@@ -59,10 +59,10 @@ class BoundaryElement(ABC):
     @controlPoints.setter
     def controlPoints(self, controlPoints):
         self._controlPoints = controlPoints
-        self.GenerateBoundary()
+        self.generate_boundary()
 
     @abstractmethod
-    def GenerateBoundary(self):
+    def generate_boundary(self):
         self.surface_points = []
         self.surface_lines = []
 
@@ -96,13 +96,15 @@ class BoundaryElement(ABC):
 class BSplineElement(BoundaryElement):
     def __init__(self, btype, control_points, bcond=None, el_size=0.05, **kwargs):
         super().__init__(btype, control_points, bcond=bcond, el_size=el_size, **kwargs)
-        self.spline_degree = kwargs.get("degree", 3)
-        self.spline_periodic = kwargs.get("periodic", False)
+        self.spline_degree = kwargs.pop("degree", 3)
+        self.spline_periodic = kwargs.pop("periodic", False)
         self.n = self.estimate_points_number(self.control_points, self.el_size)
         self.kwargs = kwargs
 
-    def GenerateBoundary(self):
-        super().GenerateBoundary()
+        self.generate_boundary()
+
+    def generate_boundary(self):
+        super().generate_boundary()
         self.boundary = Bspline(
             self.control_points,
             self.spline_degree,
