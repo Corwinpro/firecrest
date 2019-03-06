@@ -25,7 +25,10 @@ def newfolder(path):
 
 
 class Geometry(ABC):
-    def __init__(self, mesh_name="mesh", mesh_folder="Mesh", dimensions=2):
+    def __init__(
+        self, boundary_elements, mesh_name="mesh", mesh_folder="Mesh", dimensions=2
+    ):
+        self.boundary_elements = boundary_elements
         self.mesh_folder = mesh_folder
         if self.mesh_folder:
             newfolder(self.mesh_folder)
@@ -37,6 +40,8 @@ class Geometry(ABC):
         self.dolf_file = self.mesh_name + "." + MSH_FORMAT
 
         self.geometry = pg.built_in.Geometry()
+
+        self.markers_dict = {}
 
     def geo_to_mesh(self):
         """
@@ -139,32 +144,23 @@ class Geometry(ABC):
         mesh = None
         return mesh
 
-    @abstractmethod
-    def _generate_surface_points(self):
-        pass
-
-    @abstractmethod
-    def _generate_surface_lines(self):
-        pass
-
-    def generate_geometry(self):
-        self.geo_points = self._generate_surface_points()
-        self.geo_lines = self._generate_surface_lines()
-
-        lineloop = self.geometry.add_line_loop(self.geo_lines)
-        self.geometry.add_plane_surface(lineloop)
-
-        self.compile_mesh()
-
-        # self.mesh = dolf.Mesh(self.mesh_name + MSH_FORMAT)
+    def mark_boundaries(self):
+        for boundary_element in self.boundary_elements:
+            if boundary_element.btype in self.markers_dict:
+                self.markers_dict[boundary_element.btype].append(
+                    boundary_element.surface_index
+                )
+            else:
+                self.markers_dict[boundary_element.btype] = [
+                    boundary_element.surface_index
+                ]
 
 
 class SimplyConnected(Geometry):
     def __init__(
         self, boundary_elements, mesh_name="mesh", mesh_folder="Mesh", dimensions=2
     ):
-        super().__init__(mesh_name, mesh_folder, dimensions)
-        self.boundary_elements = boundary_elements
+        super().__init__(boundary_elements, mesh_name, mesh_folder, dimensions)
         self.generate_geometry()
 
     def _generate_surface_points(self):
@@ -204,3 +200,14 @@ class SimplyConnected(Geometry):
         )
 
         return geo_lines
+
+    def generate_geometry(self):
+        self.geo_points = self._generate_surface_points()
+        self.geo_lines = self._generate_surface_lines()
+
+        lineloop = self.geometry.add_line_loop(self.geo_lines)
+        self.geometry.add_plane_surface(lineloop)
+
+        self.compile_mesh()
+
+        # self.mesh = dolf.Mesh(self.mesh_name + MSH_FORMAT)
