@@ -43,6 +43,8 @@ class BoundaryElement(ABC):
     el_size : characteristic size of the line elements on the surface 
     """
 
+    surface_index = 1.0
+
     def __init__(self, btype, control_points, bcond=None, el_size=0.05, **kwargs):
         self.btype = btype
         self.control_points = control_points
@@ -51,6 +53,8 @@ class BoundaryElement(ABC):
         self.kwargs = kwargs
 
         self.boundary = None
+        self.surface_index = BoundaryElement.surface_index
+        BoundaryElement.surface_index += 1
 
     @property
     def controlPoints(self):
