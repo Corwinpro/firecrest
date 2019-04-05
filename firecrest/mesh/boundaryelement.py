@@ -37,13 +37,14 @@ class BoundaryElement(ABC):
     certain properties, i.e. a physical boundary type (no slip boundary), 
     a geometric representation (B-spline or circular arc).
 
-    btype : boundary type defined by boundary conditions
-    control_points : boundary parametrization by control points
-    bcond : specific boundary condition
-    el_size : characteristic size of the line elements on the surface 
+    params:
+        - btype : boundary type defined by boundary conditions
+        - control_points : boundary parametrization by control points
+        - bcond : specific boundary condition
+        - el_size : characteristic size of the line elements on the surface 
     """
 
-    surface_index = 1.0
+    surface_index = 1
 
     def __init__(self, btype, control_points, bcond=None, el_size=0.05, **kwargs):
         self.btype = btype
@@ -138,6 +139,8 @@ class LineElement(BSplineElement):
             < 1.0e-10
         ):
             periodic = True
+        else:
+            periodic = False
         super().__init__(
             btype,
             control_points,
