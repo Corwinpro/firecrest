@@ -41,7 +41,11 @@ class BoundaryElement(ABC):
         - btype : boundary type defined by boundary conditions
         - control_points : boundary parametrization by control points
         - bcond : specific boundary condition
-        - el_size : characteristic size of the line elements on the surface 
+        - el_size : characteristic size of the line elements on the surface
+
+    attributes:
+        - surface_index: when we create a new surface, a unique index is assigned
+        to it, so we can track the individual properties of the boundary elements
     """
 
     surface_index = 1
@@ -106,7 +110,7 @@ class BSplineElement(BoundaryElement):
         self.n = self.estimate_points_number(self.control_points, self.el_size)
         self.kwargs = kwargs
 
-        self.generate_boundary()
+        self.control_points = control_points
 
     def generate_boundary(self):
         super().generate_boundary()
