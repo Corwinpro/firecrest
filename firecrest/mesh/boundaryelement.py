@@ -48,7 +48,7 @@ class BoundaryElement(ABC):
 
     def __init__(self, btype, control_points, bcond=None, el_size=0.05, **kwargs):
         self.btype = btype
-        self.control_points = control_points
+        self._control_points = control_points
         self.bcond = bcond
         self.el_size = el_size
         self.kwargs = kwargs
@@ -58,12 +58,12 @@ class BoundaryElement(ABC):
         BoundaryElement.surface_index += 1
 
     @property
-    def controlPoints(self):
-        return self._controlPoints
+    def control_points(self):
+        return self._control_points
 
-    @controlPoints.setter
-    def controlPoints(self, controlPoints):
-        self._controlPoints = controlPoints
+    @control_points.setter
+    def control_points(self, control_points):
+        self._control_points = control_points
         self.generate_boundary()
 
     @abstractmethod
@@ -91,8 +91,8 @@ class BoundaryElement(ABC):
         return line_list
 
     @staticmethod
-    def estimate_points_number(control_points, el_size):
-        p = np.array(control_points)
+    def estimate_points_number(points, el_size):
+        p = np.array(points)
         _dist = sum([np.linalg.norm(p[i] - p[i + 1]) for i in range(len(p) - 1)])
         n_of_points = int(_dist / el_size) + 1
         return n_of_points
