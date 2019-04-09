@@ -1,4 +1,4 @@
-# firecrest <img src="firecrest_emblem3002.png" width="100">
+# <img src="firecrest_emblem3002.png" width="60"> firecrest
 
 ### Installing the __firecrest__ package
 
