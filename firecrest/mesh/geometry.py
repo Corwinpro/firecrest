@@ -3,8 +3,8 @@ import pygmsh as pg
 import meshio
 import numpy as np
 import subprocess
-import itertools
 from abc import ABC, abstractmethod
+import dolfin as dolf
 
 # from dolfin_utils.meshconvert import meshconvert
 # import dolfin as dolf
@@ -135,7 +135,7 @@ class Geometry(ABC):
             mesh_name = self.mesh_name
 
         mesh_file = mesh_name + "." + mesh_format
-        """
+
         if mesh_format == "xml":
             mesh = dolf.Mesh(mesh_file)
         elif mesh_format == "xdmf":
@@ -149,8 +149,7 @@ class Geometry(ABC):
             xdmf_file.read(mesh)
         else:
             raise ValueError("Unknown mesh format: {}".format(mesh_format))
-        """
-        mesh = None
+
         return mesh
 
     def mark_boundaries(self):
@@ -179,7 +178,7 @@ class SimpleDomain(Geometry):
         super().__init__(boundary_elements, mesh_name, mesh_folder, dimensions)
         self.generate_geometry()
         self.compile_mesh()
-        # self.mesh = dolf.Mesh(self.mesh_name + MSH_FORMAT)
+        self.mesh = self.load_mesh()
 
     def _generate_surface_points(self):
         """
