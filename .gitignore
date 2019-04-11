@@ -2,3 +2,4 @@
 __pycache__/
 firecrest.egg-info/
 Mesh/
+*.pyc

@@ -5,13 +5,14 @@ import numpy as np
 import subprocess
 from abc import ABC, abstractmethod
 import dolfin as dolf
+from dolfin_utils.meshconvert import meshconvert
 
 # from dolfin_utils.meshconvert import meshconvert
 # import dolfin as dolf
 
 GEO_EXT = ".geo"
 MSH_EXT = ".msh"
-MSH_FORMAT = "xdmf"
+MSH_FORMAT = "xdmf"  # "xml"
 LOG_EXT = ".log"
 GMSH_PATH = ""
 
@@ -35,7 +36,12 @@ class Geometry(ABC):
     """
 
     def __init__(
-        self, boundary_elements, mesh_name="mesh", mesh_folder="Mesh", dimensions=2
+        self,
+        boundary_elements,
+        mesh_name="mesh",
+        mesh_folder="Mesh",
+        dimensions=2,
+        msh_format=MSH_FORMAT,
     ):
         self.boundary_elements = boundary_elements
         self.mesh_folder = mesh_folder
@@ -46,7 +52,8 @@ class Geometry(ABC):
         self.geo_file = self.mesh_name + GEO_EXT
         self.msh_file = self.mesh_name + MSH_EXT
         self.log_file = self.mesh_name + LOG_EXT
-        self.dolf_file = self.mesh_name + "." + MSH_FORMAT
+        self.msh_format = msh_format
+        self.dolf_file = self.mesh_name + "." + self.msh_format
 
         self.pg_geometry = pg.built_in.Geometry()
 
@@ -65,6 +72,7 @@ class Geometry(ABC):
             "-{}".format(self.dimensions),
             "-format",
             "msh2",
+            # "-save_all", # : Save all elements (discard physical group definitions)
             "-o",
             self.msh_file,
         ]
@@ -78,12 +86,16 @@ class Geometry(ABC):
             mesh_log.write(gmsh_out)
             mesh_log.write(gmsh_err)
 
-    def compile_mesh(self, mesh_format=MSH_FORMAT):
+    def compile_mesh(self, mesh_format=None):
         """
         Full mesh compilation routine.
         First, creates a .msh file from .geo using self.geo_to_mesh() method,
         Second, creates an .xdmf or .xml dolfin-readable file self.dolf_file
         """
+        if mesh_format is None:
+            mesh_format = self.msh_format
+        else:
+            mesh_format = MSH_FORMAT
         self.write_geom()
         self.geo_to_mesh()
 
@@ -91,28 +103,32 @@ class Geometry(ABC):
             mesh_format = "xml"
 
         if mesh_format == "xml":
-            try:
-                pass  # meshconvert.convert2xml(self.msh_file, self.dolf_file)
-            except FileNotFoundError:
-                return False
+            self._convert_xml_to_dolfin()
         elif mesh_format == "xdmf":
-            mesh = meshio.read(self.msh_file)
-
-            if self.dimensions == 2:
-                # from gist: https://gist.github.com/michalhabera/bbe8a17f788192e53fd758a67cbf3bed
-                mesh.points = mesh.points[:, :2]  # remove z-values to force 2d mesh
-                mesh = meshio.Mesh(
-                    points=mesh.points, cells={"triangle": mesh.cells["triangle"]}
-                )
-            elif self.dimensions == 3:
-                # TODO: figure out how to fix this
-                mesh = meshio.Mesh(
-                    points=mesh.points, cells={"tetra": mesh.cells["tetra"]}
-                )
-
-            meshio.write(self.dolf_file, mesh)
+            self._convert_xdmf_to_dolfin()
         else:
             raise ValueError("Unknown mesh format: {}".format(mesh_format))
+
+    def _convert_xml_to_dolfin(self):
+        try:
+            meshconvert.convert2xml(self.msh_file, self.dolf_file)
+        except FileNotFoundError:
+            return False
+
+    def _convert_xdmf_to_dolfin(self):
+        mesh = meshio.read(self.msh_file)
+
+        if self.dimensions == 2:
+            # from gist: https://gist.github.com/michalhabera/bbe8a17f788192e53fd758a67cbf3bed
+            mesh.points = mesh.points[:, :2]  # remove z-values to force 2d mesh
+            mesh = meshio.Mesh(
+                points=mesh.points, cells={"triangle": mesh.cells["triangle"]}
+            )
+        elif self.dimensions == 3:
+            # TODO: figure out how to fix this
+            mesh = meshio.Mesh(points=mesh.points, cells={"tetra": mesh.cells["tetra"]})
+
+        meshio.write(self.dolf_file, mesh)
 
     def write_geom(self, mesh_name=None):
         """
@@ -130,9 +146,14 @@ class Geometry(ABC):
         with open(file_name, "w") as gmsh_output:
             gmsh_output.write(self.pg_geometry.get_code())
 
-    def load_mesh(self, mesh_name=None, mesh_format=MSH_FORMAT):
+    def load_mesh(self, mesh_name=None, mesh_format=None):
         if mesh_name is None:
             mesh_name = self.mesh_name
+
+        if mesh_format is None:
+            mesh_format = self.msh_format
+        else:
+            mesh_format = MSH_FORMAT
 
         mesh_file = mesh_name + "." + mesh_format
 
@@ -173,10 +194,17 @@ class Geometry(ABC):
 
 class SimpleDomain(Geometry):
     def __init__(
-        self, boundary_elements, mesh_name="mesh", mesh_folder="Mesh", dimensions=2
+        self,
+        boundary_elements,
+        mesh_name="mesh",
+        mesh_folder="Mesh",
+        dimensions=2,
+        **kwargs
     ):
-        super().__init__(boundary_elements, mesh_name, mesh_folder, dimensions)
-        self.generate_geometry()
+        super().__init__(
+            boundary_elements, mesh_name, mesh_folder, dimensions, **kwargs
+        )
+        self._generate_pg_geometry()
         self.compile_mesh()
         self.mesh = self.load_mesh()
 
@@ -210,32 +238,88 @@ class SimpleDomain(Geometry):
                     )
         return geo_points
 
-    def _generate_surface_lines(self):
+    def _generate_pg_points(self, boundary_element):
         """
-        Provided the instance has a list of geo_points from _generate_surface_points,
-        we generate a list of connections (lines) between the geometric points.
+        For the given boundary element, we collect the surface points and create pg_points list.
+        We also write the pg_points code to the self.pg_geometry code.
+        
+        pg_points: list of pygmsh Point objects.
+        """
+        pg_points = []
+        for position in boundary_element.surface_points:
+            pg_points.append(
+                self.pg_geometry.add_point(
+                    [position[0], position[1], 0.0], lcar=boundary_element.el_size
+                )
+            )
+
+        return pg_points
+
+    def _generate_pg_lines(self, boundary_element):
+        """
+        Provided the boundary_element instance has a list of pg_points from _generate_pg_points,
+        we generate a list of connections (lines) between the pg_points.
+        We also write the pg_lines code to the self.pg_geometry code.
         The lines are pygmsh objects Line.
         """
-        geo_lines = []
-        for i in range(len(self.geo_points) - 1):
-            geo_lines.append(
-                self.pg_geometry.add_line(self.geo_points[i], self.geo_points[i + 1])
+        pg_lines = []
+        for i in range(len(boundary_element.pg_points) - 1):
+            line = self.pg_geometry.add_line(
+                boundary_element.pg_points[i], boundary_element.pg_points[i + 1]
             )
-        # Do I need this last connection?
-        geo_lines.append(
-            self.pg_geometry.add_line(self.geo_points[-1], self.geo_points[0])
+            pg_lines.append(line)
+        self.pg_geometry.add_physical_line(
+            pg_lines, label=boundary_element.surface_index
         )
 
-        return geo_lines
+        return pg_lines
 
-    def generate_geometry(self):
+    def _generate_pg_geometry(self):
         """
         Main SimpleDomain mesh generation and compilation method.
-        We prepare pygmsh points and lines, create a lineloop,
+        We prepare pg_points and pg_lines, create a lineloop,
         and finally add a surface bounded by the lineloop.
         """
-        self.geo_points = self._generate_surface_points()
-        self.geo_lines = self._generate_surface_lines()
+        self.pg_points = []
+        self.pg_lines = []
 
-        lineloop = self.pg_geometry.add_line_loop(self.geo_lines)
-        self.pg_geometry.add_plane_surface(lineloop)
+        for boundary_element in self.boundary_elements:
+            boundary_element.pg_points = self._generate_pg_points(boundary_element)
+
+            self.pg_points.extend(boundary_element.pg_points)
+
+        for i in range(len(self.boundary_elements) - 1):
+            """
+            Iterate over the boundary_elements' pg_points, and connect the 
+            boundary elemements with index i and i-1 through the left edge point,
+            boundary elemements with index i and i+1 through the right edge point.
+            """
+            if (
+                self.boundary_elements[i].el_size
+                > self.boundary_elements[i - 1].el_size
+            ):
+                _left_point = self.boundary_elements[i - 1].pg_points[-1]
+            else:
+                _left_point = self.boundary_elements[i].pg_points[0]
+            self.boundary_elements[i].pg_points[0] = self.boundary_elements[
+                i - 1
+            ].pg_points[-1] = _left_point
+
+            if (
+                self.boundary_elements[i].el_size
+                > self.boundary_elements[i + 1].el_size
+            ):
+                _right_point = self.boundary_elements[i + 1].pg_points[0]
+            else:
+                _right_point = self.boundary_elements[i].pg_points[-1]
+            self.boundary_elements[i].pg_points[-1] = self.boundary_elements[
+                i + 1
+            ].pg_points[0] = _right_point
+
+        for boundary_element in self.boundary_elements:
+            boundary_element.pg_lines = self._generate_pg_lines(boundary_element)
+            self.pg_lines.extend(boundary_element.pg_lines)
+
+        self.pg_lineloop = self.pg_geometry.add_line_loop(self.pg_lines)
+        self.pg_surface = self.pg_geometry.add_plane_surface(self.pg_lineloop)
+        self.pg_geometry.add_physical_surface(self.pg_surface, 0)
