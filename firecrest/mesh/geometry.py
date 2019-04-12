@@ -3,6 +3,7 @@ import pygmsh as pg
 import meshio
 import numpy as np
 import subprocess
+import warnings
 from abc import ABC, abstractmethod
 import dolfin as dolf
 from dolfin_utils.meshconvert import meshconvert
@@ -12,7 +13,8 @@ from dolfin_utils.meshconvert import meshconvert
 
 GEO_EXT = ".geo"
 MSH_EXT = ".msh"
-MSH_FORMAT = "xdmf"  # "xml"
+MSH_FORMAT_XDMF = "xdmf"
+MSH_FORMAT_XML = "xml"
 LOG_EXT = ".log"
 GMSH_PATH = ""
 
@@ -33,6 +35,12 @@ class Geometry(ABC):
         - mesh_name: name of mesh files, associated with the geometry
         - mesh_folder: default mesh files directory
         - dimensions: dimensionality of the domain
+        - msh_format: XML or XDMF mesh format
+    
+    attributes:
+        - boundary_elements: collection of boundary_elements forming the Geometry
+        - pg_geometry: pygmsh generated geometry
+        - pg_*: pygmsh generated entities
     """
 
     def __init__(
@@ -41,7 +49,7 @@ class Geometry(ABC):
         mesh_name="mesh",
         mesh_folder="Mesh",
         dimensions=2,
-        msh_format=MSH_FORMAT,
+        msh_format=MSH_FORMAT_XML,
     ):
         self.boundary_elements = boundary_elements
         self.mesh_folder = mesh_folder
@@ -52,7 +60,16 @@ class Geometry(ABC):
         self.geo_file = self.mesh_name + GEO_EXT
         self.msh_file = self.mesh_name + MSH_EXT
         self.log_file = self.mesh_name + LOG_EXT
+
+        if msh_format not in (MSH_FORMAT_XDMF, MSH_FORMAT_XML):
+            warnings.warn(
+                "Mesh format {} not supported. Using {} instead.".format(
+                    msh_format, MSH_FORMAT_XML
+                )
+            )
+            msh_format = MSH_FORMAT_XML
         self.msh_format = msh_format
+
         self.dolf_file = self.mesh_name + "." + self.msh_format
 
         self.pg_geometry = pg.built_in.Geometry()
@@ -88,14 +105,14 @@ class Geometry(ABC):
 
     def compile_mesh(self, mesh_format=None):
         """
-        Full mesh compilation routine.
+        Full mesh compilation routine. Geo -> Msh -> Dolf Readable format.
         First, creates a .msh file from .geo using self.geo_to_mesh() method,
         Second, creates an .xdmf or .xml dolfin-readable file self.dolf_file
         """
         if mesh_format is None:
             mesh_format = self.msh_format
         else:
-            mesh_format = MSH_FORMAT
+            mesh_format = MSH_FORMAT_XDMF
         self.write_geom()
         self.geo_to_mesh()
 
@@ -147,13 +164,16 @@ class Geometry(ABC):
             gmsh_output.write(self.pg_geometry.get_code())
 
     def load_mesh(self, mesh_name=None, mesh_format=None):
+        """
+        Reads mesh_name.(xml|xdmf) file and returns a dolfin.Mesh() object
+        """
         if mesh_name is None:
             mesh_name = self.mesh_name
 
         if mesh_format is None:
             mesh_format = self.msh_format
         else:
-            mesh_format = MSH_FORMAT
+            mesh_format = MSH_FORMAT_XDMF
 
         mesh_file = mesh_name + "." + mesh_format
 
@@ -207,6 +227,10 @@ class SimpleDomain(Geometry):
         self._generate_pg_geometry()
         self.compile_mesh()
         self.mesh = self.load_mesh()
+
+        self._boundary_parts = None
+        self._ds = None
+        self._dx = None
 
     def _generate_surface_points(self):
         """
@@ -277,17 +301,20 @@ class SimpleDomain(Geometry):
     def _generate_pg_geometry(self):
         """
         Main SimpleDomain mesh generation and compilation method.
-        We prepare pg_points and pg_lines, create a lineloop,
-        and finally add a surface bounded by the lineloop.
+        We prepare pg_points and pg_lines, create a pg_lineloop,
+        and finally add a pg_surface bounded by the lineloop.
+        All the non-point objects also are gmsh 'physical' objects.
         """
         self.pg_points = []
         self.pg_lines = []
 
+        # Generating pg_points for all boundary elements
         for boundary_element in self.boundary_elements:
             boundary_element.pg_points = self._generate_pg_points(boundary_element)
 
             self.pg_points.extend(boundary_element.pg_points)
 
+        # Fixing multiple point objects representing same physical point
         for i in range(len(self.boundary_elements) - 1):
             """
             Iterate over the boundary_elements' pg_points, and connect the 
@@ -316,10 +343,57 @@ class SimpleDomain(Geometry):
                 i + 1
             ].pg_points[0] = _right_point
 
+        # Generating pg_lines for all boundary elements
         for boundary_element in self.boundary_elements:
             boundary_element.pg_lines = self._generate_pg_lines(boundary_element)
             self.pg_lines.extend(boundary_element.pg_lines)
 
+        # Generating pg_lineloop from pg_lines
         self.pg_lineloop = self.pg_geometry.add_line_loop(self.pg_lines)
+
+        # Generating pg_surface from pg_linespg_lineloop
         self.pg_surface = self.pg_geometry.add_plane_surface(self.pg_lineloop)
         self.pg_geometry.add_physical_surface(self.pg_surface, 0)
+
+    @property
+    def boundary_parts(self):
+        """
+        Creates dolfin MeshFunction of dim-1 dimension
+        """
+        if self._boundary_parts:
+            return self._boundary_parts
+
+        assert self.mesh, "Need mesh to be generated to get the boundary parts"
+
+        boundary_parts = dolf.MeshFunction(
+            "size_t", self.mesh, self.mesh_name + "_facet_region.xml"
+        )
+
+        self._boundary_parts = boundary_parts
+        return boundary_parts
+
+    @property
+    def ds(self):
+        """
+        Creates dolfin 'ds' measure, accounting for physical marking
+        """
+        assert self.mesh, "Mesh needs to be generated"
+
+        if not self._ds:
+            self._ds = dolf.Measure(
+                "ds", domain=self.mesh, subdomain_data=self.boundary_parts
+            )
+
+        return self._ds
+
+    @property
+    def dx(self):
+        """
+        Creates dolfin 'dx' measure
+        """
+        assert self.mesh, "Mesh needs to be generated"
+
+        if not self._dx:
+            self._dx = dolf.dx(domain=self.mesh)
+
+        return self._dx
