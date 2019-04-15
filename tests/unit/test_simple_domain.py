@@ -43,7 +43,7 @@ def test_boundaries_marking(simple_domain):
     ]
 
 
-def test_dolfin_measures(simple_domain):
+def test_individual_dolfin_measures(simple_domain):
     assert (
         abs(dolf.assemble(dolf.Constant(1.0) * simple_domain.ds) ** 2.0 - 1.5631 ** 2.0)
         < 0.1 ** 2.0
@@ -77,12 +77,35 @@ def test_dolfin_measures(simple_domain):
     )
 
 
+def test_groups_dolfin_measures(simple_domain):
+    assert (
+        abs(
+            dolf.assemble(
+                dolf.Constant(1.0) * simple_domain.get_boundary_measure("type_one")
+            )
+            ** 2.0
+            - 0.587 ** 2.0
+        )
+        < 0.1 ** 2.0
+    )
+    assert (
+        abs(
+            dolf.assemble(
+                dolf.Constant(1.0) * simple_domain.get_boundary_measure("type_two")
+            )
+            ** 2.0
+            - 0.976 ** 2.0
+        )
+        < 0.1 ** 2.0
+    )
+
+
 def test_get_boundaries(simple_domain):
-    assert simple_domain.get_boundaries("type_one") == [
+    assert simple_domain._get_boundaries("type_one") == [
         simple_domain.boundary_elements[0]
     ]
-    assert simple_domain.get_boundaries("type_two") == [
+    assert simple_domain._get_boundaries("type_two") == [
         simple_domain.boundary_elements[1]
     ]
-    assert simple_domain.get_boundaries("type_three") is None
+    assert simple_domain._get_boundaries("type_three") is None
 
