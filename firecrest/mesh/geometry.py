@@ -71,10 +71,13 @@ class Geometry(ABC):
         self.msh_format = msh_format
 
         self.dolf_file = self.mesh_name + "." + self.msh_format
-
         self.pg_geometry = pg.built_in.Geometry()
-
         self.mark_boundaries()
+
+        self.mesh = None
+        self._boundary_parts = None
+        self._ds = None
+        self._dx = None
 
     def geo_to_mesh(self):
         """
@@ -211,6 +214,52 @@ class Geometry(ABC):
             else:
                 self.markers_dict[boundary_element.btype] = [boundary_element]
 
+    @property
+    def boundary_parts(self):
+        """
+        Creates dolfin MeshFunction of dim-1 dimension
+        """
+        if self._boundary_parts:
+            return self._boundary_parts
+
+        assert self.mesh, "Need mesh to be generated to get the boundary parts"
+
+        boundary_parts = dolf.MeshFunction(
+            "size_t", self.mesh, self.mesh_name + "_facet_region.xml"
+        )
+
+        self._boundary_parts = boundary_parts
+        return boundary_parts
+
+    @property
+    def ds(self):
+        """
+        Creates dolfin 'ds' measure, accounting for physical marking
+        """
+        assert self.mesh, "Mesh needs to be generated"
+
+        if not self._ds:
+            self._ds = dolf.Measure(
+                "ds", domain=self.mesh, subdomain_data=self.boundary_parts
+            )
+
+        return self._ds
+
+    @property
+    def dx(self):
+        """
+        Creates dolfin 'dx' measure
+        """
+        assert self.mesh, "Mesh needs to be generated"
+
+        if not self._dx:
+            self._dx = dolf.dx(domain=self.mesh)
+
+        return self._dx
+
+    def get_boundaries(self, boundary_type):
+        return self.markers_dict.get(boundary_type, None)
+
 
 class SimpleDomain(Geometry):
     def __init__(
@@ -227,10 +276,6 @@ class SimpleDomain(Geometry):
         self._generate_pg_geometry()
         self.compile_mesh()
         self.mesh = self.load_mesh()
-
-        self._boundary_parts = None
-        self._ds = None
-        self._dx = None
 
     def _generate_surface_points(self):
         """
@@ -315,6 +360,7 @@ class SimpleDomain(Geometry):
             self.pg_points.extend(boundary_element.pg_points)
 
         # Fixing multiple point objects representing same physical point
+        # TODO: dict structure here might be more useful?
         for i in range(len(self.boundary_elements) - 1):
             """
             Iterate over the boundary_elements' pg_points, and connect the 
@@ -355,45 +401,3 @@ class SimpleDomain(Geometry):
         self.pg_surface = self.pg_geometry.add_plane_surface(self.pg_lineloop)
         self.pg_geometry.add_physical_surface(self.pg_surface, 0)
 
-    @property
-    def boundary_parts(self):
-        """
-        Creates dolfin MeshFunction of dim-1 dimension
-        """
-        if self._boundary_parts:
-            return self._boundary_parts
-
-        assert self.mesh, "Need mesh to be generated to get the boundary parts"
-
-        boundary_parts = dolf.MeshFunction(
-            "size_t", self.mesh, self.mesh_name + "_facet_region.xml"
-        )
-
-        self._boundary_parts = boundary_parts
-        return boundary_parts
-
-    @property
-    def ds(self):
-        """
-        Creates dolfin 'ds' measure, accounting for physical marking
-        """
-        assert self.mesh, "Mesh needs to be generated"
-
-        if not self._ds:
-            self._ds = dolf.Measure(
-                "ds", domain=self.mesh, subdomain_data=self.boundary_parts
-            )
-
-        return self._ds
-
-    @property
-    def dx(self):
-        """
-        Creates dolfin 'dx' measure
-        """
-        assert self.mesh, "Mesh needs to be generated"
-
-        if not self._dx:
-            self._dx = dolf.dx(domain=self.mesh)
-
-        return self._dx

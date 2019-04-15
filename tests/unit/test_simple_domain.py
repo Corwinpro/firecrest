@@ -75,3 +75,14 @@ def test_dolfin_measures(simple_domain):
         )
         < 0.1 ** 2.0
     )
+
+
+def test_get_boundaries(simple_domain):
+    assert simple_domain.get_boundaries("type_one") == [
+        simple_domain.boundary_elements[0]
+    ]
+    assert simple_domain.get_boundaries("type_two") == [
+        simple_domain.boundary_elements[1]
+    ]
+    assert simple_domain.get_boundaries("type_three") is None
+
