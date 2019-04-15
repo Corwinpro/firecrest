@@ -185,8 +185,8 @@ class Geometry(ABC):
         elif mesh_format == "xdmf":
             try:
                 MPI_COMM = dolf.MPI.comm_world
-            except AttributeError:
-                MPI_COMM = dolf.mpi_comm_world()
+            except AttributeError as e:
+                raise e
 
             mesh = dolf.Mesh()
             xdmf_file = dolf.XDMFFile(MPI_COMM, mesh_file)
@@ -257,8 +257,28 @@ class Geometry(ABC):
 
         return self._dx
 
-    def get_boundaries(self, boundary_type):
+    def _get_boundaries(self, boundary_type):
+        """
+        Returns all boundaries of the given boundary_type: str
+        """
         return self.markers_dict.get(boundary_type, None)
+
+    def get_boundary_measure(self, boundary_type=None, boundary=None):
+        """
+        Returns the dolfin 'ds' boundary measure for all the boundaries of the
+        - boundary_type: str
+        - boundary: BoundaryElement
+        If neither is provided, returns the whole boundary measure
+        """
+        if boundary_type:
+            target_boundaries = self._get_boundaries(boundary_type)
+            return self.ds(
+                tuple(boundary.surface_index for boundary in target_boundaries)
+            )
+        elif boundary:
+            return self.ds(boundary.surface_index)
+        else:
+            return self.ds
 
 
 class SimpleDomain(Geometry):
