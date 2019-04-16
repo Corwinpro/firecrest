@@ -57,7 +57,7 @@ class TVAcousticWeakForm(BaseWeakForm):
         if pressure is None and velocity is None:
             pressure, velocity = self.pressure, self.velocity
 
-        return -pressure * self.I + self.shear_stress(velocity)
+        return self.shear_stress(velocity) - pressure * self.I
 
     def heat_flux(self, temperature=None):
         if temperature is None:
@@ -68,7 +68,8 @@ class TVAcousticWeakForm(BaseWeakForm):
             / dolf.Constant(self.dolf_constants.gamma - 1.0)
         )
 
-    def _unpack_functions(self, functions):
+    @staticmethod
+    def _unpack_functions(functions):
         try:
             pressure, velocity, temperature = functions
         except ValueError as v:
@@ -76,7 +77,7 @@ class TVAcousticWeakForm(BaseWeakForm):
             raise v
         return (pressure, velocity, temperature)
 
-    def spatial_component(self, trial=None, test=None):
+    def temporal_component(self, trial=None, test=None):
         if trial is None:
             trial = self.trial_functions
         if test is None:
@@ -90,7 +91,7 @@ class TVAcousticWeakForm(BaseWeakForm):
 
         return continuity_component + momementum_component + energy_component
 
-    def volume_flux_component(self, trial=None, test=None):
+    def spatial_component(self, trial=None, test=None):
         if trial is None:
             trial = self.trial_functions
         if test is None:
