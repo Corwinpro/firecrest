@@ -1,5 +1,5 @@
 from firecrest.fem.base_fspace import BaseFunctionSpace
-from firecrest.fem.space_template import Space
+from firecrest.fem.struct_templates import Space
 
 
 class TVAcousticFunctionSpace(BaseFunctionSpace):

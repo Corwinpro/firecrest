@@ -13,3 +13,4 @@ We will use this structure to create necessary Function Spaces for pre-defined
 problems, such as thermoviscous flow, etc.
 """
 Space = namedtuple("Space", ["element_type", "order", "dimension"])
+AcousticConstants = namedtuple("AcousticConstants", ["gamma", "Re", "Pe"])

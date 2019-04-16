@@ -2,7 +2,7 @@ import pytest
 from firecrest.mesh.boundaryelement import BSplineElement, LineElement
 from firecrest.mesh.geometry import SimpleDomain
 from firecrest.fem.base_fspace import BaseFunctionSpace
-from firecrest.fem.space_template import Space
+from firecrest.fem.struct_templates import Space
 
 
 @pytest.fixture(scope="module")
