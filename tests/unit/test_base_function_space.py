@@ -3,11 +3,10 @@ from firecrest.mesh.boundaryelement import BSplineElement, LineElement
 from firecrest.mesh.geometry import SimpleDomain
 from firecrest.fem.base_fspace import BaseFunctionSpace
 from firecrest.fem.space_template import Space
-import dolfin as dolf
 
 
 @pytest.fixture(scope="module")
-def simple_domain(request):
+def simple_domain():
     control_points = [
         [0.0, 0.0],
         [0.1, 0.1],

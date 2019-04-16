@@ -8,7 +8,9 @@ class BaseFunctionSpace:
         self.function_spaces = self.generate_function_spaces()
 
     def generate_function_spaces(self, **kwargs):
-        elements = [self._generate_function_space(space, **kwargs) for space in self.spaces]
+        elements = [
+            self._generate_function_space(space, **kwargs) for space in self.spaces
+        ]
         if len(elements) == 1:
             return dolf.FunctionSpace(self.domain.mesh, elements[0], **kwargs)
 
