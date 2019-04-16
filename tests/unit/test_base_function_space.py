@@ -1,8 +1,8 @@
 import pytest
 from firecrest.mesh.boundaryelement import BSplineElement, LineElement
 from firecrest.mesh.geometry import SimpleDomain
-from firecrest.variational_forms.base_fspace import BaseFunctionSpace
-from firecrest.variational_forms.space_template import Space
+from firecrest.fem.base_fspace import BaseFunctionSpace
+from firecrest.fem.space_template import Space
 import dolfin as dolf
 
 
@@ -38,7 +38,7 @@ def test_space_template():
         (Space(element_type="CG", order=2, dimension=2),),
         (Space(element_type="DG", order=3, dimension="scalar"),),
         (
-            Space(element_type="CG", order=2, dimension='vector'),
+            Space(element_type="CG", order=2, dimension="vector"),
             Space(element_type="DG", order=3, dimension="scalar"),
         ),
     ],
