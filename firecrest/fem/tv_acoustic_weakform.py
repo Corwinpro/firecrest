@@ -181,47 +181,16 @@ class TVAcousticWeakForm(BaseWeakForm):
             )
             temperature_bc_type = self.allowed_temperature_bcs[temperature_bc]
             stress_bc_type = self.allowed_stress_bcs[stress_bc]
+
             # Step 2. If the boundary condition is one of the Dirichlet-compatible,
             # we construct Dirichlet boundary condition.
             if temperature_bc_type == "Dirichlet":
-                if temperature_bc == "isothermal":
-                    temperature = dolf.Constant(0.0)
-                elif temperature_bc == "temperature":
-                    temperature = dolf.Constant(boundary.bcond[temperature_bc])
-                else:
-                    raise TypeError(
-                        f"Invalid temperature boundary condition type for {temperature_bc_type} condition."
-                    )
                 dirichlet_bcs.append(
-                    dolf.DirichletBC(
-                        self.temperature_function_space,
-                        temperature,
-                        self.domain.boundary_parts,
-                        boundary.surface_index,
-                    )
+                    self._generate_dirichlet_bc(boundary, temperature_bc)
                 )
-
-            if stress_bc_type == "Dirichlet":
-                if stress_bc == "noslip":
-                    stress = dolf.Constant((0.0,) * self.geometric_dimension)
-                elif stress_bc == "inflow":
-                    stress = dolf.Constant(boundary.bcond[temperature_bc])
-                else:
-                    raise TypeError(
-                        f"Invalid temperature boundary condition type for {stress_bc_type} condition."
-                    )
-                dirichlet_bcs.append(
-                    dolf.DirichletBC(
-                        self.velocity_function_space,
-                        stress,
-                        self.domain.boundary_parts,
-                        boundary.surface_index
-                    )
-                )
-
             # Step 3. If the boundary condition is one of the Neumann or Robin,
             # we construct necessary boundary integrals in weak form.
-            if temperature_bc_type == "Neumann" or temperature_bc_type == "Robin":
+            elif temperature_bc_type == "Neumann" or temperature_bc_type == "Robin":
                 if temperature_bc == "adiabatic":
                     heat_flux = dolf.Constant(0.0)
                 elif temperature_bc == "heat_flux":
@@ -240,7 +209,10 @@ class TVAcousticWeakForm(BaseWeakForm):
                     * self.domain.ds((boundary.surface_index,))
                 )
 
-            if stress_bc_type == "Neumann" or stress_bc_type == "Robin":
+            # Same for stress / velocity boundary conditions
+            if stress_bc_type == "Dirichlet":
+                dirichlet_bcs.append(self._generate_dirichlet_bc(boundary, stress_bc))
+            elif stress_bc_type == "Neumann" or stress_bc_type == "Robin":
                 if stress_bc == "free":
                     stress = dolf.Constant((0.0,) * self.geometric_dimension)
                 elif stress_bc == "force":
@@ -266,3 +238,23 @@ class TVAcousticWeakForm(BaseWeakForm):
                 f"One expected, {len(bc)} received."
             )
         return bc.pop()
+
+    def _generate_dirichlet_bc(self, boundary, bc_type):
+        if bc_type == "noslip":
+            value = dolf.Constant((0.0,) * self.geometric_dimension)
+            function_space = self.velocity_function_space
+        elif bc_type == "inflow":
+            value = dolf.Constant(boundary.bcond[bc_type])
+            function_space = self.velocity_function_space
+        elif bc_type == "isothermal":
+            value = dolf.Constant(0.0)
+            function_space = self.temperature_function_space
+        elif bc_type == "temperature":
+            value = dolf.Constant(boundary.bcond[bc_type])
+            function_space = self.temperature_function_space
+        else:
+            raise TypeError(f"Invalid boundary condition type for Dirichlet condition.")
+        return dolf.DirichletBC(
+            function_space, value, self.domain.boundary_parts, boundary.surface_index
+        )
+

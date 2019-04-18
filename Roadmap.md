@@ -6,7 +6,6 @@
 
 1. Find a good approach and implement BoundaryConditions.
 2. Integration with solver module.
-3. Implement variational forms for different problem types.
 
 #### Minor tasks
 
@@ -14,6 +13,17 @@
 2. Implementing special boundary elements: arc, ellipse.
 3. 3D compatibility.
 
-### Solver modules
+### FEM modules
+
+#### Current task
+
+1. Generic approach for DirichletBC generation. In `boundary_components`:
+- dolfin.Constant shouldn't be used. It can be int/float, dolfin.Expression or dolfin.Constant. Need to parse this data properly.
+- Can the parsing be a BoundaryCondition class method?
+
+#### Major tasks
+
+1. Implement variational forms for different problem types. 
+
 
 ### Optimization modules
