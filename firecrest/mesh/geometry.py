@@ -78,6 +78,7 @@ class Geometry(ABC):
         self._boundary_parts = None
         self._ds = None
         self._dx = None
+        self._n = None
 
     def geo_to_mesh(self):
         """
@@ -256,6 +257,18 @@ class Geometry(ABC):
             self._dx = dolf.dx(domain=self.mesh)
 
         return self._dx
+
+    @property
+    def n(self):
+        """
+        Creates dolfin mesh normal
+        """
+        assert self.mesh, "Mesh needs to be generated"
+
+        if not self._n:
+            self._n = dolf.FacetNormal(self.mesh)
+
+        return self._n
 
     def _get_boundaries(self, boundary_type):
         """
