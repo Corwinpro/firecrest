@@ -121,7 +121,7 @@ class TVAcousticWeakForm(BaseWeakForm):
 
         return (
             continuity_component + momementum_component + energy_component
-        ) * dolf.dx
+        ) * self.domain.dx
 
     def spatial_component(self, trial=None, test=None):
         if trial is None:
@@ -144,7 +144,7 @@ class TVAcousticWeakForm(BaseWeakForm):
 
         return (
             continuity_component + momementum_component + energy_component
-        ) * dolf.dx
+        ) * self.domain.dx
 
     def boundary_components(self, trial=None, test=None):
         """
@@ -180,7 +180,7 @@ class TVAcousticWeakForm(BaseWeakForm):
                 boundary.bcond, self.allowed_stress_bcs
             )
             temperature_bc_type = self.allowed_temperature_bcs[temperature_bc]
-            stress_bc_type = self.allowed_stress_bcs[temperature_bc]
+            stress_bc_type = self.allowed_stress_bcs[stress_bc]
             # Step 2. If the boundary condition is one of the Dirichlet-compatible,
             # we construct Dirichlet boundary condition.
             if temperature_bc_type == "Dirichlet":
@@ -196,7 +196,7 @@ class TVAcousticWeakForm(BaseWeakForm):
                     dolf.DirichletBC(
                         self.temperature_function_space,
                         temperature,
-                        self.domain.ds,
+                        self.domain.boundary_parts,
                         boundary.surface_index,
                     )
                 )
@@ -214,8 +214,8 @@ class TVAcousticWeakForm(BaseWeakForm):
                     dolf.DirichletBC(
                         self.velocity_function_space,
                         stress,
-                        self.domain.ds,
-                        boundary.surface_index,
+                        self.domain.boundary_parts,
+                        boundary.surface_index
                     )
                 )
 
@@ -259,10 +259,10 @@ class TVAcousticWeakForm(BaseWeakForm):
 
     @staticmethod
     def _verify_boundary_condition(bcond, allowed_bconds):
-        bc = allowed_bconds.intersection(bcond)
+        bc = set(bcond.keys()) & set(allowed_bconds.keys())
         if len(bc) != 1:
             raise TypeError(
                 "Incorrect number of temperature-related boundary condition."
                 f"One expected, {len(bc)} received."
             )
-        return bc
+        return bc.pop()

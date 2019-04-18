@@ -24,9 +24,6 @@ class TVAcousticFunctionSpace(BaseFunctionSpace):
         if self.is_complex:
             self.spaces *= 2
         super().__init__(domain, self.spaces)
-        self.pressure_function_space = self.function_spaces.sub(0)
-        self.velocity_function_space = self.function_spaces.sub(1)
-        self.temperature_function_space = self.function_spaces.sub(2)
 
     @property
     def pressure_function_space(self):
