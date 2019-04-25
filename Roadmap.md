@@ -25,5 +25,8 @@
 
 1. Implement variational forms for different problem types. 
 
+#### Minor tasks
+
+1. TVAcoustics: add normal_force boundary condition.
 
 ### Optimization modules

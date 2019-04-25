@@ -108,6 +108,9 @@ class TVAcousticWeakForm(BaseWeakForm):
         return (pressure, velocity, temperature)
 
     def temporal_component(self, trial=None, test=None):
+        """
+        Generates temporal component of the TVAcoustic weak form equation.
+        """
         if trial is None:
             trial = self.trial_functions
         if test is None:
@@ -124,6 +127,9 @@ class TVAcousticWeakForm(BaseWeakForm):
         ) * self.domain.dx
 
     def spatial_component(self, trial=None, test=None):
+        """
+        Generates spatial component of the TVAcoustic weak form equation.
+        """
         if trial is None:
             trial = self.trial_functions
         if test is None:
@@ -148,8 +154,9 @@ class TVAcousticWeakForm(BaseWeakForm):
 
     def boundary_components(self, trial=None, test=None):
         """
-        I suppose this is the place where I actually consider
-        various boundary conditions and specific values for them.
+        Generates DirichletBCs, stress and thermal boundary components of the TVAcoustic weak form equation.
+
+        Here we consider various boundary conditions and specific values for them.
         For instance, if I have a boundary element with prescribed
         velocity profile on it, I must a priory know this is a DirichletBC,
         and if I have a heat flux (Neumann) boundary condition on a wall,
@@ -194,10 +201,13 @@ class TVAcousticWeakForm(BaseWeakForm):
                 if temperature_bc == "adiabatic":
                     heat_flux = dolf.Constant(0.0)
                 elif temperature_bc == "heat_flux":
-                    heat_flux = dolf.Constant(boundary.bcond[temperature_bc])
+                    heat_flux = self._parse_dolf_expression(
+                        boundary.bcond[temperature_bc]
+                    )
                 elif temperature_bc == "thermal_accomodation":
                     heat_flux = (
-                        -dolf.Constant(boundary.bcond[temperature_bc]) * temperature
+                        -self._parse_dolf_expression(boundary.bcond[temperature_bc])
+                        * temperature
                     )
                 else:
                     raise TypeError(
@@ -216,9 +226,12 @@ class TVAcousticWeakForm(BaseWeakForm):
                 if stress_bc == "free":
                     stress = dolf.Constant((0.0,) * self.geometric_dimension)
                 elif stress_bc == "force":
-                    stress = dolf.Constant(boundary.bcond[stress_bc])
+                    stress = self._parse_dolf_expression(boundary.bcond[temperature_bc])
                 elif stress_bc == "impedance":
-                    stress = dolf.Constant(boundary.bcond[stress_bc]) * velocity
+                    stress = (
+                        self._parse_dolf_expression(boundary.bcond[temperature_bc])
+                        * velocity
+                    )
                 else:
                     raise TypeError(
                         f"Invalid temperature boundary condition type for {stress_bc_type} condition."
@@ -234,27 +247,52 @@ class TVAcousticWeakForm(BaseWeakForm):
         bc = set(bcond.keys()) & set(allowed_bconds.keys())
         if len(bc) != 1:
             raise TypeError(
-                "Incorrect number of temperature-related boundary condition."
+                "Incorrect number of boundary condition."
                 f"One expected, {len(bc)} received."
             )
         return bc.pop()
 
     def _generate_dirichlet_bc(self, boundary, bc_type):
+        """
+        Given a boundary and a boundary condition type (one from the 'bc_to_fs' dict),
+        we generate a dolfin DirichletBC based on the boundary expression for this boundary condition.
+        """
+        bc_to_fs = {
+            "noslip": self.velocity_function_space,
+            "inflow": self.velocity_function_space,
+            "isothermal": self.temperature_function_space,
+            "temperature": self.temperature_function_space,
+        }
+
         if bc_type == "noslip":
             value = dolf.Constant((0.0,) * self.geometric_dimension)
-            function_space = self.velocity_function_space
-        elif bc_type == "inflow":
-            value = dolf.Constant(boundary.bcond[bc_type])
-            function_space = self.velocity_function_space
         elif bc_type == "isothermal":
             value = dolf.Constant(0.0)
-            function_space = self.temperature_function_space
-        elif bc_type == "temperature":
-            value = dolf.Constant(boundary.bcond[bc_type])
-            function_space = self.temperature_function_space
+        elif bc_type == "inflow" or bc_type == "temperature":
+            value = self._parse_dolf_expression(boundary.bcond[bc_type])
         else:
             raise TypeError(f"Invalid boundary condition type for Dirichlet condition.")
+
+        function_space = bc_to_fs[bc_type]
+
         return dolf.DirichletBC(
             function_space, value, self.domain.boundary_parts, boundary.surface_index
         )
 
+    @staticmethod
+    def _parse_dolf_expression(expression):
+        """
+        Parses an (int, float, dolf.Constant, dolf.Expression) expression to dolfin-compatible
+        format. We use this for generating values for dolf.DirichletBC.
+        """
+        if isinstance(expression, dolf.function.expression.Expression):
+            value = expression
+        elif isinstance(expression, (int, float)):
+            value = dolf.Constant(expression)
+        elif isinstance(expression, dolf.function.constant.Constant):
+            value = expression
+        else:
+            raise TypeError(
+                f"Invalid boundary condition value type for boundary expression {expression}."
+            )
+        return value
