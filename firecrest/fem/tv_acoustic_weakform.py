@@ -23,6 +23,7 @@ class TVAcousticWeakForm(BaseWeakForm):
             "inflow": "Dirichlet",
             "free": "Neumann",
             "force": "Neumann",
+            "normal_force": "Neumann",
             "impedance": "Robin",
         }
 
@@ -183,11 +184,7 @@ class TVAcousticWeakForm(BaseWeakForm):
             temperature_bc = self._verify_boundary_condition(
                 boundary.bcond, self.allowed_temperature_bcs
             )
-            stress_bc = self._verify_boundary_condition(
-                boundary.bcond, self.allowed_stress_bcs
-            )
             temperature_bc_type = self.allowed_temperature_bcs[temperature_bc]
-            stress_bc_type = self.allowed_stress_bcs[stress_bc]
 
             # Step 2. If the boundary condition is one of the Dirichlet-compatible,
             # we construct Dirichlet boundary condition.
@@ -220,17 +217,27 @@ class TVAcousticWeakForm(BaseWeakForm):
                 )
 
             # Same for stress / velocity boundary conditions
+            stress_bc = self._verify_boundary_condition(
+                boundary.bcond, self.allowed_stress_bcs
+            )
+            stress_bc_type = self.allowed_stress_bcs[stress_bc]
+
             if stress_bc_type == "Dirichlet":
                 dirichlet_bcs.append(self._generate_dirichlet_bc(boundary, stress_bc))
             elif stress_bc_type == "Neumann" or stress_bc_type == "Robin":
                 if stress_bc == "free":
                     stress = dolf.Constant((0.0,) * self.geometric_dimension)
                 elif stress_bc == "force":
-                    stress = self._parse_dolf_expression(boundary.bcond[temperature_bc])
+                    stress = self._parse_dolf_expression(boundary.bcond[stress_bc])
                 elif stress_bc == "impedance":
                     stress = (
-                        self._parse_dolf_expression(boundary.bcond[temperature_bc])
+                        self._parse_dolf_expression(boundary.bcond[stress_bc])
                         * velocity
+                    )
+                elif stress_bc == "normal_force":
+                    stress = (
+                        self._parse_dolf_expression(boundary.bcond[stress_bc])
+                        * self.domain.n
                     )
                 else:
                     raise TypeError(
@@ -278,21 +285,3 @@ class TVAcousticWeakForm(BaseWeakForm):
         return dolf.DirichletBC(
             function_space, value, self.domain.boundary_parts, boundary.surface_index
         )
-
-    @staticmethod
-    def _parse_dolf_expression(expression):
-        """
-        Parses an (int, float, dolf.Constant, dolf.Expression) expression to dolfin-compatible
-        format. We use this for generating values for dolf.DirichletBC.
-        """
-        if isinstance(expression, dolf.function.expression.Expression):
-            value = expression
-        elif isinstance(expression, (int, float)):
-            value = dolf.Constant(expression)
-        elif isinstance(expression, dolf.function.constant.Constant):
-            value = expression
-        else:
-            raise TypeError(
-                f"Invalid boundary condition value type for boundary expression {expression}."
-            )
-        return value
