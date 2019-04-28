@@ -9,6 +9,6 @@ control_points = [
     [0.4, 0.0],
     [0.5, 0.1],
 ]
-boundary2 = LineElement("type", [[0.5, 0.1], [0.5, -0.2], [0.0, -0.2], [0.0, 0.0]])
-boundary1 = BSplineElement("type", control_points)
+boundary2 = LineElement([[0.5, 0.1], [0.5, -0.2], [0.0, -0.2], [0.0, 0.0]])
+boundary1 = BSplineElement(control_points)
 domain = SimpleDomain([boundary1, boundary2])
