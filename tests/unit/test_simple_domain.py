@@ -18,9 +18,9 @@ def simple_domain(request):
         [0.4, 0.0],
         [0.5, 0.1],
     ]
-    boundary1 = BSplineElement("type_one", control_points)
+    boundary1 = BSplineElement(control_points, bcond={"type_one": True})
     boundary2 = LineElement(
-        "type_two", [[0.5, 0.1], [0.5, -0.2], [0.0, -0.2], [0.0, 0.0]]
+        [[0.5, 0.1], [0.5, -0.2], [0.0, -0.2], [0.0, 0.0]], bcond={"type_two": True}
     )
     domain_boundaries = (boundary1, boundary2)
     domain = SimpleDomain(domain_boundaries, msh_format=request.param)
@@ -107,5 +107,6 @@ def test_get_boundaries(simple_domain):
     assert simple_domain._get_boundaries("type_two") == [
         simple_domain.boundary_elements[1]
     ]
-    assert simple_domain._get_boundaries("type_three") is None
+    with pytest.raises(KeyError):
+        simple_domain._get_boundaries("type_three")
 

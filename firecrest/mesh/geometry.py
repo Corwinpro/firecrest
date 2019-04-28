@@ -200,20 +200,22 @@ class Geometry(ABC):
     def mark_boundaries(self):
         """
         The dictionary 'markers_dict' stores the pairs of 
-        (keys) boundary type 'btype',
+        (keys) boundary condition type,
         (values) list of boundary_elements of this boundary type,
         i.e.
         ```
         self.market_dict = {"noslip": [noslip_boundary_1, noslip_boundary_2],
-                            "slip": [slip_boundary_3]}
+                            "adiabatic": [noslip_boundary_1],
+                            "heat_flux": [noslip_boundary_2]}
         ```
         """
         self.markers_dict = {}
         for boundary_element in self.boundary_elements:
-            if boundary_element.btype in self.markers_dict:
-                self.markers_dict[boundary_element.btype].append(boundary_element)
-            else:
-                self.markers_dict[boundary_element.btype] = [boundary_element]
+            for btype in boundary_element.bcond:
+                if btype in self.markers_dict:
+                    self.markers_dict[btype].append(boundary_element)
+                else:
+                    self.markers_dict[btype] = [boundary_element]
 
     @property
     def boundary_parts(self):
@@ -274,7 +276,7 @@ class Geometry(ABC):
         """
         Returns all boundaries of the given boundary_type: str
         """
-        return self.markers_dict.get(boundary_type, None)
+        return self.markers_dict[boundary_type]
 
     def get_boundary_measure(self, boundary_type=None, boundary=None):
         """

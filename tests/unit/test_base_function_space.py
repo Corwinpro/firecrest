@@ -15,10 +15,8 @@ def simple_domain():
         [0.4, 0.0],
         [0.5, 0.1],
     ]
-    boundary1 = BSplineElement("type_one", control_points)
-    boundary2 = LineElement(
-        "type_two", [[0.5, 0.1], [0.5, -0.2], [0.0, -0.2], [0.0, 0.0]]
-    )
+    boundary1 = BSplineElement(control_points)
+    boundary2 = LineElement([[0.5, 0.1], [0.5, -0.2], [0.0, -0.2], [0.0, 0.0]])
     domain_boundaries = (boundary1, boundary2)
     domain = SimpleDomain(domain_boundaries)
     return domain

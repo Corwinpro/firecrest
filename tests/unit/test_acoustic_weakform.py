@@ -16,10 +16,10 @@ def forms():
     ]
     control_points_2 = [[0.5, 0.1], [0.5, -0.2], [0.0, -0.2], [0.0, 0.0]]
     boundary1 = BSplineElement(
-        "type_one", control_points_1, bcond={"noslip": True, "heat_flux": 10}
+        control_points_1, bcond={"noslip": True, "heat_flux": 10}
     )
     boundary2 = LineElement(
-        "type_two", control_points_2, bcond={"impedance": 5, "isothermal": True}
+        control_points_2, bcond={"impedance": 5, "isothermal": True}
     )
     domain_boundaries = (boundary1, boundary2)
     domain = SimpleDomain(domain_boundaries)

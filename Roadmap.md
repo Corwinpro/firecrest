@@ -17,9 +17,7 @@
 
 #### Current task
 
-1. Generic approach for DirichletBC generation. In `boundary_components`:
-- dolfin.Constant shouldn't be used. It can be int/float, dolfin.Expression or dolfin.Constant. Need to parse this data properly.
-- Can the parsing be a BoundaryCondition class method?
+1. Boundary conditions should be in a separate class. I still don't understand how to couple a boundary condition with weak form classes.
 
 #### Major tasks
 
@@ -27,6 +25,5 @@
 
 #### Minor tasks
 
-1. TVAcoustics: add normal_force boundary condition.
 
 ### Optimization modules

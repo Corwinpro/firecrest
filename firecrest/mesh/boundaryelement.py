@@ -38,7 +38,6 @@ class BoundaryElement(ABC):
     a geometric representation (B-spline or circular arc).
 
     params:
-        - btype : boundary type defined by boundary conditions
         - control_points : boundary parametrization by control points
         - bcond : specific boundary condition
         - el_size : characteristic size of the line elements on the surface
@@ -50,10 +49,9 @@ class BoundaryElement(ABC):
 
     surface_index = 1
 
-    def __init__(self, btype, control_points, bcond=None, el_size=0.05, **kwargs):
-        self.btype = btype
+    def __init__(self, control_points, bcond=None, el_size=0.05, **kwargs):
         self._control_points = control_points
-        self.bcond = bcond
+        self.bcond = bcond or {}
         self.el_size = el_size
         self.kwargs = kwargs
 
@@ -103,8 +101,8 @@ class BoundaryElement(ABC):
 
 
 class BSplineElement(BoundaryElement):
-    def __init__(self, btype, control_points, bcond=None, el_size=0.05, **kwargs):
-        super().__init__(btype, control_points, bcond=bcond, el_size=el_size, **kwargs)
+    def __init__(self, control_points, bcond=None, el_size=0.05, **kwargs):
+        super().__init__(control_points, bcond=bcond, el_size=el_size, **kwargs)
         self.spline_degree = kwargs.pop("degree", 3)
         self.spline_periodic = kwargs.pop("periodic", False)
         self.n = self.estimate_points_number(self.control_points, self.el_size)
@@ -137,7 +135,7 @@ class BSplineElement(BoundaryElement):
 
 
 class LineElement(BSplineElement):
-    def __init__(self, btype, control_points, bcond=None, el_size=0.05, **kwargs):
+    def __init__(self, control_points, bcond=None, el_size=0.05, **kwargs):
         if (
             np.linalg.norm(np.array(control_points[0] - np.array(control_points[-1])))
             < 1.0e-10
@@ -146,7 +144,6 @@ class LineElement(BSplineElement):
         else:
             periodic = False
         super().__init__(
-            btype,
             control_points,
             bcond=bcond,
             el_size=el_size,
