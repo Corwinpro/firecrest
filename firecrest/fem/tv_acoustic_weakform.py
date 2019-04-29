@@ -6,6 +6,23 @@ import ufl
 
 
 class TVAcousticWeakForm(BaseWeakForm):
+    allowed_stress_bcs = {
+        "noslip": "Dirichlet",
+        "inflow": "Dirichlet",
+        "free": "Neumann",
+        "force": "Neumann",
+        "normal_force": "Neumann",
+        "impedance": "Robin",
+    }
+
+    allowed_temperature_bcs = {
+        "isothermal": "Dirichlet",
+        "temperature": "Dirichlet",
+        "adiabatic": "Neumann",
+        "heat_flux": "Neumann",
+        "thermal_accomodation": "Robin",
+    }
+
     def __init__(self, domain, **kwargs):
         super().__init__(domain, **kwargs)
         self.function_space_factory = TVAcousticFunctionSpace(self.domain)
@@ -18,22 +35,6 @@ class TVAcousticWeakForm(BaseWeakForm):
         )
 
         self.dolf_constants = self.get_constants(kwargs)
-        self.allowed_stress_bcs = {
-            "noslip": "Dirichlet",
-            "inflow": "Dirichlet",
-            "free": "Neumann",
-            "force": "Neumann",
-            "normal_force": "Neumann",
-            "impedance": "Robin",
-        }
-
-        self.allowed_temperature_bcs = {
-            "isothermal": "Dirichlet",
-            "temperature": "Dirichlet",
-            "adiabatic": "Neumann",
-            "heat_flux": "Neumann",
-            "thermal_accomodation": "Robin",
-        }
 
     @property
     def function_space(self):
@@ -182,9 +183,11 @@ class TVAcousticWeakForm(BaseWeakForm):
             # Step 1. Parse boundary condition data provided by boundary elements.
             # We only accept one boundary condition for stress/velocity and temperature/heat flux.
             temperature_bc = self._verify_boundary_condition(
-                boundary.bcond, self.allowed_temperature_bcs
+                boundary.bcond, TVAcousticWeakForm.allowed_temperature_bcs
             )
-            temperature_bc_type = self.allowed_temperature_bcs[temperature_bc]
+            temperature_bc_type = TVAcousticWeakForm.allowed_temperature_bcs[
+                temperature_bc
+            ]
 
             # Step 2. If the boundary condition is one of the Dirichlet-compatible,
             # we construct Dirichlet boundary condition.
@@ -218,9 +221,9 @@ class TVAcousticWeakForm(BaseWeakForm):
 
             # Same for stress / velocity boundary conditions
             stress_bc = self._verify_boundary_condition(
-                boundary.bcond, self.allowed_stress_bcs
+                boundary.bcond, TVAcousticWeakForm.allowed_stress_bcs
             )
-            stress_bc_type = self.allowed_stress_bcs[stress_bc]
+            stress_bc_type = TVAcousticWeakForm.allowed_stress_bcs[stress_bc]
 
             if stress_bc_type == "Dirichlet":
                 dirichlet_bcs.append(self._generate_dirichlet_bc(boundary, stress_bc))
