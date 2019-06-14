@@ -11,7 +11,7 @@ class TVAcousticSolver(BaseSolver):
         super().__init__(domain)
         self.forms = TVAcousticWeakForm(domain, **kwargs)
         self._dt = kwargs.get("dt", DEFAULT_DT)
-        self._reverse_dt = dolf.Constant(1.0 / self._dt)
+        self._inverse_dt = dolf.Constant(1.0 / self._dt)
 
     def set_initial_state(self, initial_state):
         self.initial_state = initial_state
@@ -25,14 +25,14 @@ class TVAcousticSolver(BaseSolver):
             self.forms.boundary_components()
         )
         form = (
-            self._reverse_dt * (temporal_component - temporal_component_old)
+            self._inverse_dt * (temporal_component - temporal_component_old)
             + spatial_component
             + stress_boundary_component
             + temperature_boundary_component
         )
         return form, dirichlet_bcs
 
-    def implicit_crank_nicolson(self, initial_state):
+    def crank_nicolson(self, initial_state):
         temporal_component = self.forms.temporal_component()
         temporal_component_old = self.forms.temporal_component(initial_state)
 
@@ -45,7 +45,7 @@ class TVAcousticSolver(BaseSolver):
             initial_state
         )
         form = (
-            self._reverse_dt * (temporal_component - temporal_component_old)
+            self._inverse_dt * (temporal_component - temporal_component_old)
             + dolf.Constant(0.5) * (spatial_component + spatial_component_old)
             + dolf.Constant(0.5)
             * (stress_boundary_component + stress_boundary_component_old)
@@ -57,8 +57,8 @@ class TVAcousticSolver(BaseSolver):
     def solve(self, initial_state, time_scheme="implicit_euler"):
         if time_scheme == "implicit_euler":
             form, bcs = self.implicit_euler(initial_state)
-        elif time_scheme == "implicit_crank_nicolson":
-            form, bcs = self.implicit_crank_nicolson(initial_state)
+        elif time_scheme == "crank_nicolson":
+            form, bcs = self.crank_nicolson(initial_state)
         else:
             raise NotImplementedError(
                 f"Time discretization scheme {time_scheme} is not yet implemented."
