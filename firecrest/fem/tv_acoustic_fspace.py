@@ -9,42 +9,33 @@ class TVAcousticFunctionSpace(BaseFunctionSpace):
         Pressure(scalar, order = 2),
         Velocity(vector, order = 2),
         Temperature(scalar, order = 1).
-    If space is_complex, we are dealing with complex function space, i.e.
-    every subspace (pressure, velocity, temperature) has both real and
-    complex counterparts.
     """
 
-    def __init__(self, domain, order=2, is_complex=False):
+    def __init__(self, domain, order=2):
         self.spaces = (
             Space(element_type="CG", order=order, dimension="scalar"),
             Space(element_type="CG", order=order, dimension="vector"),
             Space(element_type="CG", order=order - 1, dimension="scalar"),
         )
-        self.is_complex = is_complex
-        if self.is_complex:
-            self.spaces *= 2
         super().__init__(domain, self.spaces)
 
     @property
     def pressure_function_space(self):
-        if self.is_complex:
-            raise NotImplementedError
-            return (self.function_spaces.sub(0), self.function_spaces.sub(3))
-        else:
-            return self.function_spaces.sub(0)
+        """
+        Picks pressure function space from generated function_spaces.
+        """
+        return self.function_spaces.sub(0)
 
     @property
     def velocity_function_space(self):
-        if self.is_complex:
-            raise NotImplementedError
-            return (self.function_spaces.sub(1), self.function_spaces.sub(4))
-        else:
-            return self.function_spaces.sub(1)
+        """
+        Picks velocity function space from generated function_spaces.
+        """
+        return self.function_spaces.sub(1)
 
     @property
     def temperature_function_space(self):
-        if self.is_complex:
-            raise NotImplementedError
-            return (self.function_spaces.sub(2), self.function_spaces.sub(5))
-        else:
-            return self.function_spaces.sub(2)
+        """
+        Picks temperature function space from generated function_spaces.
+        """
+        return self.function_spaces.sub(2)

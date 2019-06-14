@@ -16,7 +16,7 @@ class BaseFunctionSpace:
 
     def generate_function_spaces(self, **kwargs):
         """
-        Generates a dolfin FunctionSpace of either single Finite Element (if only Space one provided)
+        Generates a dolfin FunctionSpace of either single Finite Element (if only one Space is provided)
         or Mixed Elements (if more the one Space provided).
         """
         elements = [

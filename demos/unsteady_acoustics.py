@@ -1,6 +1,6 @@
 from firecrest.mesh.boundaryelement import LineElement
 from firecrest.mesh.geometry import SimpleDomain
-from firecrest.solvers.tv_acoustic_solver import TVAcousticSolver
+from firecrest.solvers.unsteady_tv_acoustic_solver import UnsteadyTVAcousticSolver
 import dolfin as dolf
 
 
@@ -15,7 +15,7 @@ boundary2 = LineElement(
 domain_boundaries = (boundary1, boundary2)
 domain = SimpleDomain(domain_boundaries)
 
-solver = TVAcousticSolver(domain, Re=1.0e3, Pe=10.0, dt=1.0e-2)
+solver = UnsteadyTVAcousticSolver(domain, Re=1.0e3, Pe=10.0, dt=1.0e-2)
 initial_state = (
     dolf.Expression(
         "exp(-(sqrt(x[0]*x[0] + x[1]*x[1]) - 0.5)*(sqrt(x[0]*x[0] + x[1]*x[1]) - 0.5)/0.025)",

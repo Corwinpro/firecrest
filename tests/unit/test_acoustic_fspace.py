@@ -25,9 +25,3 @@ def test_create_acoustic_fspace(simple_domain):
     function_space = TVAcousticFunctionSpace(simple_domain)
     assert function_space
     assert function_space.function_spaces
-
-
-def test_create_complex_acoustic_fspace(simple_domain):
-    function_space = TVAcousticFunctionSpace(simple_domain, is_complex=True)
-    assert function_space
-    assert function_space.function_spaces
