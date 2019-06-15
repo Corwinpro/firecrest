@@ -6,7 +6,7 @@ import logging
 DEFAULT_DT = 1.0e-3
 
 
-class TVAcousticSolver(BaseSolver):
+class UnsteadyTVAcousticSolver(BaseSolver):
     def __init__(self, domain, **kwargs):
         super().__init__(domain)
         self.forms = TVAcousticWeakForm(domain, **kwargs)
@@ -21,9 +21,11 @@ class TVAcousticSolver(BaseSolver):
         temporal_component_old = self.forms.temporal_component(initial_state)
 
         spatial_component = self.forms.spatial_component()
-        dirichlet_bcs, stress_boundary_component, temperature_boundary_component = (
+        stress_boundary_component, temperature_boundary_component = (
             self.forms.boundary_components()
         )
+        dirichlet_bcs = self.forms.dirichlet_boundary_conditions()
+
         form = (
             self._inverse_dt * (temporal_component - temporal_component_old)
             + spatial_component
@@ -37,11 +39,12 @@ class TVAcousticSolver(BaseSolver):
         temporal_component_old = self.forms.temporal_component(initial_state)
 
         spatial_component = self.forms.spatial_component()
-        dirichlet_bcs, stress_boundary_component, temperature_boundary_component = (
+        stress_boundary_component, temperature_boundary_component = (
             self.forms.boundary_components()
         )
+        dirichlet_bcs = self.forms.dirichlet_boundary_conditions()
         spatial_component_old = self.forms.spatial_component(initial_state)
-        _, stress_boundary_component_old, temperature_boundary_component_old = self.forms.boundary_components(
+        stress_boundary_component_old, temperature_boundary_component_old = self.forms.boundary_components(
             initial_state
         )
         form = (
