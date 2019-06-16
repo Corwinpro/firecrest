@@ -9,15 +9,25 @@ import dolfin as dolf
 import ufl
 
 
-def _parse_trialtest(component):
+def parse_trialtest(component):
+    """
+    Parse Real / Complex case of trial and test functions arguments for weak forms.
+    """
+
     @functools.wraps(component)
-    def inner(self, test=None, trial=None):
+    def inner(self, trial=None, test=None):
         if trial is None and test is None:
             """
             With empty arguments we implement default trial/test complex component
             """
             trial = self.trial_functions
             test = self.test_functions
+        elif test is None:
+            """
+            The test is not specified when we need to calculate linear forms with
+            existing test functions (e.g., linear form from previous time step in unsteady problem). 
+            """
+            test = self.test_functions[: len(trial)]
 
         if len(trial) == 3 and len(test) == 3:
             """
@@ -176,22 +186,15 @@ class TVAcousticWeakForm(BaseTVAcousticWeakForm):
             raise v
         return (pressure, velocity, temperature)
 
+    @parse_trialtest
     def temporal_component(self, trial=None, test=None):
-        if trial is None:
-            trial = self.trial_functions
-        if test is None:
-            test = self.test_functions
-
         return super().temporal_component(trial, test)
 
+    @parse_trialtest
     def spatial_component(self, trial=None, test=None):
-        if trial is None:
-            trial = self.trial_functions
-        if test is None:
-            test = self.test_functions
-
         return super().spatial_component(trial, test)
 
+    @parse_trialtest
     def boundary_components(self, trial=None, test=None):
         """
         Generates stress and thermal boundary components of the TVAcoustic weak form equation.
@@ -199,10 +202,6 @@ class TVAcousticWeakForm(BaseTVAcousticWeakForm):
         I expect the usage should be something like:
             bcond = {"noslip" : True, "heat_flux" : 1.}
         """
-        if trial is None:
-            trial = self.trial_functions
-        if test is None:
-            test = self.test_functions
         _, velocity, temperature = trial
         _, test_velocity, test_temperature = test
 
@@ -380,10 +379,10 @@ class ComplexTVAcousticWeakForm(BaseTVAcousticWeakForm):
             self.test_imag_temperature,
         ) = self.test_functions
 
-    @_parse_trialtest
+    @parse_trialtest
     def temporal_component(self, trial=None, test=None):
         return super().temporal_component(trial, test)
 
-    @_parse_trialtest
+    @parse_trialtest
     def spatial_component(self, trial=None, test=None):
         return super().spatial_component(trial, test)
