@@ -12,7 +12,7 @@ class BaseFunctionSpace:
     def __init__(self, domain, spaces):
         self.domain = domain
         self.spaces = spaces
-        self.function_spaces = self.generate_function_spaces()
+        self._function_spaces = None
 
     def generate_function_spaces(self, **kwargs):
         """
@@ -42,3 +42,10 @@ class BaseFunctionSpace:
             return dolf.VectorElement(element_type, cell, space.order, dimension)
         elif space.dimension >= 2:
             return dolf.VectorElement(element_type, cell, space.order, space.dimension)
+
+    @property
+    def function_spaces(self):
+        if not self._function_spaces:
+            self._function_spaces = self.generate_function_spaces()
+
+        return self._function_spaces
