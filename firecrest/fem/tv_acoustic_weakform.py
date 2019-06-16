@@ -1,8 +1,38 @@
+import functools
 from firecrest.fem.base_weakform import BaseWeakForm
-from firecrest.fem.tv_acoustic_fspace import TVAcousticFunctionSpace
+from firecrest.fem.tv_acoustic_fspace import (
+    TVAcousticFunctionSpace,
+    ComplexTVAcousticFunctionSpace,
+)
 from firecrest.fem.struct_templates import AcousticConstants
 import dolfin as dolf
 import ufl
+
+
+def _parse_trialtest(component):
+    @functools.wraps(component)
+    def inner(self, test=None, trial=None):
+        if trial is None and test is None:
+            """
+            With empty arguments we implement default trial/test complex component
+            """
+            trial = self.trial_functions
+            test = self.test_functions
+
+        if len(trial) == 3 and len(test) == 3:
+            """
+            If triplets trial and test are given, we contstruct real component
+            """
+            return component(self, trial, test)
+        elif len(trial) == 6 and len(test) == 6:
+            """
+            If triplets*2 trial and test are given, we contstruct complex component
+            """
+            return component(self, trial[:3], test[:3]) + component(
+                self, trial[3:], test[3:]
+            )
+
+    return inner
 
 
 class BaseTVAcousticWeakForm(BaseWeakForm):
@@ -40,6 +70,16 @@ class BaseTVAcousticWeakForm(BaseWeakForm):
             Re=dolf.Constant(self._Re),
             Pe=dolf.Constant(self._Pe),
         )
+
+    @property
+    def function_space(self):
+        try:
+            return self.function_space_factory.function_spaces
+        except AttributeError as e:
+            print(
+                "A function_space_factory which implements funcions_spaces must be provided."
+            )
+            raise e
 
     def density(self, pressure, temperature):
         return self.dolf_constants.gamma * pressure - temperature
@@ -114,10 +154,6 @@ class TVAcousticWeakForm(BaseTVAcousticWeakForm):
         self.test_pressure, self.test_velocity, self.test_temperature = (
             self.test_functions
         )
-
-    @property
-    def function_space(self):
-        return self.function_space_factory.function_spaces
 
     @property
     def pressure_function_space(self):
@@ -313,3 +349,41 @@ class TVAcousticWeakForm(BaseTVAcousticWeakForm):
                 dirichlet_bcs.append(self._generate_dirichlet_bc(boundary, velocity_bc))
 
         return dirichlet_bcs
+
+
+class ComplexTVAcousticWeakForm(BaseTVAcousticWeakForm):
+    """
+    Weak forms for complex TVAcoustic problem. 
+    """
+
+    def __init__(self, domain, **kwargs):
+        super().__init__(domain, **kwargs)
+        self.function_space_factory = ComplexTVAcousticFunctionSpace(self.domain)
+
+        self.trial_functions = dolf.TrialFunctions(self.function_space)
+        self.test_functions = dolf.TestFunctions(self.function_space)
+
+        (
+            self.real_pressure,
+            self.real_velocity,
+            self.real_temperature,
+            self.imag_pressure,
+            self.imag_velocity,
+            self.imag_temperature,
+        ) = self.trial_functions
+        (
+            self.test_real_pressure,
+            self.test_real_velocity,
+            self.test_real_temperature,
+            self.test_imag_pressure,
+            self.test_imag_velocity,
+            self.test_imag_temperature,
+        ) = self.test_functions
+
+    @_parse_trialtest
+    def temporal_component(self, trial=None, test=None):
+        return super().temporal_component(trial, test)
+
+    @_parse_trialtest
+    def spatial_component(self, trial=None, test=None):
+        return super().spatial_component(trial, test)
