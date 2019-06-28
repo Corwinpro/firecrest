@@ -7,10 +7,10 @@ import dolfin as dolf
 control_points_1 = [[0.0, 1.0], [0.0, 0.0], [1.0, 0.0]]
 control_points_2 = [[1.0, 0.0], [1.0, 1.0], [0.0, 1.0]]
 boundary1 = LineElement(
-    control_points_1, el_size=0.1, bcond={"noslip": True, "isothermal": True}
+    control_points_1, el_size=0.02, bcond={"noslip": True, "isothermal": True}
 )
 boundary2 = LineElement(
-    control_points_2, el_size=0.1, bcond={"free": True, "adiabatic": True}
+    control_points_2, el_size=0.02, bcond={"free": True, "adiabatic": True}
 )
 domain_boundaries = (boundary1, boundary2)
 domain = SimpleDomain(domain_boundaries)
@@ -34,7 +34,7 @@ f << P
 
 for i in range(100):
     old_state = initial_state
-    w = solver.solve(initial_state, time_scheme="crank_nicolson")
+    w = solver.solve(initial_state)
     dolf.assign(P, w.sub(0))
     f << P
     initial_state = w.split(True)
