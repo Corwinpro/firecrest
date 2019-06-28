@@ -53,3 +53,25 @@ class ComplexTVAcousticFunctionSpace(BaseFunctionSpace):
     def __init__(self, domain, order=2):
         self.spaces = DEFAULT_TVACOUSTIC_SPACES(order) * 2
         super().__init__(domain, self.spaces)
+
+    @property
+    def pressure_function_space(self):
+        """
+        Picks pressure function space from generated function_spaces.
+        """
+        return (self.function_spaces.sub(0), self.function_spaces.sub(3))
+
+    @property
+    def velocity_function_space(self):
+        """
+        Picks velocity function space from generated function_spaces.
+        """
+        return (self.function_spaces.sub(1), self.function_spaces.sub(4))
+
+    @property
+    def temperature_function_space(self):
+        """
+        Picks temperature function space from generated function_spaces.
+        """
+        return (self.function_spaces.sub(2), self.function_spaces.sub(5))
+
