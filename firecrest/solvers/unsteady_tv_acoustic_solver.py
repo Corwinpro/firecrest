@@ -89,5 +89,7 @@ class UnsteadyTVAcousticSolver(BaseSolver):
         to obtain the solution much more efficiently. 
         This is done by defining a LUSolver object while PETSc handles caching factorizations.'
         """
-        self.K, _ = dolf.assemble_system(dolf.lhs(form), dolf.rhs(form), bcs)
+        self.K = dolf.assemble(dolf.lhs(form))
+        for bc in bcs:
+            bc.apply(self.K)
         self.LUSolver = dolf.LUSolver(self.K, solver_type)
