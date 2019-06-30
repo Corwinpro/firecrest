@@ -98,7 +98,7 @@ class BaseTVAcousticWeakForm(BaseWeakForm, ABC):
             return self.function_space_factory.function_spaces
         except AttributeError as e:
             print(
-                "A function_space_factory which implements funcions_spaces must be provided."
+                "A function_space_factory which implements functions_spaces must be provided."
             )
             raise e
 
@@ -430,6 +430,7 @@ class ComplexTVAcousticWeakForm(BaseTVAcousticWeakForm):
     def __init__(self, domain, **kwargs):
         super().__init__(domain, **kwargs)
         self.function_space_factory = ComplexTVAcousticFunctionSpace(self.domain)
+        self.real_function_space_factory = None
 
         self.trial_functions = dolf.TrialFunctions(self.function_space)
         self.test_functions = dolf.TestFunctions(self.function_space)
@@ -458,7 +459,14 @@ class ComplexTVAcousticWeakForm(BaseTVAcousticWeakForm):
         elif complex_flag == "imag":
             return functions[3:6]
         else:
-            raise ValueError("Only real or imag complex flags are accepted.")
+            raise ValueError("Only 'real' or 'imag' complex flags are accepted.")
+
+    @property
+    def real_function_space(self):
+        if self.real_function_space_factory is None:
+            self.real_function_space_factory = TVAcousticFunctionSpace(self.domain)
+
+        return self.real_function_space_factory.function_spaces
 
     @parse_trialtest
     def temporal_component(self, trial=None, test=None):
@@ -477,7 +485,7 @@ class ComplexTVAcousticWeakForm(BaseTVAcousticWeakForm):
         we generate a dolfin DirichletBC based on the boundary expression for this boundary condition.
         
         TODO:
-            - add properties for ComplexFS factory w function spaces
+            - add complex parameters
         """
         bc_to_fs = {
             "noslip": self.velocity_function_space,

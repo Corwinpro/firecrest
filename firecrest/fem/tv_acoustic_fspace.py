@@ -74,4 +74,3 @@ class ComplexTVAcousticFunctionSpace(BaseFunctionSpace):
         Picks temperature function space from generated function_spaces.
         """
         return (self.function_spaces.sub(2), self.function_spaces.sub(5))
-

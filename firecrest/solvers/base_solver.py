@@ -54,13 +54,13 @@ class EigenvalueSolver(BaseSolver):
 
     def __solution_vector_template(self):
         rx = PETSc.Vec().createSeq(self.AA.getSize()[0])
-        cx = PETSc.Vec().createSeq(self.AA.getSize()[0])
-        return (rx, cx)
+        ix = PETSc.Vec().createSeq(self.AA.getSize()[0])
+        return (rx, ix)
 
     def retrieve_eigenvalue(self, index):
-        rx, cx = self.__solution_vector_template()
-        eigenvalue = self.solver.getEigenpair(index, rx, cx)
-        return (eigenvalue, rx, cx)
+        rx, ix = self.__solution_vector_template()
+        eigenvalue = self.solver.getEigenpair(index, rx, ix)
+        return eigenvalue, rx, ix
 
     def solve(self):
         """
