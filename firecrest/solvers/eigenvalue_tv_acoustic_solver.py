@@ -52,12 +52,12 @@ class EigenvalueTVAcousticSolver(EigenvalueSolver):
 
     def restore_eigenfunction(self, index):
         """
-        Recombine complex vector solution of the eigenvalue problem, which appeared after
-        doubling the space of the problem.
+        Recombine complex vector solution of the eigenvalue problem back to normal,
+        which appeared after doubling the space of the problem.
         See appendix of my First Year Report.
 
         :param index: index of (eigenvalue, eigenmode) to return
-        :return:
+        :return: a tuple of (eigenvalue, real part of the eigenmode,imaginary part of the eigenmode)
         """
         ev, rx, ix = self.retrieve_eigenvalue(index)
         real_part = self._vec_to_func(rx)
@@ -72,14 +72,7 @@ class EigenvalueTVAcousticSolver(EigenvalueSolver):
             else:
                 real_part[j].vector()[:] += imag_part[j - mid].vector()
 
-        # real_mode = self._vec_to_func(
-        #     real_part[:mid], function_space=self.forms.real_function_space
-        # )
-        # imag_mode = self._vec_to_func(
-        #     real_part[mid:], function_space=self.forms.real_function_space
-        # )
-        # return ev, real_mode, imag_mode
-        return (ev, real_part[:mid], real_part[mid:])
+        return ev, real_part[:mid], real_part[mid:]
 
     def _vec_to_func(self, vector, function_space=None):
         if function_space is None:
