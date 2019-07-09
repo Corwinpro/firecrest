@@ -75,6 +75,18 @@ class EigenvalueTVAcousticSolver(EigenvalueSolver):
             else:
                 real_part[j].vector()[:] += imag_part[j - mid].vector()
 
+        """
+        TODO:
+        - Instead of passing an actual index from (1, nof_converged), we should pass the pair index.
+        Then, we calculate the norms of the each solution in this pair, compare them, and return the 
+        one with the highest norm.
+        This should be a separate method, and 'restore_eigenfunction' should be not be a part of API.
+        """
+
+        norm = self._solution_norm(self._tuple_to_vec(real_part))
+        if verbose:
+            print(norm)
+
         return ev, real_part[:mid], real_part[mid:]
 
     def _vec_to_func(self, vector, function_space=None):
@@ -83,3 +95,14 @@ class EigenvalueTVAcousticSolver(EigenvalueSolver):
         dolf_function = dolf.Function(function_space)
         dolf_function.vector()[:] = vector
         return dolf_function
+
+    def _tuple_to_vec(self, function):
+        dolf_function = dolf.Function(self.forms.function_space)
+        for i in range(len(function)):
+            dolf.assign(dolf_function.sub(i), function[i])
+        return dolf_function.vector()
+
+    def _solution_norm(self, vector):
+        empty_vector = dolf.Function(self.forms.function_space).vector()
+        self.lhs.mult(vector.vec(), empty_vector.vec())
+        return empty_vector.norm("linf")

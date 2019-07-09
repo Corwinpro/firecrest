@@ -9,23 +9,24 @@ control_points_2 = [[0.0, 3.0], [1.0, 3.0]]
 control_points_3 = [[1.0, 3.0], [1.0, 1.0], [10.0, 1.0]]
 control_points_4 = [[10.0, 1.0], [10.0, -0.2], [9.75, -0.2]]
 
+el_size = 0.1
 boundary1 = LineElement(
-    control_points_1, el_size=0.05, bcond={"noslip": True, "isothermal": True}
+    control_points_1, el_size=el_size, bcond={"noslip": True, "isothermal": True}
 )
 boundary2 = LineElement(
-    control_points_2, el_size=0.05, bcond={"free": True, "adiabatic": True}
+    control_points_2, el_size=el_size, bcond={"free": True, "adiabatic": True}
 )
 boundary3 = LineElement(
-    control_points_3, el_size=0.05, bcond={"noslip": True, "isothermal": True}
+    control_points_3, el_size=el_size, bcond={"noslip": True, "isothermal": True}
 )
 boundary4 = LineElement(
-    control_points_4, el_size=0.05, bcond={"free": True, "adiabatic": True}
+    control_points_4, el_size=el_size, bcond={"free": True, "adiabatic": True}
 )
 domain_boundaries = (boundary1, boundary2, boundary3, boundary4)
 domain = SimpleDomain(domain_boundaries)
 
 solver = EigenvalueTVAcousticSolver(
-    domain, complex_shift=0.0 + 0.25j, Re=100.0, Pe=1.0, nmodes=10
+    domain, complex_shift=0.0 + 0.15j, Re=100.0, Pe=1.0, nmodes=4
 )
 solver.solve()
 
