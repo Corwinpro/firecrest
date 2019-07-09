@@ -10,7 +10,7 @@ class EigenvalueTVAcousticSolver(EigenvalueSolver):
     """
 
     def __init__(self, domain, complex_shift=0 + 0j, **kwargs):
-        super().__init__(domain)
+        super().__init__(domain, **kwargs)
         self.complex_shift = complex_shift
         self.forms = ComplexTVAcousticWeakForm(domain, **kwargs)
         self.set_solver_operators(self.lhs, self.rhs)
@@ -21,12 +21,12 @@ class EigenvalueTVAcousticSolver(EigenvalueSolver):
         Constructs the LHS matrix (spatial components), AA of the eigenvalue problem.
         """
         spatial_component = -self.forms.spatial_component()
-        imag_shift_components = dolf.Constant(self.complex_shift.imag) * (
+        imag_shift_components = -dolf.Constant(self.complex_shift.imag) * (
             self.forms.temporal_component("real", "imag")
             - self.forms.temporal_component("imag", "real")
         )
         real_shift_components = (
-            -dolf.Constant(self.complex_shift.real) * self.forms.temporal_component()
+            dolf.Constant(self.complex_shift.real) * self.forms.temporal_component()
         )
         AA = dolf.PETScMatrix()
         AA = dolf.assemble(
@@ -50,18 +50,21 @@ class EigenvalueTVAcousticSolver(EigenvalueSolver):
 
         return BB.mat()
 
-    def restore_eigenfunction(self, index):
+    def restore_eigenfunction(self, index, verbose=True):
         """
         Recombine complex vector solution of the eigenvalue problem back to normal,
         which appeared after doubling the space of the problem.
         See appendix of my First Year Report.
 
         :param index: index of (eigenvalue, eigenmode) to return
+        :param verbose: printing the eigenvalue in runtime
         :return: a tuple of (eigenvalue, real part of the eigenmode,imaginary part of the eigenmode)
         """
         ev, rx, ix = self.retrieve_eigenvalue(index)
         real_part = self._vec_to_func(rx)
         imag_part = self._vec_to_func(ix)
+        if verbose:
+            print(ev + self.complex_shift)
 
         real_part = real_part.split(True)
         imag_part = imag_part.split(True)

@@ -96,11 +96,10 @@ class BaseTVAcousticWeakForm(BaseWeakForm, ABC):
     def function_space(self):
         try:
             return self.function_space_factory.function_spaces
-        except AttributeError as e:
-            print(
+        except AttributeError:
+            raise AttributeError(
                 "A function_space_factory which implements functions_spaces must be provided."
             )
-            raise e
 
     @property
     @abstractmethod

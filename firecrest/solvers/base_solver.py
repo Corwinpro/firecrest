@@ -67,5 +67,5 @@ class EigenvalueSolver(BaseSolver):
         Solve the eigenvalue problem with configured solver and matrices
         """
         self.solver.solve()
-        nof_modes_converged = self.solver.getConverged()
-        print("Converged values:", nof_modes_converged)
+        self.nof_modes_converged = self.solver.getConverged()
+        print("Converged values:", self.nof_modes_converged)
