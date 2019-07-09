@@ -75,7 +75,7 @@ class BaseTVAcousticWeakForm(BaseWeakForm, ABC):
         "temperature": "Dirichlet",
         "adiabatic": "Neumann",
         "heat_flux": "Neumann",
-        "thermal_accomodation": "Robin",
+        "thermal_accommodation": "Robin",
     }
 
     def __init__(self, domain, **kwargs):
@@ -151,11 +151,11 @@ class BaseTVAcousticWeakForm(BaseWeakForm, ABC):
         test_pressure, test_velocity, test_temperature = test
 
         continuity_component = self.density(pressure, temperature) * test_pressure
-        momementum_component = dolf.inner(velocity, test_velocity)
+        momentum_component = dolf.inner(velocity, test_velocity)
         energy_component = self.entropy(pressure, temperature) * test_temperature
 
         return (
-            continuity_component + momementum_component + energy_component
+            continuity_component + momentum_component + energy_component
         ) * self.domain.dx
 
     def spatial_component(self, trial, test):
@@ -168,7 +168,7 @@ class BaseTVAcousticWeakForm(BaseWeakForm, ABC):
         i, j = ufl.indices(2)
 
         continuity_component = test_pressure * dolf.div(velocity)
-        momementum_component = dolf.inner(
+        momentum_component = dolf.inner(
             dolf.as_tensor(test_velocity[i].dx(j), (i, j)),
             self.stress(pressure, velocity),
         )
@@ -177,7 +177,7 @@ class BaseTVAcousticWeakForm(BaseWeakForm, ABC):
         )
 
         return (
-            continuity_component + momementum_component + energy_component
+            continuity_component + momentum_component + energy_component
         ) * self.domain.dx
 
     @staticmethod
@@ -246,7 +246,7 @@ class TVAcousticWeakForm(BaseTVAcousticWeakForm):
         except ValueError as v:
             print(f"Not enough values to unpack a function {functions}")
             raise v
-        return (pressure, velocity, temperature)
+        return pressure, velocity, temperature
 
     @parse_trialtest
     def temporal_component(self, trial=None, test=None):
@@ -259,7 +259,8 @@ class TVAcousticWeakForm(BaseTVAcousticWeakForm):
     @parse_trialtest
     def boundary_components(self, trial=None, test=None):
         """
-        Generates stress and thermal boundary components of the TVAcoustic weak form equation.
+        Generates momentum (stress, velocity) and thermal (heat flux. temperature) boundary components
+        of the TVAcoustic weak form equation.
 
         I expect the usage should be something like:
             bcond = {"noslip" : True, "heat_flux" : 1.}
@@ -289,7 +290,7 @@ class TVAcousticWeakForm(BaseTVAcousticWeakForm):
                     heat_flux = self._parse_dolf_expression(
                         boundary.bcond[temperature_bc]
                     )
-                elif temperature_bc == "thermal_accomodation":
+                elif temperature_bc == "thermal_accommodation":
                     heat_flux = (
                         -self._parse_dolf_expression(boundary.bcond[temperature_bc])
                         * temperature
@@ -422,7 +423,7 @@ class TVAcousticWeakForm(BaseTVAcousticWeakForm):
 
 class ComplexTVAcousticWeakForm(BaseTVAcousticWeakForm):
     """
-    Weak forms for complex TVAcoustic problem. 
+    Weak forms for complex TVAcoustic problem.
     """
 
     function_space_factory = None

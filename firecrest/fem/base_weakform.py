@@ -9,8 +9,7 @@ class BaseWeakForm(ABC):
         self.I = dolf.Identity(self.geometric_dimension)
         self.dirichlet_bcs = []
 
-    @staticmethod
-    def _parse_dolf_expression(expression):
+    def _parse_dolf_expression(self, expression):
         """
         Parses an (int, float, dolf.Constant, dolf.Expression) expression to dolfin-compatible
         format. We use this for generating values for dolf.DirichletBC.
@@ -22,7 +21,12 @@ class BaseWeakForm(ABC):
         elif isinstance(expression, dolf.function.constant.Constant):
             value = expression
         else:
-            raise TypeError(
-                f"Invalid boundary condition value type for boundary expression {expression}."
-            )
+            try:
+                expression = expression.eval()
+                value = self._parse_dolf_expression(expression)
+            except AttributeError:
+                raise TypeError(
+                    f"Invalid boundary condition value type for boundary expression {expression}. "
+                    f"It must be a compatible numerical value or dolfin value, or implement eval() method."
+                )
         return value

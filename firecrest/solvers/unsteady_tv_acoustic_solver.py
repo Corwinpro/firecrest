@@ -13,6 +13,8 @@ class UnsteadyTVAcousticSolver(BaseSolver):
         self._dt = kwargs.get("dt", DEFAULT_DT)
         self._inverse_dt = dolf.Constant(1.0 / self._dt)
 
+        self.LUSolver = None
+
     def set_initial_state(self, initial_state):
         self.initial_state = initial_state
 
@@ -57,15 +59,37 @@ class UnsteadyTVAcousticSolver(BaseSolver):
         )
         return form, dirichlet_bcs
 
-    def solve(self, initial_state, time_scheme="implicit_euler"):
-        if time_scheme == "implicit_euler":
-            form, bcs = self.implicit_euler(initial_state)
-        elif time_scheme == "crank_nicolson":
-            form, bcs = self.crank_nicolson(initial_state)
-        else:
+    def solve(self, initial_state, time_scheme="crank_nicolson"):
+        try:
+            form, bcs = getattr(self, time_scheme)(initial_state)
+        except AttributeError:
             raise NotImplementedError(
                 f"Time discretization scheme {time_scheme} is not yet implemented."
             )
+
+        if self.LUSolver is None:
+            self.initialize_solver(form, bcs)
+
+        L_form = dolf.rhs(form)
+        res = dolf.assemble(L_form)
+        for bc in bcs:
+            bc.apply(res)
+
         w = dolf.Function(self.forms.function_space)
-        dolf.solve(dolf.lhs(form) == dolf.rhs(form), w, bcs)
+        self.LUSolver.solve(self.K, w.vector(), res)
         return w
+
+    def initialize_solver(self, form, bcs, solver_type="mumps"):
+        """
+        Performs solver initialization and matrix factorization is stored.
+        As discussed at https://fenicsproject.org/docs/dolfin/dev/python/demos/elastodynamics/demo_elastodynamics.py.html:
+        'Since the system matrix to solve is the same for each time step (constant time step), 
+        it is not necessary to factorize the system at each increment. It can be done once and 
+        for all and only perform assembly of the varying right-hand side and backsubstitution 
+        to obtain the solution much more efficiently. 
+        This is done by defining a LUSolver object while PETSc handles caching factorizations.'
+        """
+        self.K = dolf.assemble(dolf.lhs(form))
+        for bc in bcs:
+            bc.apply(self.K)
+        self.LUSolver = dolf.LUSolver(self.K, solver_type)
