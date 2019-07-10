@@ -15,6 +15,18 @@ class BaseSolver(ABC):
     def solve(self):
         pass
 
+    def _vec_to_func(self, vector, function_space):
+        """
+        Given a vector (list, np.array, PETSc vector), creates a new dolfin function
+        and performs an element-wise assignment
+        :param vector: vector-type object, i.e. a dolfin vector
+        :param function_space: the corresponding function space to output
+        :return: dolfin.Function object with elements assigned
+        """
+        dolf_function = dolf.Function(function_space)
+        dolf_function.vector()[:] = vector
+        return dolf_function
+
 
 class EigenvalueSolver(BaseSolver):
     """
@@ -57,7 +69,7 @@ class EigenvalueSolver(BaseSolver):
         ix = PETSc.Vec().createSeq(self.AA.getSize()[0])
         return (rx, ix)
 
-    def retrieve_eigenvalue(self, index):
+    def retrieve_eigenpair(self, index):
         rx, ix = self.__solution_vector_template()
         eigenvalue = self.solver.getEigenpair(index, rx, ix)
         return eigenvalue, rx, ix
