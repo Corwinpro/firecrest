@@ -7,9 +7,11 @@ import matplotlib.pyplot as plt
 control_points_1 = [[9.75, -0.2], [9.75, 0.0], [0.0, 0.0], [0.0, 3.0]]
 control_points_2 = [[0.0, 3.0], [1.0, 3.0]]
 control_points_3 = [[1.0, 3.0], [1.0, 1.0], [10.0, 1.0]]
-control_points_4 = [[10.0, 1.0], [10.0, -0.2], [9.75, -0.2]]
+control_points_4 = [[10.0, 1.0], [10.0, -0.2]]
+control_points_5 = [[10.0, -0.2], [9.75, -0.2]]
 
-el_size = 0.05
+
+el_size = 0.1
 boundary1 = LineElement(
     control_points_1, el_size=el_size, bcond={"noslip": True, "isothermal": True}
 )
@@ -20,9 +22,12 @@ boundary3 = LineElement(
     control_points_3, el_size=el_size, bcond={"noslip": True, "isothermal": True}
 )
 boundary4 = LineElement(
-    control_points_4, el_size=el_size, bcond={"free": True, "adiabatic": True}
+    control_points_4, el_size=el_size, bcond={"slip": True, "adiabatic": True}
 )
-domain_boundaries = (boundary1, boundary2, boundary3, boundary4)
+boundary5 = LineElement(
+    control_points_5, el_size=el_size, bcond={"free": True, "adiabatic": True}
+)
+domain_boundaries = (boundary1, boundary2, boundary3, boundary4, boundary5)
 domain = SimpleDomain(domain_boundaries)
 
 solver = EigenvalueTVAcousticSolver(

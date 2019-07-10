@@ -68,7 +68,7 @@ class EigenvalueTVAcousticSolver(EigenvalueSolver):
         second_norm, second_real, second_imag = self.reconstruct_eigenpair(rx, ix)
 
         if abs(first_ev.real - second_ev.real) > eigenvalue_tolerance:
-            print("Warning, the pair seems to be from difference actual solutions.")
+            print("Warning, the pair seems to be from different solution pairs.")
 
         if first_norm > second_norm:
             solution = first_ev + self.complex_shift, first_real, first_imag
