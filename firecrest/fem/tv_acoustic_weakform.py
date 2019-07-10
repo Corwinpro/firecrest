@@ -68,6 +68,7 @@ class BaseTVAcousticWeakForm(BaseWeakForm, ABC):
         "force": "Neumann",
         "normal_force": "Neumann",
         "impedance": "Robin",
+        "slip": "Neumann",
     }
 
     allowed_temperature_bcs = {
@@ -323,6 +324,13 @@ class TVAcousticWeakForm(BaseTVAcousticWeakForm):
                 elif stress_bc == "normal_force":
                     stress = (
                         self._parse_dolf_expression(boundary.bcond[stress_bc])
+                        * self.domain.n
+                    )
+                elif stress_bc == "slip":
+                    stress = (
+                        dolf.Constant(-1.0e2)
+                        / dolf.CellDiameter(self.domain.mesh)
+                        * dolf.inner(velocity, self.domain.n)
                         * self.domain.n
                     )
                 else:

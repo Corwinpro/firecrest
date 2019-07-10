@@ -7,9 +7,7 @@ import dolfin as dolf
 control_points_1 = [[0.0, 1.0], [0.0, 0.0], [1.0, 0.0]]
 control_points_2 = [[1.0, 0.0], [1.0, 1.0], [0.0, 1.0]]
 boundary1 = LineElement(
-    control_points_1,
-    el_size=0.05,
-    bcond={"inflow": dolf.Constant((0.0, 0.0)), "isothermal": True},  # noslip
+    control_points_1, el_size=0.05, bcond={"slip": True, "isothermal": True}  # noslip
 )
 boundary2 = LineElement(
     control_points_2, el_size=0.05, bcond={"free": True, "adiabatic": True}
@@ -29,14 +27,14 @@ initial_state = (
 )
 
 f = dolf.File("temp.pvd")
-P = dolf.Function(solver.forms.pressure_function_space.collapse())
-P.rename("P", "P")
-P.interpolate(initial_state[0])
-f << P
-# U = dolf.Function(solver.forms.velocity_function_space.collapse())
-# U.rename("u", "u")
-# U.interpolate(initial_state[1])
-# f << U
+# P = dolf.Function(solver.forms.pressure_function_space.collapse())
+# P.rename("P", "P")
+# P.interpolate(initial_state[0])
+# f << P
+U = dolf.Function(solver.forms.velocity_function_space.collapse())
+U.rename("u", "u")
+U.interpolate(initial_state[1])
+f << U
 
 for i in range(100):
     old_state = initial_state
@@ -44,8 +42,8 @@ for i in range(100):
     # dolf.assign(P, w.sub(0))
     # f << P
     initial_state = w.split(True)
-    initial_state[0].rename("P", "P")
-    f << initial_state[0]
+    initial_state[1].rename("u", "u")
+    f << initial_state[1]
     print(
         dolf.assemble(solver.forms.temporal_component(initial_state, initial_state)),
         dolf.assemble(solver.forms.spatial_component(initial_state, initial_state))
