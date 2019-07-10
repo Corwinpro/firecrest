@@ -61,11 +61,13 @@ class UnsteadyTVAcousticSolver(BaseSolver):
 
     def solve(self, initial_state, time_scheme="crank_nicolson"):
         try:
-            form, bcs = getattr(self, time_scheme)(initial_state)
+            solving_scheme = getattr(self, time_scheme)
         except AttributeError:
             raise NotImplementedError(
                 f"Time discretization scheme {time_scheme} is not yet implemented."
             )
+
+        form, bcs = solving_scheme(initial_state)
 
         if self.LUSolver is None:
             self.initialize_solver(form, bcs)
