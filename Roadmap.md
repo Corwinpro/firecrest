@@ -17,7 +17,8 @@ It is much more efficient and convenient to reuse them, rather then build every 
 
 #### Current task
 
-1. Should the Boundary conditions be in a separate class?
+1. Eigensolver: implement the surface tension BC
+2. Should the Boundary conditions be in a separate class?
 
 #### Major tasks
 
