@@ -4,8 +4,8 @@
 
 #### Major tasks
 
-1. Find a good approach and implement BoundaryConditions.
-2. Integration with solver module.
+1. Implement load and export geometry and mesh objects. 
+It is much more efficient and convenient to reuse them, rather then build every time.
 
 #### Minor tasks
 
@@ -17,14 +17,16 @@
 
 #### Current task
 
-1. The method 'TVAcousticWeakForm().boundary_components' should parse the 'markers_dict' object of it's domain, not each boundary separately.
-2. Boundary conditions should be in a separate class. I still don't understand how to couple a boundary condition with weak form classes.
+1. Should the Boundary conditions be in a separate class?
 
 #### Major tasks
 
-1. Implement variational forms for different problem types. 
+1. Eigenvalue solver: implement complex-valued boundary conditions
 
 #### Minor tasks
 
 
 ### Optimization modules
+
+1. Implement templates for objective with (value, Jacobian) attributes.
+2. Implement adjoint unsteady solver.
