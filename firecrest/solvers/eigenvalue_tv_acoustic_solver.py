@@ -28,9 +28,15 @@ class EigenvalueTVAcousticSolver(EigenvalueSolver):
         real_shift_components = (
             -dolf.Constant(self.complex_shift.real) * self.forms.temporal_component()
         )
+        boundary_components = dolf.lhs(-sum(self.forms.boundary_components()))
+
         AA = dolf.PETScMatrix()
         AA = dolf.assemble(
-            spatial_component + imag_shift_components + real_shift_components, tensor=AA
+            spatial_component
+            + boundary_components
+            + imag_shift_components
+            + real_shift_components,
+            tensor=AA,
         )
         for bc in self.forms.dirichlet_boundary_conditions():
             bc.apply(AA)
