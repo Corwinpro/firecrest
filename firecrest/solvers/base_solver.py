@@ -2,6 +2,7 @@ from abc import ABC, abstractmethod
 from slepc4py import SLEPc
 from petsc4py import PETSc
 import dolfin as dolf
+import os
 
 LOG_LEVEL = 30
 
@@ -12,6 +13,9 @@ class BaseSolver(ABC):
         self.domain = domain
 
         self._visualization_files = None
+        self.vis_dir = "Visualization/"
+        if not os.path.exists(self.vis_dir):
+            os.makedirs(self.vis_dir)
 
     @abstractmethod
     def solve(self, *args, **kwargs):
@@ -69,7 +73,7 @@ class EigenvalueSolver(BaseSolver):
     def __solution_vector_template(self):
         rx = PETSc.Vec().createSeq(self.AA.getSize()[0])
         ix = PETSc.Vec().createSeq(self.AA.getSize()[0])
-        return (rx, ix)
+        return rx, ix
 
     def retrieve_eigenpair(self, index):
         rx, ix = self.__solution_vector_template()

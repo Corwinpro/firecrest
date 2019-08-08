@@ -127,9 +127,9 @@ class UnsteadyTVAcousticSolver(BaseSolver):
         if self._visualization_files is None:
             self._visualization_files = OrderedDict(
                 {
-                    "p": dolf.File("pressure.pvd"),
-                    "u": dolf.File("u.pvd"),
-                    "T": dolf.File("temperature.pvd"),
+                    "p": dolf.File(self.vis_dir + "pressure.pvd"),
+                    "u": dolf.File(self.vis_dir + "u.pvd"),
+                    "T": dolf.File(self.vis_dir + "temperature.pvd"),
                 }
             )
         return self._visualization_files
