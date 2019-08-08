@@ -28,7 +28,11 @@ class EigenvalueTVAcousticSolver(EigenvalueSolver):
         real_shift_components = (
             -dolf.Constant(self.complex_shift.real) * self.forms.temporal_component()
         )
-        boundary_components = dolf.lhs(-sum(self.forms.boundary_components()))
+        boundary_components = -sum(self.forms.boundary_components())
+        if len(boundary_components.arguments()) >= 2:
+            boundary_components = dolf.lhs(-sum(self.forms.boundary_components()))
+        else:
+            boundary_components = 0
 
         AA = dolf.PETScMatrix()
         AA = dolf.assemble(
@@ -58,7 +62,7 @@ class EigenvalueTVAcousticSolver(EigenvalueSolver):
 
     def extract_solution(self, index, eigenvalue_tolerance=1.0e-8, verbose=True):
         """
-        Instead of passing an actual index from (1, nof_converged), we pass the pair index.
+        Instead of passing an actual index from range(1, nof_converged), we pass the pair index.
         Then, we calculate the norms of the each solution in this pair, compare them, and return the
         one with the highest norm.
         :param index: int, number of pair
