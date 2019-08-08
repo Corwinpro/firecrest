@@ -12,7 +12,7 @@ class BaseSolver(ABC):
         self.domain = domain
 
     @abstractmethod
-    def solve(self):
+    def solve(self, *args, **kwargs):
         pass
 
     def _vec_to_func(self, vector, function_space):

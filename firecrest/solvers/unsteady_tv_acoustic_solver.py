@@ -1,6 +1,11 @@
 from firecrest.solvers.base_solver import BaseSolver
 from firecrest.fem.tv_acoustic_weakform import TVAcousticWeakForm
 import dolfin as dolf
+from firecrest.misc.type_checker import (
+    is_numeric_argument,
+    is_numeric_tuple,
+    is_dolfin_exp,
+)
 import logging
 
 DEFAULT_DT = 1.0e-3
@@ -15,8 +20,27 @@ class UnsteadyTVAcousticSolver(BaseSolver):
 
         self.LUSolver = None
 
-    def set_initial_state(self, initial_state):
-        self.initial_state = initial_state
+        self._initial_state = None
+
+    @property
+    def initial_state(self):
+        return self._initial_state
+
+    @initial_state.setter
+    def initial_state(self, state):
+        state_list = []
+        for component in state:
+            if is_numeric_argument(component) or is_numeric_tuple(component):
+                state_list.append(
+                    dolf.Constant(component, cell=self.domain.mesh.ufl_cell())
+                )
+            elif is_dolfin_exp(component):
+                state_list.append(component)
+            else:
+                raise TypeError(
+                    "Numeric argument or dolf.Constant / dolf.Expression expected"
+                )
+        self._initial_state = tuple(state_list)
 
     def implicit_euler(self, initial_state):
         temporal_component = self.forms.temporal_component()
@@ -66,14 +90,14 @@ class UnsteadyTVAcousticSolver(BaseSolver):
             raise NotImplementedError(
                 f"Time discretization scheme {time_scheme} is not yet implemented."
             )
-
-        form, bcs = solving_scheme(initial_state)
+        self.initial_state = initial_state
+        form, bcs = solving_scheme(self.initial_state)
 
         if self.LUSolver is None:
             self.initialize_solver(form, bcs)
 
-        L_form = dolf.rhs(form)
-        res = dolf.assemble(L_form)
+        linear_form = dolf.rhs(form)
+        res = dolf.assemble(linear_form)
         for bc in bcs:
             bc.apply(res)
 
