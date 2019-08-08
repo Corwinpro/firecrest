@@ -153,7 +153,7 @@ control_points_2 = [[1.0e-16, 1.0], [0.2, 1.0 - 1.0e-16]]
 control_points_3 = [[0.2, 1.0 - 1.0e-16], [0.2, 1.0e-16]]
 control_points_4 = [[0.2, 1.0e-16], [0.0, 0.0]]
 
-el_size = 0.01
+el_size = 0.005
 
 boundary1 = LineElement(
     control_points_1, el_size=el_size, bcond={"noslip": True, "adiabatic": True}
@@ -172,26 +172,22 @@ boundary4 = LineElement(
 domain_boundaries = (boundary1, boundary2, boundary3, boundary4)
 domain = SimpleDomain(domain_boundaries)
 
-solver = UnsteadyTVAcousticSolver(domain, Re=1.0e3, Pe=10.0, dt=1.0e-2)
-initial_state = (
-    dolf.Constant(0.0, cell=solver.domain.mesh.ufl_cell()),
-    dolf.Constant((0.0, 0.0), cell=solver.domain.mesh.ufl_cell()),
-    dolf.Constant(0.0, cell=solver.domain.mesh.ufl_cell()),
-)
+solver = UnsteadyTVAcousticSolver(domain, Re=5.0e3, Pr=10., dt=1.0e-3)
+initial_state = (0.0, (0.0, 0.0), 0.0)
 
 f = dolf.File("temp.pvd")
 P = dolf.Function(solver.forms.pressure_function_space.collapse())
 P.rename("P", "P")
-P.interpolate(initial_state[0])
-f << P
+# P.interpolate(initial_state[0])
+# f << P
 
-for i in range(100):
+for i in range(1000):
     old_state = initial_state
     w = solver.solve(initial_state)
 
     initial_state = w.split(True)
-    initial_state[0].rename("P", "P")
-    f << initial_state[0]
+    if i % 10 == 9:
+        solver.output_field(initial_state)
 
     # Updating the curvature
     flow_rate = dolf.assemble(

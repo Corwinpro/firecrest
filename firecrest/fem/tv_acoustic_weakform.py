@@ -86,7 +86,16 @@ class BaseTVAcousticWeakForm(BaseWeakForm, ABC):
     def get_constants(self, kwargs):
         self._gamma = kwargs.get("gamma", 1.4)
         self._Re = kwargs["Re"]
-        self._Pe = kwargs["Pe"]
+        try:
+            self._Pe = kwargs["Pe"]
+        except KeyError:
+            try:
+                _Pr = kwargs["Pr"]
+                self._Pe = self._Re * _Pr
+            except KeyError:
+                raise KeyError(
+                    "Peclet or Prandtl numbers required for Thermoviscous acoustic flow."
+                )
         return AcousticConstants(
             gamma=dolf.Constant(self._gamma),
             Re=dolf.Constant(self._Re),

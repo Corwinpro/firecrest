@@ -6,6 +6,7 @@ from firecrest.misc.type_checker import (
     is_numeric_tuple,
     is_dolfin_exp,
 )
+from collections import OrderedDict
 import logging
 
 DEFAULT_DT = 1.0e-3
@@ -19,6 +20,7 @@ class UnsteadyTVAcousticSolver(BaseSolver):
         self._inverse_dt = dolf.Constant(1.0 / self._dt)
 
         self.LUSolver = None
+        self.bilinear_form = None
 
         self._initial_state = None
 
@@ -102,7 +104,7 @@ class UnsteadyTVAcousticSolver(BaseSolver):
             bc.apply(res)
 
         w = dolf.Function(self.forms.function_space)
-        self.LUSolver.solve(self.K, w.vector(), res)
+        self.LUSolver.solve(self.bilinear_form, w.vector(), res)
         return w
 
     def initialize_solver(self, form, bcs, solver_type="mumps"):
@@ -115,7 +117,31 @@ class UnsteadyTVAcousticSolver(BaseSolver):
         to obtain the solution much more efficiently. 
         This is done by defining a LUSolver object while PETSc handles caching factorizations.'
         """
-        self.K = dolf.assemble(dolf.lhs(form))
+        self.bilinear_form = dolf.assemble(dolf.lhs(form))
         for bc in bcs:
-            bc.apply(self.K)
-        self.LUSolver = dolf.LUSolver(self.K, solver_type)
+            bc.apply(self.bilinear_form)
+        self.LUSolver = dolf.LUSolver(self.bilinear_form, solver_type)
+
+    @property
+    def visualization_files(self):
+        if self._visualization_files is None:
+            self._visualization_files = OrderedDict(
+                {
+                    "p": dolf.File("pressure.pvd"),
+                    "u": dolf.File("u.pvd"),
+                    "T": dolf.File("temperature.pvd"),
+                }
+            )
+        return self._visualization_files
+
+    def output_field(self, fields, name=None):
+        if name:
+            fields.rename(name, name)
+            self.visualization_files[name] << fields
+        if len(fields) != len(self.visualization_files):
+            raise IndexError(
+                f"Expected {len(self.visualization_files)} fields, only {len(fields)} received."
+            )
+        for field, file_name in zip(fields, self.visualization_files):
+            field.rename(file_name, file_name)
+            self.visualization_files[file_name] << field

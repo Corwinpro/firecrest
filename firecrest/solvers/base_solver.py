@@ -11,6 +11,8 @@ class BaseSolver(ABC):
         dolf.set_log_level(LOG_LEVEL)
         self.domain = domain
 
+        self._visualization_files = None
+
     @abstractmethod
     def solve(self, *args, **kwargs):
         pass
