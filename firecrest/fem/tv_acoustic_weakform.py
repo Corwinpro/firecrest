@@ -69,6 +69,7 @@ class BaseTVAcousticWeakForm(BaseWeakForm, ABC):
         "normal_force": "Neumann",
         "impedance": "Robin",
         "slip": "Neumann",
+        "normal_velocity": "Neumann",
     }
 
     allowed_temperature_bcs = {
@@ -207,11 +208,9 @@ class BaseTVAcousticWeakForm(BaseWeakForm, ABC):
             # Step 1. Parse boundary condition data provided by boundary elements.
             # We only accept one boundary condition for stress/velocity and temperature/heat flux.
             temperature_bc = self._pop_boundary_condition(
-                boundary.bcond, TVAcousticWeakForm.allowed_temperature_bcs
+                boundary.bcond, self.allowed_temperature_bcs
             )
-            temperature_bc_type = TVAcousticWeakForm.allowed_temperature_bcs[
-                temperature_bc
-            ]
+            temperature_bc_type = self.allowed_temperature_bcs[temperature_bc]
 
             # Step 2. If the boundary condition is one of the Neumann or Robin,
             # we construct necessary boundary integrals in weak form.
@@ -258,11 +257,16 @@ class BaseTVAcousticWeakForm(BaseWeakForm, ABC):
                         self._parse_dolf_expression(boundary.bcond[stress_bc])
                         * self.domain.n
                     )
-                elif stress_bc == "slip":
+                elif stress_bc == "slip" or stress_bc == "normal_velocity":
+                    normal_velocity = (
+                        dolf.Constant(0.0)
+                        if stress_bc == "slip"
+                        else self._parse_dolf_expression(boundary.bcond[stress_bc])
+                    )
                     stress = (
                         dolf.Constant(-1.0e2)
                         / dolf.CellDiameter(self.domain.mesh)
-                        * dolf.inner(velocity, self.domain.n)
+                        * (dolf.inner(velocity, self.domain.n) - normal_velocity)
                         * self.domain.n
                     )
                 else:
@@ -359,7 +363,10 @@ class TVAcousticWeakForm(BaseTVAcousticWeakForm):
 
         I expect the usage should be something like:
             bcond = {"noslip" : True, "heat_flux" : 1.}
+
+        TODO: check super() is OK
         """
+        return super().boundary_components(trial, test)
         _, velocity, temperature = trial
         _, test_velocity, test_temperature = test
 

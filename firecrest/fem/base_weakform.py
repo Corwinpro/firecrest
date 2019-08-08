@@ -1,5 +1,10 @@
 from abc import ABC, abstractmethod
 import dolfin as dolf
+from firecrest.misc.type_checker import (
+    is_numeric_argument,
+    is_dolfin_exp,
+    is_numeric_tuple,
+)
 
 
 class BaseWeakForm(ABC):
@@ -14,12 +19,10 @@ class BaseWeakForm(ABC):
         Parses an (int, float, dolf.Constant, dolf.Expression) expression to dolfin-compatible
         format. We use this for generating values for dolf.DirichletBC.
         """
-        if isinstance(expression, dolf.function.expression.Expression):
+        if is_dolfin_exp(expression):
             value = expression
-        elif isinstance(expression, (int, float)):
+        elif is_numeric_argument(expression) or is_numeric_tuple(expression):
             value = dolf.Constant(expression)
-        elif isinstance(expression, dolf.function.constant.Constant):
-            value = expression
         else:
             try:
                 expression = expression.eval()
