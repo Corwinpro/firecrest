@@ -15,14 +15,19 @@ DEFAULT_DT = 1.0e-3
 class UnsteadyTVAcousticSolver(BaseSolver):
     def __init__(self, domain, **kwargs):
         super().__init__(domain)
+        self.timer = kwargs.get("timer", None)
+        if self.timer:
+            self._dt = self.timer.get("dt", DEFAULT_DT)
+        else:
+            self._dt = kwargs.get("dt", DEFAULT_DT)
+
         self.forms = TVAcousticWeakForm(domain, **kwargs)
-        self._dt = kwargs.get("dt", DEFAULT_DT)
-        self._inverse_dt = dolf.Constant(1.0 / self._dt)
 
         self.LUSolver = None
         self.bilinear_form = None
 
         self._initial_state = None
+        self.is_linearised = False
 
     @property
     def initial_state(self):
@@ -40,11 +45,21 @@ class UnsteadyTVAcousticSolver(BaseSolver):
                 state_list.append(component)
             else:
                 raise TypeError(
-                    "Numeric argument or dolf.Constant / dolf.Expression expected"
+                    "Numeric argument / iterable, or dolf.Constant / dolf.Expression expected"
                 )
         self._initial_state = tuple(state_list)
 
-    def implicit_euler(self, initial_state):
+    @property
+    def _inverse_dt(self):
+        return dolf.Constant(1.0 / self._dt)
+
+    def _implicit_euler(self, initial_state):
+        return self._theta_scheme(initial_state, theta=1.0)
+
+    def _crank_nicolson(self, initial_state):
+        return self._theta_scheme(initial_state, theta=0.5)
+
+    def _theta_scheme(self, initial_state, theta):
         temporal_component = self.forms.temporal_component()
         temporal_component_old = self.forms.temporal_component(initial_state)
 
@@ -52,42 +67,34 @@ class UnsteadyTVAcousticSolver(BaseSolver):
         stress_boundary_component, temperature_boundary_component = (
             self.forms.boundary_components()
         )
-        dirichlet_bcs = self.forms.dirichlet_boundary_conditions()
+        dirichlet_bcs = self.forms.dirichlet_boundary_conditions(self.is_linearised)
 
-        form = (
-            self._inverse_dt * (temporal_component - temporal_component_old)
-            + spatial_component
-            + stress_boundary_component
-            + temperature_boundary_component
-        )
-        return form, dirichlet_bcs
-
-    def crank_nicolson(self, initial_state):
-        temporal_component = self.forms.temporal_component()
-        temporal_component_old = self.forms.temporal_component(initial_state)
-
-        spatial_component = self.forms.spatial_component()
-        stress_boundary_component, temperature_boundary_component = (
-            self.forms.boundary_components()
-        )
-        dirichlet_bcs = self.forms.dirichlet_boundary_conditions()
         spatial_component_old = self.forms.spatial_component(initial_state)
         stress_boundary_component_old, temperature_boundary_component_old = self.forms.boundary_components(
             initial_state
         )
+
         form = (
             self._inverse_dt * (temporal_component - temporal_component_old)
-            + dolf.Constant(0.5) * (spatial_component + spatial_component_old)
-            + dolf.Constant(0.5)
-            * (stress_boundary_component + stress_boundary_component_old)
-            + dolf.Constant(0.5)
-            * (temperature_boundary_component + temperature_boundary_component_old)
+            + dolf.Constant(theta)
+            * (
+                spatial_component
+                + stress_boundary_component
+                + temperature_boundary_component
+            )
+            + dolf.Constant(1 - theta)
+            * (
+                spatial_component_old
+                + stress_boundary_component_old
+                + temperature_boundary_component_old
+            )
         )
+
         return form, dirichlet_bcs
 
     def solve(self, initial_state, time_scheme="crank_nicolson"):
         try:
-            solving_scheme = getattr(self, time_scheme)
+            solving_scheme = getattr(self, "_" + time_scheme)
         except AttributeError:
             raise NotImplementedError(
                 f"Time discretization scheme {time_scheme} is not yet implemented."
@@ -106,6 +113,89 @@ class UnsteadyTVAcousticSolver(BaseSolver):
         w = dolf.Function(self.forms.function_space)
         self.LUSolver.solve(self.bilinear_form, w.vector(), res)
         return w
+
+    def solve_direct(self, initial_state, time_scheme="crank_nicolson", verbose=False):
+        current_time = 0.0
+        final_time = self.timer["T"]
+        current_state = initial_state
+
+        while current_time < final_time - 1.0e-8:
+            w = self.solve(current_state, time_scheme=time_scheme)
+
+            current_state = w.split(True)
+            # if int(current_time / self._dt) % 10 == 9:
+            self.output_field(current_state)
+
+            if verbose:
+                print(
+                    "Timestep: \t {0:.4f}->{1:.4f}".format(
+                        current_time, current_time + self._dt
+                    )
+                )
+            current_time += self._dt
+
+        return current_state
+
+    def solve_adjoint(self, initial_state, time_scheme="crank_nicolson", verbose=False):
+        """
+        Solving the adjoint problem backwards in time. We reuse the direct forms, therefore
+        the adjoint problem must be modified (see time symmetry in the unsteady control paper).
+        The first time step is of length dt/2 for Crank-Nicolson, and brings us to the adjoint initial condition.
+
+        :param initial_state: Direct state at the final time
+        :param time_scheme: time discretization name
+        :param verbose: verbosity level
+        :return: adjoint time stepping history
+        """
+        if not time_scheme == "crank_nicolson":
+            raise NotImplementedError(
+                "Only crank_nicolson time scheme is implemented for direct-adjoint looping."
+            )
+        current_time = self.timer["T"]
+        final_time = self._dt
+        current_state = initial_state
+        # I reset the factorization for the adjoint solver
+        self.LUSolver = None
+        self.is_linearised = True
+
+        state_history = []
+
+        # Half stepping first
+        self._dt /= 2.0
+        form, bcs = self._implicit_euler(current_state)
+        linear_form = dolf.assemble(dolf.rhs(form))
+        bilinear_form = dolf.assemble(dolf.lhs(form))
+        for bc in bcs:
+            bc.apply(bilinear_form)
+            bc.apply(linear_form)
+        w = dolf.Function(self.forms.function_space)
+        dolf.solve(bilinear_form, w.vector(), linear_form)
+        current_state = w.split(True)
+        state_history.append(current_state)
+        current_time -= self._dt
+        self._dt *= 2.0
+
+        # Regular time stepping
+        while current_time > final_time + 1.0e-8:
+            w = self.solve(current_state, time_scheme=time_scheme)
+
+            current_state = w.split(True)
+            state_history.append(current_state)
+            # if int(current_time / self._dt) % 10 == 9:
+            self.output_field(current_state)
+
+            if verbose:
+                print(
+                    "Timestep: \t {0:.4f}->{1:.4f}".format(
+                        current_time, current_time - self._dt
+                    )
+                )
+            current_time -= self._dt
+
+        self.is_linearised = False
+        self.LUSolver = None
+
+        return state_history
 
     def initialize_solver(self, form, bcs, solver_type="mumps"):
         """
@@ -133,15 +223,3 @@ class UnsteadyTVAcousticSolver(BaseSolver):
                 }
             )
         return self._visualization_files
-
-    def output_field(self, fields, name=None):
-        if name:
-            fields.rename(name, name)
-            self.visualization_files[name] << fields
-        if len(fields) != len(self.visualization_files):
-            raise IndexError(
-                f"Expected {len(self.visualization_files)} fields, only {len(fields)} received."
-            )
-        for field, file_name in zip(fields, self.visualization_files):
-            field.rename(file_name, file_name)
-            self.visualization_files[file_name] << field
