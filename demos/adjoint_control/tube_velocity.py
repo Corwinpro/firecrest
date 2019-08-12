@@ -49,7 +49,10 @@ domain = SimpleDomain(domain_boundaries)
 timer = {"dt": 1.0e-2, "T": 1.0e-2}
 solver = UnsteadyTVAcousticSolver(domain, Re=5.0e3, Pr=10.0, timer=timer)
 initial_state = (0.0, (0.0, 0.0), 0.0)
-final_state = solver.solve_direct(initial_state, verbose=True)
+state = solver.solve_direct(initial_state, verbose=True)
+final_state = state[timer["T"]]
+
+
 print(
     "Final Energy: {}".format(
         dolf.assemble(solver.forms.temporal_component(final_state, final_state)) / 2.0
@@ -63,7 +66,7 @@ final_state = tuple(final_state)
 
 adjoint_history = solver.solve_adjoint(final_state, verbose=True)
 
-adjoint_stress = [solver.forms.stress(state[0], state[1]) for state in adjoint_history]
+adjoint_stress = [solver.forms.stress(adjoint_history[time][0], adjoint_history[time][1]) for time in adjoint_history]
 adjoint_stress_averaged = [
     dolf.assemble(
         dolf.dot(dolf.dot(stress, solver.domain.n), solver.domain.n)
@@ -88,7 +91,7 @@ print(delta_energy)
 
 for i in range(1, 11):
     boundary4.bcond["inflow"] = NormalInflow(1.0 - i * dU)
-    final_state = solver.solve_direct(initial_state, verbose=False)
+    final_state = solver.solve_direct(initial_state, verbose=False)[timer["T"]]
     print(
         "Final Energy: {}".format(
             dolf.assemble(solver.forms.temporal_component(final_state, final_state))

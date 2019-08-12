@@ -7,6 +7,7 @@ from firecrest.misc.type_checker import (
     is_dolfin_exp,
 )
 from collections import OrderedDict
+from firecrest.misc.time_storage import StateHistory
 import logging
 
 DEFAULT_DT = 1.0e-3
@@ -117,10 +118,10 @@ class UnsteadyTVAcousticSolver(BaseSolver):
     def solve_direct(self, initial_state, time_scheme="crank_nicolson", verbose=False):
         current_time = 0.0
         final_time = self.timer["T"]
-        current_state = initial_state
+        state = StateHistory(initial_state, current_time)
 
         while current_time < final_time - 1.0e-8:
-            w = self.solve(current_state, time_scheme=time_scheme)
+            w = self.solve(state.recent, time_scheme=time_scheme)
 
             current_state = w.split(True)
             # if int(current_time / self._dt) % 10 == 9:
@@ -133,8 +134,9 @@ class UnsteadyTVAcousticSolver(BaseSolver):
                     )
                 )
             current_time += self._dt
+            state[current_time] = current_state
 
-        return current_state
+        return state
 
     def solve_adjoint(self, initial_state, time_scheme="crank_nicolson", verbose=False):
         """
@@ -158,7 +160,8 @@ class UnsteadyTVAcousticSolver(BaseSolver):
         self.LUSolver = None
         self.is_linearised = True
 
-        state_history = []
+        # state_history = []
+        state = StateHistory()
 
         # Half stepping first
         self._dt /= 2.0
@@ -171,7 +174,8 @@ class UnsteadyTVAcousticSolver(BaseSolver):
         w = dolf.Function(self.forms.function_space)
         dolf.solve(bilinear_form, w.vector(), linear_form)
         current_state = w.split(True)
-        state_history.append(current_state)
+        # state_history.append(current_state)
+        state[current_time] = current_state
         current_time -= self._dt
         self._dt *= 2.0
 
@@ -180,7 +184,7 @@ class UnsteadyTVAcousticSolver(BaseSolver):
             w = self.solve(current_state, time_scheme=time_scheme)
 
             current_state = w.split(True)
-            state_history.append(current_state)
+            # state_history.append(current_state)
             # if int(current_time / self._dt) % 10 == 9:
             self.output_field(current_state)
 
@@ -191,11 +195,13 @@ class UnsteadyTVAcousticSolver(BaseSolver):
                     )
                 )
             current_time -= self._dt
+            state[current_time] = current_state
 
         self.is_linearised = False
         self.LUSolver = None
 
-        return state_history
+        # return state_history
+        return state
 
     def initialize_solver(self, form, bcs, solver_type="mumps"):
         """
