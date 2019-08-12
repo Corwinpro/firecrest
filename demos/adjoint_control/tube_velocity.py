@@ -1,19 +1,32 @@
 from firecrest.mesh.boundaryelement import LineElement
 from firecrest.mesh.geometry import SimpleDomain
 from firecrest.solvers.unsteady_tv_acoustic_solver import UnsteadyTVAcousticSolver
-from firecrest.models.free_surface_cap import SurfaceModel
-
 import dolfin as dolf
 
-current_time = 0.0
+
+class NormalInflow:
+    high = 1
+
+    def __init__(self, value):
+        self.counter = 0
+        self.value = value
+
+    def eval(self):
+        if self.counter < NormalInflow.high:
+            self.counter += 1
+            return 0.0, self.value
+        return 0.0, 0.0
 
 
-control_points_1 = [[0.0, 0.0], [1.0e-16, 1.0]]
-control_points_2 = [[1.0e-16, 1.0], [0.2, 1.0 - 1.0e-16]]
-control_points_3 = [[0.2, 1.0 - 1.0e-16], [0.2, 1.0e-16]]
-control_points_4 = [[0.2, 1.0e-16], [0.0, 0.0]]
+length = 0.03
+width = 0.05
+offset = 0.005
+control_points_1 = [[offset, 0.0], [0.0, 0.0], [1.0e-16, length]]
+control_points_2 = [[1.0e-16, length], [width, length - 1.0e-16]]
+control_points_3 = [[width, length - 1.0e-16], [width, 0.0], [width - offset, 1.0e-16]]
+control_points_4 = [[width - offset, 1.0e-16], [offset, 0.0]]
 
-el_size = 0.01
+el_size = 0.0025
 
 boundary1 = LineElement(
     control_points_1, el_size=el_size, bcond={"noslip": True, "adiabatic": True}
@@ -26,23 +39,59 @@ boundary3 = LineElement(
 )
 boundary4 = LineElement(
     control_points_4,
-    el_size=el_size,
-    bcond={"inflow": (0., 1.), "adiabatic": True},
+    el_size=el_size / 2.0,
+    bcond={"inflow": NormalInflow(1.0), "adiabatic": True},
 )
 domain_boundaries = (boundary1, boundary2, boundary3, boundary4)
 domain = SimpleDomain(domain_boundaries)
 
-solver = UnsteadyTVAcousticSolver(domain, Re=5.0e3, Pr=10.0, dt=1.0e-3)
+
+timer = {"dt": 1.0e-2, "T": 1.0e-2}
+solver = UnsteadyTVAcousticSolver(domain, Re=5.0e3, Pr=10.0, timer=timer)
 initial_state = (0.0, (0.0, 0.0), 0.0)
+final_state = solver.solve_direct(initial_state, verbose=True)
+print(
+    "Final Energy: {}".format(
+        dolf.assemble(solver.forms.temporal_component(final_state, final_state)) / 2.0
+    )
+)
 
 
-for i in range(1000):
-    old_state = initial_state
-    w = solver.solve(initial_state)
+final_state = list(final_state)
+final_state[1] = -final_state[1]
+final_state = tuple(final_state)
 
-    initial_state = w.split(True)
-    if i % 10 == 9:
-        solver.output_field(initial_state)
+adjoint_history = solver.solve_adjoint(final_state, verbose=True)
 
-    current_time += solver._dt
-    print(current_time)
+adjoint_stress = [solver.forms.stress(state[0], state[1]) for state in adjoint_history]
+adjoint_stress_averaged = [
+    dolf.assemble(
+        dolf.dot(dolf.dot(stress, solver.domain.n), solver.domain.n)
+        * solver.domain.ds((boundary4.surface_index,))
+    )
+    for stress in adjoint_stress
+]
+
+dU = 1.0e-3
+delta_energy = (
+    solver._dt
+    * dU
+    * (
+        sum(adjoint_stress_averaged)
+        - 0.5 * adjoint_stress_averaged[-1]
+        # - 0.5 * adjoint_stress_averaged[0]
+    )
+)
+print(delta_energy)
+# print(solver._dt * dU * (sum(adjoint_stress_averaged)) / 2.)
+
+
+for i in range(1, 11):
+    boundary4.bcond["inflow"] = NormalInflow(1.0 - i * dU)
+    final_state = solver.solve_direct(initial_state, verbose=False)
+    print(
+        "Final Energy: {}".format(
+            dolf.assemble(solver.forms.temporal_component(final_state, final_state))
+            / 2.0
+        )
+    )
