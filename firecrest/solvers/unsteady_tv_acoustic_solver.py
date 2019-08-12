@@ -7,7 +7,8 @@ from firecrest.misc.type_checker import (
     is_dolfin_exp,
 )
 from collections import OrderedDict
-from firecrest.misc.time_storage import StateHistory
+from firecrest.misc.time_storage import TimeSeries
+from decimal import Decimal
 import logging
 
 DEFAULT_DT = 1.0e-3
@@ -118,7 +119,7 @@ class UnsteadyTVAcousticSolver(BaseSolver):
     def solve_direct(self, initial_state, time_scheme="crank_nicolson", verbose=False):
         current_time = 0.0
         final_time = self.timer["T"]
-        state = StateHistory(initial_state, current_time)
+        state = TimeSeries(initial_state, current_time)
 
         while current_time < final_time - 1.0e-8:
             w = self.solve(state.recent, time_scheme=time_scheme)
@@ -161,10 +162,10 @@ class UnsteadyTVAcousticSolver(BaseSolver):
         self.is_linearised = True
 
         # state_history = []
-        state = StateHistory()
+        state = TimeSeries()
 
         # Half stepping first
-        self._dt /= 2.0
+        self._dt = round(self._dt / 2.0, 5)
         form, bcs = self._implicit_euler(current_state)
         linear_form = dolf.assemble(dolf.rhs(form))
         bilinear_form = dolf.assemble(dolf.lhs(form))
@@ -175,9 +176,9 @@ class UnsteadyTVAcousticSolver(BaseSolver):
         dolf.solve(bilinear_form, w.vector(), linear_form)
         current_state = w.split(True)
         # state_history.append(current_state)
-        state[current_time] = current_state
         current_time -= self._dt
-        self._dt *= 2.0
+        state[current_time] = current_state
+        self._dt = round(self._dt * 2.0, 5)
 
         # Regular time stepping
         while current_time > final_time + 1.0e-8:
