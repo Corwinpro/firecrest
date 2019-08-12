@@ -141,6 +141,11 @@ class BaseTVAcousticWeakForm(BaseWeakForm, ABC):
             velocity[i].dx(j)
             + dolf.Constant(1.0 / 3.0) * self.I[i, j] * dolf.div(velocity)
         ) / self.dolf_constants.Re
+        # shear_stress = (
+        #     velocity[i].dx(j)
+        #     + velocity[j].dx(i)
+        #     - dolf.Constant(2.0 / 3.0) * self.I[i, j] * dolf.div(velocity)
+        # ) / self.dolf_constants.Re
         return dolf.as_tensor(shear_stress, (i, j))
 
     def stress(self, pressure, velocity):
@@ -293,7 +298,7 @@ class BaseTVAcousticWeakForm(BaseWeakForm, ABC):
             )
         return bc.pop()
 
-    def dirichlet_boundary_conditions(self):
+    def dirichlet_boundary_conditions(self, is_linearised=False):
         """
         Generates DirichletBCs on all appropriate boundary elements.
         """
@@ -308,7 +313,7 @@ class BaseTVAcousticWeakForm(BaseWeakForm, ABC):
             temperature_bc_type = self.allowed_temperature_bcs[temperature_bc]
             if temperature_bc_type == "Dirichlet":
                 dirichlet_bcs.extend(
-                    self._generate_dirichlet_bc(boundary, temperature_bc)
+                    self._generate_dirichlet_bc(boundary, temperature_bc, is_linearised)
                 )
             # We only accept one Dirichlet boundary condition for velocity.
             velocity_bc = self._pop_boundary_condition(
@@ -317,12 +322,14 @@ class BaseTVAcousticWeakForm(BaseWeakForm, ABC):
 
             velocity_bc_type = self.allowed_stress_bcs[velocity_bc]
             if velocity_bc_type == "Dirichlet":
-                dirichlet_bcs.extend(self._generate_dirichlet_bc(boundary, velocity_bc))
+                dirichlet_bcs.extend(
+                    self._generate_dirichlet_bc(boundary, velocity_bc, is_linearised)
+                )
 
         return dirichlet_bcs
 
     @abstractmethod
-    def _generate_dirichlet_bc(self, boundary, bc_type):
+    def _generate_dirichlet_bc(self, boundary, bc_type, is_linearised=False):
         pass
 
 
@@ -361,7 +368,7 @@ class TVAcousticWeakForm(BaseTVAcousticWeakForm):
     def boundary_components(self, trial=None, test=None):
         return super().boundary_components(trial, test)
 
-    def _generate_dirichlet_bc(self, boundary, bc_type):
+    def _generate_dirichlet_bc(self, boundary, bc_type, is_linearised=False):
         """
         Given a boundary and a boundary condition type (one from the 'bc_to_fs' dict),
         we generate a dolfin DirichletBC based on the boundary expression for this boundary condition.
@@ -373,9 +380,9 @@ class TVAcousticWeakForm(BaseTVAcousticWeakForm):
             "temperature": self.temperature_function_space,
         }
 
-        if bc_type == "noslip":
+        if bc_type == "noslip" or (bc_type == "inflow" and is_linearised):
             value = dolf.Constant((0.0,) * self.geometric_dimension)
-        elif bc_type == "isothermal":
+        elif bc_type == "isothermal" or (bc_type == "temperature" and is_linearised):
             value = dolf.Constant(0.0)
         elif bc_type == "inflow" or bc_type == "temperature":
             value = self._parse_dolf_expression(boundary.bcond[bc_type])
