@@ -33,6 +33,22 @@ class BaseSolver(ABC):
         dolf_function.vector()[:] = vector
         return dolf_function
 
+    @property
+    def visualization_files(self):
+        return self._visualization_files
+
+    def output_field(self, fields, name=None):
+        if name:
+            fields.rename(name, name)
+            self.visualization_files[name] << fields
+        if len(fields) != len(self.visualization_files):
+            raise IndexError(
+                f"Expected {len(self.visualization_files)} fields, only {len(fields)} received."
+            )
+        for field, file_name in zip(fields, self.visualization_files):
+            field.rename(file_name, file_name)
+            self.visualization_files[file_name] << field
+
 
 class EigenvalueSolver(BaseSolver):
     """
