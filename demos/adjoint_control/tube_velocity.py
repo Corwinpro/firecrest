@@ -108,7 +108,7 @@ dU = 1.0e-3
 delta_energy = (
     solver._dt
     * dU
-    * (sum(adjoint_stress_averaged.values()) - 0.5 * adjoint_stress_averaged.recent)
+    * (sum(adjoint_stress_averaged.values()) - 0.5 * adjoint_stress_averaged.first)
 )
 print(delta_energy)
 # print(solver._dt * dU * (sum(adjoint_stress_averaged)) / 2.)

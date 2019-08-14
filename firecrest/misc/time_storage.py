@@ -15,20 +15,20 @@ class TimeGridError(Exception):
 class TimeSeries(OrderedDict):
     """
     State storage class for saving state snapshots at different time steps.
-
-    TODO:
-    - recent -> (first, last)
     """
 
     def __init__(self, state=None, start_time=None):
         decimal.getcontext().prec = 5
         self._dt = None
-        self._recent = None
+        self._first = None
+        self._last = None
 
         super().__init__()
         if state:
-            self[decimal.Decimal(start_time)] = state
-            self._recent = decimal.Decimal(start_time)
+            start_time = decimal.Decimal(start_time)
+            self[start_time] = state
+            self._first = start_time
+            self._last = start_time
 
     def __mul__(self, other):
         if not self._same_grid(other):
@@ -50,23 +50,22 @@ class TimeSeries(OrderedDict):
         return True
 
     @property
-    def recent(self):
-        """
-        :return: the most recent added state to the State history
-        """
-        if self._recent is None:
+    def first(self):
+        if self._first is None:
             return None
-        return self[self._recent]
+        return self[self._first]
 
-    @recent.setter
-    def recent(self, value):
-        self._recent = value
+    @property
+    def last(self):
+        if self._last is None:
+            return None
+        return self[self._last]
 
     def __setitem__(self, key, value):
         key = decimal.Decimal(key)
 
         try:
-            _dt = key - self._recent
+            _dt = min(abs(key - self._first), abs(key - self._last))
         except TypeError:
             pass
         else:
@@ -77,25 +76,27 @@ class TimeSeries(OrderedDict):
                 )
             self._dt = _dt
 
-        self._recent = key
+        self._first = min(i for i in (key, self._first) if i is not None)
+        self._last = max(i for i in (key, self._last) if i is not None)
         super().__setitem__(key, value)
 
     @classmethod
-    def from_dict(cls, dict, reversed=False):
+    def from_dict(cls, dict):
         """
         Create a TimeSeries instance from an (unordered) dict of time stamps
 
         :param dict: data to TimeSeries
-        :param reversed: if the recent element is the first or last in time
         :return: TimeSeries instance
         """
         instance = cls()
+        if len(dict) == 0:
+            return instance
         for el in sorted(dict):
             instance[el] = dict[el]
-        try:
-            instance.recent = min(dict) if reversed else max(dict)
-        except ValueError:
-            pass
+
+        instance._first = min(dict)
+        instance._last = max(dict)
+
         return instance
 
     def apply(self, func):

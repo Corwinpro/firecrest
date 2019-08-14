@@ -122,7 +122,7 @@ class UnsteadyTVAcousticSolver(BaseSolver):
         state = TimeSeries(initial_state, current_time)
 
         while current_time < final_time - 1.0e-8:
-            w = self.solve(state.recent, time_scheme=time_scheme)
+            w = self.solve(state.last, time_scheme=time_scheme)
 
             current_state = w.split(True)
             # if int(current_time / self._dt) % 10 == 9:
