@@ -19,7 +19,7 @@ class UnsteadyTVAcousticSolver(BaseSolver):
         super().__init__(domain)
         self.timer = kwargs.get("timer", None)
         if self.timer:
-            self._dt = self.timer.get("dt", DEFAULT_DT)
+            self._dt = float(self.timer.get("dt", DEFAULT_DT))
         else:
             self._dt = kwargs.get("dt", DEFAULT_DT)
 
@@ -117,11 +117,11 @@ class UnsteadyTVAcousticSolver(BaseSolver):
         return w
 
     def solve_direct(self, initial_state, time_scheme="crank_nicolson", verbose=False):
-        current_time = 0.0
+        current_time = Decimal("0")
         final_time = self.timer["T"]
         state = TimeSeries(initial_state, current_time)
 
-        while current_time < final_time - 1.0e-8:
+        while current_time < final_time - Decimal(1.0e-8):
             w = self.solve(state.last, time_scheme=time_scheme)
 
             current_state = w.split(True)
@@ -131,10 +131,10 @@ class UnsteadyTVAcousticSolver(BaseSolver):
             if verbose:
                 print(
                     "Timestep: \t {0:.4f}->{1:.4f}".format(
-                        current_time, current_time + self._dt
+                        current_time, current_time + self.timer["dt"]
                     )
                 )
-            current_time += self._dt
+            current_time += self.timer["dt"]
             state[current_time] = current_state
 
         return state
@@ -155,7 +155,7 @@ class UnsteadyTVAcousticSolver(BaseSolver):
                 "Only crank_nicolson time scheme is implemented for direct-adjoint looping."
             )
         current_time = self.timer["T"]
-        final_time = self._dt
+        final_time = Decimal(self._dt)
         current_state = initial_state
         # I reset the factorization for the adjoint solver
         self.LUSolver = None
@@ -165,7 +165,7 @@ class UnsteadyTVAcousticSolver(BaseSolver):
         state = TimeSeries()
 
         # Half stepping first
-        self._dt = round(self._dt / 2.0, 5)
+        self._dt = self._dt / 2.0
         form, bcs = self._implicit_euler(current_state)
         linear_form = dolf.assemble(dolf.rhs(form))
         bilinear_form = dolf.assemble(dolf.lhs(form))
@@ -176,12 +176,12 @@ class UnsteadyTVAcousticSolver(BaseSolver):
         dolf.solve(bilinear_form, w.vector(), linear_form)
         current_state = w.split(True)
         # state_history.append(current_state)
-        current_time -= self._dt
+        current_time -= self.timer["dt"] / Decimal("2")
         state[current_time] = current_state
-        self._dt = round(self._dt * 2.0, 5)
+        self._dt = self._dt * 2.0
 
         # Regular time stepping
-        while current_time > final_time + 1.0e-8:
+        while current_time > final_time + Decimal(1.0e-8):
             w = self.solve(current_state, time_scheme=time_scheme)
 
             current_state = w.split(True)
@@ -192,10 +192,10 @@ class UnsteadyTVAcousticSolver(BaseSolver):
             if verbose:
                 print(
                     "Timestep: \t {0:.4f}->{1:.4f}".format(
-                        current_time, current_time - self._dt
+                        current_time, current_time - self.timer["dt"]
                     )
                 )
-            current_time -= self._dt
+            current_time -= self.timer["dt"]
             state[current_time] = current_state
 
         self.is_linearised = False

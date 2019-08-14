@@ -1,6 +1,7 @@
 import decimal
 from collections import OrderedDict
 import warnings
+from firecrest.misc.type_checker import is_numeric_argument
 
 
 class TimeGridError(Exception):
@@ -18,7 +19,6 @@ class TimeSeries(OrderedDict):
     """
 
     def __init__(self, state=None, start_time=None):
-        decimal.getcontext().prec = 5
         self._dt = None
         self._first = None
         self._last = None
@@ -41,6 +41,10 @@ class TimeSeries(OrderedDict):
         new_instance = self.__class__()
         for el in self:
             new_instance[el] = self[el] * other[el]
+
+        if len(new_instance) == 1:
+            new_instance._dt = self._dt or other._dt
+        print(new_instance)
         return new_instance
 
     def _same_grid(self, other):
@@ -61,9 +65,12 @@ class TimeSeries(OrderedDict):
             return None
         return self[self._last]
 
-    def __setitem__(self, key, value):
-        key = decimal.Decimal(key)
-
+    def _warn_time_interval_consistency(self, key):
+        """
+        Check if adding a new key changes the time step.
+        :param key: Key to insert
+        :return: None
+        """
         try:
             _dt = min(abs(key - self._first), abs(key - self._last))
         except TypeError:
@@ -71,10 +78,15 @@ class TimeSeries(OrderedDict):
         else:
             if self._dt and self._dt != _dt:
                 warnings.warn(
-                    f"The time series time intervals appear to be non-uniform, with current dt = {self._dt} != _dt",
+                    f"The time series time intervals appear to be non-uniform, with current dt = {self._dt} != {_dt}",
                     RuntimeWarning,
                 )
             self._dt = _dt
+
+    def __setitem__(self, key, value):
+        key = decimal.Decimal(key)
+        if key not in self:
+            self._warn_time_interval_consistency(key)
 
         self._first = min(i for i in (key, self._first) if i is not None)
         self._last = max(i for i in (key, self._last) if i is not None)
@@ -94,9 +106,6 @@ class TimeSeries(OrderedDict):
         for el in sorted(dict):
             instance[el] = dict[el]
 
-        instance._first = min(dict)
-        instance._last = max(dict)
-
         return instance
 
     def apply(self, func):
@@ -109,9 +118,10 @@ class TimeSeries(OrderedDict):
         return self.__class__().from_dict({time: func(self[time]) for time in self})
 
     def integrate(self, mid_point=True):
+        result = sum(self.values()) * float(self._dt)
         if mid_point:
-            return sum(self.values()) * float(self._dt)
-        raise NotImplementedError
+            return result
+        return result - (self.first + self.last) * float(self._dt) / 2.0
 
     @classmethod
     def interpolate_to_keys(cls, series, keys_series):
@@ -120,9 +130,19 @@ class TimeSeries(OrderedDict):
                 "The interpolated series must be of length of keys plus 1"
             )
         instance = cls()
+        dt = keys_series._dt
+        if dt is None:
+            dt = series._dt
+            warnings.warn(
+                f"The interpolation TimeSeries grid has no dt attribute. Using the interpolating grid dt={dt} instead"
+            )
+
         for key in keys_series:
             instance[key] = 0.5 * (
-                series[key - keys_series._dt / decimal.Decimal(2.0)]
-                + series[key + keys_series._dt / decimal.Decimal(2.0)]
+                series[key - dt / decimal.Decimal(2.0)]
+                + series[key + dt / decimal.Decimal(2.0)]
             )
+
+        if len(instance) == 1:
+            instance._dt = series._dt or keys_series._dt
         return instance
