@@ -161,7 +161,6 @@ class UnsteadyTVAcousticSolver(BaseSolver):
         self.LUSolver = None
         self.is_linearised = True
 
-        # state_history = []
         state = TimeSeries()
 
         # Half stepping first
@@ -175,7 +174,6 @@ class UnsteadyTVAcousticSolver(BaseSolver):
         w = dolf.Function(self.forms.function_space)
         dolf.solve(bilinear_form, w.vector(), linear_form)
         current_state = w.split(True)
-        # state_history.append(current_state)
         current_time -= self.timer["dt"] / Decimal("2")
         state[current_time] = current_state
         self._dt = self._dt * 2.0
@@ -185,7 +183,6 @@ class UnsteadyTVAcousticSolver(BaseSolver):
             w = self.solve(current_state, time_scheme=time_scheme)
 
             current_state = w.split(True)
-            # state_history.append(current_state)
             # if int(current_time / self._dt) % 10 == 9:
             self.output_field(current_state)
 
@@ -201,7 +198,6 @@ class UnsteadyTVAcousticSolver(BaseSolver):
         self.is_linearised = False
         self.LUSolver = None
 
-        # return state_history
         return state
 
     def initialize_solver(self, form, bcs, solver_type="mumps"):

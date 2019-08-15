@@ -52,6 +52,13 @@ def test_create_from_dict():
         assert series._last == max(dictionary)
 
 
+def test_create_from_list():
+    for series in numeric_series() + dicts():
+        values = series.values()
+        new_series = TimeSeries.from_list(values, series)
+        assert new_series == series
+
+
 def test_apply_func():
     series = numeric_series()[0]
 

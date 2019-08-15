@@ -44,7 +44,6 @@ class TimeSeries(OrderedDict):
 
         if len(new_instance) == 1:
             new_instance._dt = self._dt or other._dt
-        print(new_instance)
         return new_instance
 
     def _same_grid(self, other):
@@ -92,6 +91,9 @@ class TimeSeries(OrderedDict):
         self._last = max(i for i in (key, self._last) if i is not None)
         super().__setitem__(key, value)
 
+    def values(self):
+        return [el[1] for el in sorted(self.items())]
+
     @classmethod
     def from_dict(cls, dict):
         """
@@ -105,6 +107,25 @@ class TimeSeries(OrderedDict):
             return instance
         for el in sorted(dict):
             instance[el] = dict[el]
+
+        return instance
+
+    @classmethod
+    def from_list(cls, array, template_grid):
+        """
+        Create a TimeSeries instance from a list and a template TimeSeries (grid)
+
+        :param array: data to TimeSeries
+        :param template_grid: template TimeSeries for data storage
+        :return: TimeSeries instance
+        """
+        if len(array) != len(template_grid):
+            raise TimeGridError(
+                f"Array must be of the same size as template grid ({len(template_grid)})"
+            )
+        instance = cls()
+        for item, key in zip(array, template_grid):
+            instance[key] = item
 
         return instance
 

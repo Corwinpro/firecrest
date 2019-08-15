@@ -5,20 +5,33 @@ import dolfin as dolf
 from firecrest.misc.time_storage import TimeSeries
 from decimal import Decimal
 
+timer = {"dt": Decimal("0.001"), "T": Decimal("0.21")}
+
 
 class NormalInflow:
-    high = 1
-
-    def __init__(self, value):
-        self.counter = 0
-        self.value = value
+    def __init__(self, series: TimeSeries):
+        self.counter = 1
+        self.series = list(series.values())
 
     def eval(self):
-        if self.counter < NormalInflow.high:
+        if self.counter < len(self.series):
+            value = 0.0, self.series[self.counter]
             self.counter += 1
-            return 0.0, self.value
+            return value
         return 0.0, 0.0
 
+
+def generate_inflow(amplitude):
+    inflow = TimeSeries.from_dict(
+        {
+            Decimal(i) * Decimal(timer["dt"]): 0 if i == 0 else amplitude
+            for i in range(int(timer["T"] / Decimal(timer["dt"])) + 1)
+        }
+    )
+    return inflow
+
+
+inflow = generate_inflow(1.0)
 
 length = 0.03
 width = 0.05
@@ -42,13 +55,12 @@ boundary3 = LineElement(
 boundary4 = LineElement(
     control_points_4,
     el_size=el_size / 2.0,
-    bcond={"inflow": NormalInflow(1.0), "adiabatic": True},
+    bcond={"inflow": NormalInflow(inflow), "adiabatic": True},
 )
 domain_boundaries = (boundary1, boundary2, boundary3, boundary4)
 domain = SimpleDomain(domain_boundaries)
 
 
-timer = {"dt": Decimal("0.01"), "T": Decimal("0.01")}
 solver = UnsteadyTVAcousticSolver(domain, Re=5.0e3, Pr=10.0, timer=timer)
 initial_state = (0.0, (0.0, 0.0), 0.0)
 state = solver.solve_direct(initial_state, verbose=True)
@@ -67,9 +79,8 @@ final_state[1] = -final_state[1]
 final_state = tuple(final_state)
 
 adjoint_history = solver.solve_adjoint(final_state, verbose=True)
-print(adjoint_history)
-adjoint_stress = adjoint_history.apply(lambda x: solver.forms.stress(x[0], x[1]))
 
+adjoint_stress = adjoint_history.apply(lambda x: solver.forms.stress(x[0], x[1]))
 adjoint_stress_averaged = adjoint_stress.apply(
     lambda x: dolf.assemble(
         dolf.dot(dolf.dot(x, solver.domain.n), solver.domain.n)
@@ -78,27 +89,12 @@ adjoint_stress_averaged = adjoint_stress.apply(
 )
 
 dU = 1.0e-3
-
-dvelocity = TimeSeries.from_dict(
-    {
-        Decimal(i) * Decimal(timer["dt"]): dU
-        for i in range(int(timer["T"] / Decimal(timer["dt"])) + 1)
-    }
-)
-dvelocity[0] = 0
-
-delta_energy = (
-    solver._dt
-    * dU
-    * (sum(adjoint_stress_averaged.values()) - 0.5 * adjoint_stress_averaged.first)
-)
+d_inflow = generate_inflow(dU)
+delta_energy = (adjoint_stress_averaged * d_inflow).integrate()
 print(delta_energy)
 
-denergy = (adjoint_stress_averaged * dvelocity).integrate()
-print(denergy)
-
 for i in range(1, 11):
-    boundary4.bcond["inflow"] = NormalInflow(1.0 - i * dU)
+    boundary4.bcond["inflow"] = NormalInflow(generate_inflow(1.0 - i * dU))
     state = solver.solve_direct(initial_state, verbose=False)
     final_state = state.last
     print(

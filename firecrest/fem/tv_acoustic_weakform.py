@@ -400,57 +400,8 @@ class TVAcousticWeakForm(BaseTVAcousticWeakForm):
             )
         ]
 
-    def testing_dirichlet_boundary_conditions(self):
-        dirichlet_bcs = []
-
-        # Parse boundary condition data provided by boundary elements.
-        for boundary in self.domain.boundary_elements:
-            # We only accept one Dirichlet boundary condition for temperature.
-            temperature_bc = self._pop_boundary_condition(
-                boundary.bcond, TVAcousticWeakForm.allowed_temperature_bcs
-            )
-            # Problem is here: we need to check if it's a Dirichlet type boundary
-            temperature_bc_type = TVAcousticWeakForm.allowed_temperature_bcs[
-                temperature_bc
-            ]
-            if temperature_bc_type == "Dirichlet":
-                if temperature_bc == "isothermal":
-                    value = dolf.Constant(0.0)
-                elif temperature_bc == "temperature":
-                    value = self._parse_dolf_expression(boundary.bcond[temperature_bc])
-
-                    function_space = self.temperature_function_space
-                    dirichlet_bcs.append(
-                        dolf.DirichletBC(
-                            function_space,
-                            value,
-                            self.domain.boundary_parts,
-                            boundary.surface_index,
-                        )
-                    )
-
-            # We only accept one Dirichlet boundary condition for velocity.
-            velocity_bc = self._pop_boundary_condition(
-                boundary.bcond, TVAcousticWeakForm.allowed_stress_bcs
-            )
-            velocity_bc_type = TVAcousticWeakForm.allowed_stress_bcs[velocity_bc]
-            if velocity_bc_type == "Dirichlet":
-                if velocity_bc == "noslip":
-                    value = dolf.Constant((0.0,) * self.geometric_dimension)
-                elif velocity_bc == "inflow":
-                    value = self._parse_dolf_expression(boundary.bcond[velocity_bc])
-
-                    function_space = self.velocity_function_space
-                    dirichlet_bcs.append(
-                        dolf.DirichletBC(
-                            function_space,
-                            value,
-                            self.domain.boundary_parts,
-                            boundary.surface_index,
-                        )
-                    )
-
-        return dirichlet_bcs
+    def energy(self, state):
+        return dolf.assemble(self.temporal_component(state, state)) / 2.0
 
 
 class ComplexTVAcousticWeakForm(BaseTVAcousticWeakForm):
