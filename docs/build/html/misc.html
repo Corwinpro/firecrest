@@ -1,0 +1,273 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml" lang="python3">
+  <head>
+    <meta charset="utf-8" />
+  
+  <!-- Licensed under the Apache 2.0 License -->
+  <link rel="stylesheet" type="text/css" href="_static/fonts/open-sans/stylesheet.css" />
+  <!-- Licensed under the SIL Open Font License -->
+  <link rel="stylesheet" type="text/css" href="_static/fonts/source-serif-pro/source-serif-pro.css" />
+  <link rel="stylesheet" type="text/css" href="_static/css/bootstrap.min.css" />
+  <link rel="stylesheet" type="text/css" href="_static/css/bootstrap-theme.min.css" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+    <title>misc package &#8212; firecrest 0.1 documentation</title>
+    <link rel="stylesheet" href="_static/guzzle.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <script type="text/javascript" src="_static/language_data.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+  
+   
+
+  </head><body>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">firecrest 0.1 documentation</a> &#187;</li> 
+      </ul>
+    </div>
+    <div class="container-wrapper">
+
+      <div id="mobile-toggle">
+        <a href="#"><span class="glyphicon glyphicon-align-justify" aria-hidden="true"></span></a>
+      </div>
+  <div id="left-column">
+    <div class="sphinxsidebar">
+<div class="sidebar-block">
+  <div class="sidebar-wrapper">
+    <h2>Contents</h2>
+    <div class="sidebar-localtoc">
+      <ul>
+<li><a class="reference internal" href="#">misc package</a><ul>
+<li><a class="reference internal" href="#submodules">Submodules</a></li>
+<li><a class="reference internal" href="#module-misc.optimization_mixin">misc.optimization_mixin module</a></li>
+<li><a class="reference internal" href="#module-misc.time_storage">misc.time_storage module</a></li>
+<li><a class="reference internal" href="#module-misc.type_checker">misc.type_checker module</a></li>
+<li><a class="reference internal" href="#module-misc">Module contents</a></li>
+</ul>
+</li>
+</ul>
+
+    </div>
+  </div>
+</div>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="_sources/misc.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div class="sidebar-block">
+  <div class="sidebar-wrapper">
+    <div id="main-search">
+      <form class="form-inline" action="search.html" method="GET" role="form">
+        <div class="input-group">
+          <input name="q" type="text" class="form-control" placeholder="Search...">
+        </div>
+        <input type="hidden" name="check_keywords" value="yes" />
+        <input type="hidden" name="area" value="default" />
+      </form>
+    </div>
+  </div>
+</div>
+      
+    </div>
+  </div>
+        <div id="right-column">
+          
+          <div role="navigation" aria-label="breadcrumbs navigation">
+            <ol class="breadcrumb">
+              <li><a href="index.html">Docs</a></li>
+              
+              <li>misc package</li>
+            </ol>
+          </div>
+          
+          <div class="document clearer body">
+            
+  <div class="section" id="misc-package">
+<h1>misc package<a class="headerlink" href="#misc-package" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="submodules">
+<h2>Submodules<a class="headerlink" href="#submodules" title="Permalink to this headline">¶</a></h2>
+</div>
+<div class="section" id="module-misc.optimization_mixin">
+<span id="misc-optimization-mixin-module"></span><h2>misc.optimization_mixin module<a class="headerlink" href="#module-misc.optimization_mixin" title="Permalink to this headline">¶</a></h2>
+<dl class="class">
+<dt id="misc.optimization_mixin.OptimizationMixin">
+<em class="property">class </em><code class="sig-prename descclassname">misc.optimization_mixin.</code><code class="sig-name descname">OptimizationMixin</code><span class="sig-paren">(</span><em class="sig-param">*args</em>, <em class="sig-param">**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/misc/optimization_mixin.html#OptimizationMixin"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#misc.optimization_mixin.OptimizationMixin" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">abc.ABC</span></code></p>
+<p>The Caching Mixin class is used to store the intermediate optimization results (direct state, adjoint state)
+for a given control parameters vector. It requires the optimization solver to implement the following methods:
+- _objective_state: result of the direct computation
+- _objective : the value of the objective function for an objective state
+- _jacobian: returns a gradient vector consistent with the control</p>
+<dl class="method">
+<dt id="misc.optimization_mixin.OptimizationMixin.jacobian">
+<code class="sig-name descname">jacobian</code><span class="sig-paren">(</span><em class="sig-param">control</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/misc/optimization_mixin.html#OptimizationMixin.jacobian"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#misc.optimization_mixin.OptimizationMixin.jacobian" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="misc.optimization_mixin.OptimizationMixin.minimize">
+<code class="sig-name descname">minimize</code><span class="sig-paren">(</span><em class="sig-param">x0</em>, <em class="sig-param">bnds</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/misc/optimization_mixin.html#OptimizationMixin.minimize"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#misc.optimization_mixin.OptimizationMixin.minimize" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="misc.optimization_mixin.OptimizationMixin.objective">
+<code class="sig-name descname">objective</code><span class="sig-paren">(</span><em class="sig-param">control</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/misc/optimization_mixin.html#OptimizationMixin.objective"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#misc.optimization_mixin.OptimizationMixin.objective" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="module-misc.time_storage">
+<span id="misc-time-storage-module"></span><h2>misc.time_storage module<a class="headerlink" href="#module-misc.time_storage" title="Permalink to this headline">¶</a></h2>
+<dl class="exception">
+<dt id="misc.time_storage.TimeGridError">
+<em class="property">exception </em><code class="sig-prename descclassname">misc.time_storage.</code><code class="sig-name descname">TimeGridError</code><span class="sig-paren">(</span><em class="sig-param">message=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/misc/time_storage.html#TimeGridError"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#misc.time_storage.TimeGridError" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">Exception</span></code></p>
+</dd></dl>
+
+<dl class="class">
+<dt id="misc.time_storage.TimeSeries">
+<em class="property">class </em><code class="sig-prename descclassname">misc.time_storage.</code><code class="sig-name descname">TimeSeries</code><span class="sig-paren">(</span><em class="sig-param">state=None</em>, <em class="sig-param">start_time=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/misc/time_storage.html#TimeSeries"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#misc.time_storage.TimeSeries" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">collections.OrderedDict</span></code></p>
+<p>State storage class for saving state snapshots at different time steps.</p>
+<dl class="method">
+<dt id="misc.time_storage.TimeSeries.apply">
+<code class="sig-name descname">apply</code><span class="sig-paren">(</span><em class="sig-param">func</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/misc/time_storage.html#TimeSeries.apply"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#misc.time_storage.TimeSeries.apply" title="Permalink to this definition">¶</a></dt>
+<dd><p>Applies a function to the TimeSeries instance, returning a new one.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>func</strong> -- a function to apply</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>TimeSeries object from the current one</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="misc.time_storage.TimeSeries.first">
+<em class="property">property </em><code class="sig-name descname">first</code><a class="headerlink" href="#misc.time_storage.TimeSeries.first" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="misc.time_storage.TimeSeries.from_dict">
+<em class="property">classmethod </em><code class="sig-name descname">from_dict</code><span class="sig-paren">(</span><em class="sig-param">dict</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/misc/time_storage.html#TimeSeries.from_dict"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#misc.time_storage.TimeSeries.from_dict" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create a TimeSeries instance from an (unordered) dict of time stamps</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>dict</strong> -- data to TimeSeries</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>TimeSeries instance</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="misc.time_storage.TimeSeries.from_list">
+<em class="property">classmethod </em><code class="sig-name descname">from_list</code><span class="sig-paren">(</span><em class="sig-param">array</em>, <em class="sig-param">template_grid</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/misc/time_storage.html#TimeSeries.from_list"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#misc.time_storage.TimeSeries.from_list" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create a TimeSeries instance from a list and a template TimeSeries (grid)</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>array</strong> -- data to TimeSeries</p></li>
+<li><p><strong>template_grid</strong> -- template TimeSeries for data storage</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>TimeSeries instance</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="misc.time_storage.TimeSeries.integrate">
+<code class="sig-name descname">integrate</code><span class="sig-paren">(</span><em class="sig-param">mid_point=True</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/misc/time_storage.html#TimeSeries.integrate"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#misc.time_storage.TimeSeries.integrate" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="misc.time_storage.TimeSeries.interpolate_to_keys">
+<em class="property">classmethod </em><code class="sig-name descname">interpolate_to_keys</code><span class="sig-paren">(</span><em class="sig-param">series</em>, <em class="sig-param">keys_series</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/misc/time_storage.html#TimeSeries.interpolate_to_keys"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#misc.time_storage.TimeSeries.interpolate_to_keys" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="misc.time_storage.TimeSeries.last">
+<em class="property">property </em><code class="sig-name descname">last</code><a class="headerlink" href="#misc.time_storage.TimeSeries.last" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="misc.time_storage.TimeSeries.values">
+<code class="sig-name descname">values</code><span class="sig-paren">(</span><span class="sig-paren">)</span> &#x2192; an object providing a view on D's values<a class="reference internal" href="_modules/misc/time_storage.html#TimeSeries.values"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#misc.time_storage.TimeSeries.values" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="module-misc.type_checker">
+<span id="misc-type-checker-module"></span><h2>misc.type_checker module<a class="headerlink" href="#module-misc.type_checker" title="Permalink to this headline">¶</a></h2>
+<dl class="function">
+<dt id="misc.type_checker.is_dolfin_exp">
+<code class="sig-prename descclassname">misc.type_checker.</code><code class="sig-name descname">is_dolfin_exp</code><span class="sig-paren">(</span><em class="sig-param">arg</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/misc/type_checker.html#is_dolfin_exp"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#misc.type_checker.is_dolfin_exp" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="misc.type_checker.is_numeric_argument">
+<code class="sig-prename descclassname">misc.type_checker.</code><code class="sig-name descname">is_numeric_argument</code><span class="sig-paren">(</span><em class="sig-param">arg</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/misc/type_checker.html#is_numeric_argument"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#misc.type_checker.is_numeric_argument" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="misc.type_checker.is_numeric_tuple">
+<code class="sig-prename descclassname">misc.type_checker.</code><code class="sig-name descname">is_numeric_tuple</code><span class="sig-paren">(</span><em class="sig-param">arg</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/misc/type_checker.html#is_numeric_tuple"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#misc.type_checker.is_numeric_tuple" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</div>
+<div class="section" id="module-misc">
+<span id="module-contents"></span><h2>Module contents<a class="headerlink" href="#module-misc" title="Permalink to this headline">¶</a></h2>
+</div>
+</div>
+
+
+          </div>
+            
+        </div>
+        <div class="clearfix"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">firecrest 0.1 documentation</a> &#187;</li> 
+      </ul>
+    </div>
+<script type="text/javascript">
+  $("#mobile-toggle a").click(function () {
+    $("#left-column").toggle();
+  });
+</script>
+<script type="text/javascript" src="_static/js/bootstrap.js"></script>
+  <div class="footer">
+    &copy; Copyright 2019, Petr Kungurtsev. Created using <a href="http://sphinx.pocoo.org/">Sphinx</a>.
+  </div>
+  </body>
+</html>

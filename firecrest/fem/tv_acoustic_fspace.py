@@ -14,9 +14,9 @@ class TVAcousticFunctionSpace(BaseFunctionSpace):
     """
     Template function spaces for real Thermoviscous Acoustic FEM problem.
     Chosen function spaces are:
-        Pressure(scalar, order = 2),
-        Velocity(vector, order = 2),
-        Temperature(scalar, order = 1).
+    - Pressure(scalar, order = 2),
+    - Velocity(vector, order = 2),
+    - Temperature(scalar, order = 1).
     """
 
     def __init__(self, domain, order=2):
