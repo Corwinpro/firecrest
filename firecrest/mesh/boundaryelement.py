@@ -38,13 +38,14 @@ class BoundaryElement(ABC):
     a geometric representation (B-spline or circular arc).
 
     params:
-        - control_points : boundary parametrization by control points
-        - bcond : specific boundary condition
-        - el_size : characteristic size of the line elements on the surface
+    - control_points : boundary parametrization by control points
+    - bcond : specific boundary condition
+    - el_size : characteristic size of the line elements on the surface
 
     attributes:
-        - surface_index: when we create a new surface, a unique index is assigned
-        to it, so we can track the individual properties of the boundary elements
+    - surface_index: when we create a new surface, a unique index is assigned
+    to it, so we can track the individual properties of the boundary elements
+        
     """
 
     surface_index = 1
@@ -151,4 +152,3 @@ class LineElement(BSplineElement):
             periodic=periodic,
             **kwargs
         )
-

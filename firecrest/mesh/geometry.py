@@ -32,15 +32,16 @@ class Geometry(ABC):
     Abstract base class for Geometry Entity.
     A Geometry consists of a set of boundary_elements.
     params:
-        - mesh_name: name of mesh files, associated with the geometry
-        - mesh_folder: default mesh files directory
-        - dimensions: dimensionality of the domain
-        - msh_format: XML or XDMF mesh format
+    - mesh_name: name of mesh files, associated with the geometry
+    - mesh_folder: default mesh files directory
+    - dimensions: dimensionality of the domain
+    - msh_format: XML or XDMF mesh format
     
     attributes:
-        - boundary_elements: collection of boundary_elements forming the Geometry
-        - pg_geometry: pygmsh generated geometry
-        - pg_*: pygmsh generated entities
+    - boundary_elements: collection of boundary_elements forming the Geometry
+    - pg_geometry: pygmsh generated geometry
+    - pg_*: pygmsh generated entities
+
     """
 
     def __init__(
@@ -83,9 +84,9 @@ class Geometry(ABC):
     def geo_to_mesh(self):
         """
         command line convertion of a 
-            self.geo_file with .geo extension
+        <self.geo_file> with .geo extension
         to 
-            self.msh_file with .msh extension
+        <self.msh_file> with .msh extension
         """
         cmd = [
             "gmsh",
@@ -204,10 +205,13 @@ class Geometry(ABC):
         (values) list of boundary_elements of this boundary type,
         i.e.
         ```
-        self.market_dict = {"noslip": [noslip_boundary_1, noslip_boundary_2],
-                            "adiabatic": [noslip_boundary_1],
-                            "heat_flux": [noslip_boundary_2]}
+        self.market_dict = {
+        "noslip": [noslip_boundary_1, noslip_boundary_2],
+        "adiabatic": [noslip_boundary_1],
+        "heat_flux": [noslip_boundary_2]
+        }
         ```
+
         """
         self.markers_dict = {}
         for boundary_element in self.boundary_elements:
@@ -435,4 +439,3 @@ class SimpleDomain(Geometry):
         # Generating pg_surface from pg_linespg_lineloop
         self.pg_surface = self.pg_geometry.add_plane_surface(self.pg_lineloop)
         self.pg_geometry.add_physical_surface(self.pg_surface, 0)
-

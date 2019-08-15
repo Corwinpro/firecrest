@@ -7,15 +7,15 @@ class OptimizationMixin(ABC):
     """
     The Caching Mixin class is used to store the intermediate optimization results (direct state, adjoint state)
     for a given control parameters vector. It requires the optimization solver to implement the following methods:
-        - _objective_state: result of the direct computation
-        - _objective : the value of the objective function for an objective state
-        - _jacobian: returns a gradient vector consistent with the control
+    - _objective_state: result of the direct computation
+    - _objective : the value of the objective function for an objective state
+    - _jacobian: returns a gradient vector consistent with the control
     """
 
     def __init__(self, *args, **kwargs):
         """
         :attr default_renormalization: The objective and the Jacobian are normalized by a constant,
-            such that the optimization tool does not require a lower convergence tolerance.
+        such that the optimization tool does not require a lower convergence tolerance.
         """
         super().__init__(*args, **kwargs)
         self.objective_cache = {}

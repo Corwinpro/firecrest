@@ -5,8 +5,8 @@ class BaseFunctionSpace:
     """
     Base Function Space factory.
     params:
-        - domain: geometrical domain with dolfin mesh
-        - spaces: collection of Space objects with Finite Element type, polynomial order, space dimension
+    - domain: geometrical domain with dolfin mesh
+    - spaces: collection of Space objects with Finite Element type, polynomial order, space dimension
     """
 
     def __init__(self, domain, spaces):
