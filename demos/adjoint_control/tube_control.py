@@ -105,7 +105,7 @@ class OptimizationSolver(OptimizationMixin, UnsteadyTVAcousticSolver):
         du[Decimal("0")] = 0
         du[timer["T"]] = 0
 
-        print((adjoint_stress_averaged * du).integrate())
+        print("gradient norm: ", (adjoint_stress_averaged * du).integrate())
         return [d * self._dt for d in du.values()[1:-1]]
 
 

@@ -465,13 +465,14 @@ class ComplexTVAcousticWeakForm(BaseTVAcousticWeakForm):
         # TODO: parse complex boundary conditions
         return super().boundary_components(trial, test)
 
-    def _generate_dirichlet_bc(self, boundary, bc_type):
+    def _generate_dirichlet_bc(self, boundary, bc_type, is_linearised=False):
         """
         Given a boundary and a boundary condition type (one from the 'bc_to_fs' dict),
         we generate a dolfin DirichletBC based on the boundary expression for this boundary condition.
         
         TODO:
             - add complex parameters
+            - Deal with is_linearised=False flag
         """
         bc_to_fs = {
             "noslip": self.velocity_function_space,
