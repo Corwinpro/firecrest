@@ -6,8 +6,7 @@ from firecrest.misc.optimization_mixin import OptimizationMixin
 import dolfin as dolf
 from decimal import Decimal
 
-
-timer = {"dt": Decimal("0.001"), "T": Decimal("0.01")}
+timer = {"dt": Decimal("0.001"), "T": Decimal("0.3")}
 
 
 class NormalInflow:
@@ -41,28 +40,35 @@ small_grid = TimeSeries.from_dict(
 x0 = [1.0 for _ in range(len(default_grid) - 1)]
 inflow = TimeSeries.from_list([0.0] + x0, default_grid)
 
-length = 0.03
+length = 0.1
 width = 0.05
 offset = 0.005
-control_points_1 = [[offset, 0.0], [0.0, 0.0], [1.0e-16, length]]
-control_points_2 = [[1.0e-16, length], [width, length - 1.0e-16]]
-control_points_3 = [[width, length - 1.0e-16], [width, 0.0], [width - offset, 1.0e-16]]
+control_points_1 = [[offset, 0.0], [0.0, 0.0], [0.0, length], [offset, length]]
+control_points_2 = [[offset, length], [width - offset, length - 1.0e-16]]
+control_points_3 = [
+    [width - offset, length - 1.0e-16],
+    [width, length],
+    [width, 0.0],
+    [width - offset, 1.0e-16],
+]
 control_points_4 = [[width - offset, 1.0e-16], [offset, 0.0]]
 
-el_size = 0.0025
+el_size = 0.002
 
 boundary1 = LineElement(
     control_points_1, el_size=el_size, bcond={"noslip": True, "adiabatic": True}
 )
 boundary2 = LineElement(
-    control_points_2, el_size=el_size, bcond={"noslip": True, "adiabatic": True}
+    control_points_2,
+    el_size=el_size,
+    bcond={"inflow": NormalInflow(inflow), "adiabatic": True},
 )
 boundary3 = LineElement(
     control_points_3, el_size=el_size, bcond={"noslip": True, "adiabatic": True}
 )
 boundary4 = LineElement(
     control_points_4,
-    el_size=el_size / 2.0,
+    el_size=el_size,
     bcond={"inflow": NormalInflow(inflow), "adiabatic": True},
 )
 domain_boundaries = (boundary1, boundary2, boundary3, boundary4)
@@ -77,6 +83,7 @@ class OptimizationSolver(OptimizationMixin, UnsteadyTVAcousticSolver):
         boundary4.bcond["inflow"] = NormalInflow(
             TimeSeries.from_list([0.0] + list(control) + [0.0], default_grid)
         )
+        boundary2.bcond["inflow"] = NormalInflow(inflow)
         return self.solve_direct(initial_state, verbose=True).last
 
     def _objective(self, state):
