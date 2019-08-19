@@ -1,6 +1,6 @@
 import functools
 from abc import ABC, abstractmethod
-from firecrest.fem.base_weakform import BaseWeakForm
+from firecrest.fem.base_weakform import BaseWeakForm, BaseComplexWeakForm
 from firecrest.fem.tv_acoustic_fspace import (
     TVAcousticFunctionSpace,
     ComplexTVAcousticFunctionSpace,
@@ -16,7 +16,7 @@ def parse_trialtest(component):
     """
 
     @functools.wraps(component)
-    def inner(self, trial=None, test=None):
+    def inner(self, trial=None, test=None, *args, **kwargs):
         if trial is None and test is None:
             """
             With empty arguments we implement default trial/test complex component
@@ -32,23 +32,31 @@ def parse_trialtest(component):
 
         if len(trial) == 3 and len(test) == 3:
             """
-            If triplets trial and test are given, we contstruct real component
+            If triplets trial and test are given, we construct real component
             """
             return component(self, trial, test)
         elif len(trial) == 6 and len(test) == 6:
             """
-            If triplets*2 trial and test are given, we contstruct complex component
-            TODO:
-                Use complex_component method instead of explicit indexing
+            If triplets*2 trial and test are given, we construct complex component
             """
-            return component(self, trial[:3], test[:3]) + component(
-                self, trial[3:], test[3:]
+            _flag = self.complex_forms_flag
+            self.complex_forms_flag = "real"
+            forms = component(self, trial[:3], test[:3], *args, **kwargs) + component(
+                self, trial[3:], test[3:], *args, **kwargs
             )
+            self.complex_forms_flag = "imag"
+            forms += component(self, trial[:3], test[3:], *args, **kwargs) - component(
+                self, trial[3:], test[:3], *args, **kwargs
+            )
+            self.complex_forms_flag = _flag
+            return forms
         elif (trial in ["real", "imag"]) and (test in ["real", "imag"]):
             return component(
                 self,
                 self.complex_component(self.trial_functions, trial),
                 self.complex_component(self.test_functions, test),
+                *args,
+                **kwargs,
             )
         else:
             raise ValueError
@@ -56,7 +64,7 @@ def parse_trialtest(component):
     return inner
 
 
-class BaseTVAcousticWeakForm(BaseWeakForm, ABC):
+class BaseTVAcousticWeakForm(BaseComplexWeakForm, ABC):
     """
     Base class for Thermoviscous acoustic weak forms generation.
     """
@@ -158,7 +166,7 @@ class BaseTVAcousticWeakForm(BaseWeakForm, ABC):
             / dolf.Constant(self.dolf_constants.gamma - 1.0)
         )
 
-    def temporal_component(self, trial, test):
+    def temporal_component(self, trial, test, shift=None):
         """
         Generates temporal component of the TVAcoustic weak form equation.
         """
@@ -169,9 +177,14 @@ class BaseTVAcousticWeakForm(BaseWeakForm, ABC):
         momentum_component = dolf.inner(velocity, test_velocity)
         energy_component = self.entropy(pressure, temperature) * test_temperature
 
+        if shift is None:
+            shift = 1.0 + 0.0j
+
         return (
-            continuity_component + momentum_component + energy_component
-        ) * self.domain.dx
+            self._parse_dolf_expression(shift)
+            * (continuity_component + momentum_component + energy_component)
+            * self.domain.dx
+        )
 
     def spatial_component(self, trial, test):
         """
@@ -282,7 +295,7 @@ class BaseTVAcousticWeakForm(BaseWeakForm, ABC):
                     stress, test_velocity
                 ) * self.domain.ds((boundary.surface_index,))
 
-        return stress_boundary_component, temperature_boundary_component
+        return stress_boundary_component + temperature_boundary_component
 
     @staticmethod
     def _pop_boundary_condition(bcond, allowed_bconds):
@@ -335,6 +348,7 @@ class BaseTVAcousticWeakForm(BaseWeakForm, ABC):
 
 class TVAcousticWeakForm(BaseTVAcousticWeakForm):
     function_space_factory = None
+    complex_forms_flag = "real"
 
     def __init__(self, domain, **kwargs):
         super().__init__(domain, **kwargs)
@@ -453,8 +467,8 @@ class ComplexTVAcousticWeakForm(BaseTVAcousticWeakForm):
         return self.real_function_space_factory.function_spaces
 
     @parse_trialtest
-    def temporal_component(self, trial=None, test=None):
-        return super().temporal_component(trial, test)
+    def temporal_component(self, trial=None, test=None, shift=None):
+        return super().temporal_component(trial, test, shift=shift)
 
     @parse_trialtest
     def spatial_component(self, trial=None, test=None):

@@ -66,30 +66,17 @@ class UnsteadyTVAcousticSolver(BaseSolver):
         temporal_component_old = self.forms.temporal_component(initial_state)
 
         spatial_component = self.forms.spatial_component()
-        stress_boundary_component, temperature_boundary_component = (
-            self.forms.boundary_components()
-        )
+        boundary_component = self.forms.boundary_components()
         dirichlet_bcs = self.forms.dirichlet_boundary_conditions(self.is_linearised)
 
         spatial_component_old = self.forms.spatial_component(initial_state)
-        stress_boundary_component_old, temperature_boundary_component_old = self.forms.boundary_components(
-            initial_state
-        )
+        boundary_component_old = self.forms.boundary_components(initial_state)
 
         form = (
             self._inverse_dt * (temporal_component - temporal_component_old)
-            + dolf.Constant(theta)
-            * (
-                spatial_component
-                + stress_boundary_component
-                + temperature_boundary_component
-            )
+            + dolf.Constant(theta) * (spatial_component + boundary_component)
             + dolf.Constant(1 - theta)
-            * (
-                spatial_component_old
-                + stress_boundary_component_old
-                + temperature_boundary_component_old
-            )
+            * (spatial_component_old + boundary_component_old)
         )
 
         return form, dirichlet_bcs

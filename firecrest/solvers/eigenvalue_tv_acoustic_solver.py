@@ -20,24 +20,23 @@ class EigenvalueTVAcousticSolver(EigenvalueSolver):
         Constructs the LHS forms (spatial components), AA of the eigenvalue problem.
         """
         spatial_component = -self.forms.spatial_component()
-        imag_shift_components = -dolf.Constant(self.complex_shift.imag) * (
-            self.forms.temporal_component("real", "imag")
-            - self.forms.temporal_component("imag", "real")
-        )
-        real_shift_components = (
-            -dolf.Constant(self.complex_shift.real) * self.forms.temporal_component()
-        )
-        boundary_components = -sum(self.forms.boundary_components())
+        # imag_shift_components = -dolf.Constant(self.complex_shift.imag) * (
+        #     self.forms.temporal_component("real", "imag")
+        #     - self.forms.temporal_component("imag", "real")
+        # )
+        # real_shift_components = (
+        #     -dolf.Constant(self.complex_shift.real) * self.forms.temporal_component()
+        # )
+        # shift_components = imag_shift_components + real_shift_components
+        shift_components = -self.forms.temporal_component(shift=self.complex_shift)
+        # boundary_components = -sum(self.forms.boundary_components())
+        boundary_components = -self.forms.boundary_components()
         if len(boundary_components.arguments()) >= 2:
-            boundary_components = dolf.lhs(-sum(self.forms.boundary_components()))
+            # boundary_components = dolf.lhs(-sum(self.forms.boundary_components()))
+            boundary_components = dolf.lhs(boundary_components)
         else:
             boundary_components = 0
-        return (
-            spatial_component
-            + boundary_components
-            + imag_shift_components
-            + real_shift_components
-        )
+        return spatial_component + boundary_components + shift_components
 
     @property
     def lhs(self):
