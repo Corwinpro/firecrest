@@ -15,10 +15,9 @@ class EigenvalueTVAcousticSolver(EigenvalueSolver):
         self.forms = ComplexTVAcousticWeakForm(domain, **kwargs)
         self.set_solver_operators(self.lhs, self.rhs)
 
-    @property
-    def lhs(self):
+    def _lhs_forms(self):
         """
-        Constructs the LHS matrix (spatial components), AA of the eigenvalue problem.
+        Constructs the LHS forms (spatial components), AA of the eigenvalue problem.
         """
         spatial_component = -self.forms.spatial_component()
         imag_shift_components = -dolf.Constant(self.complex_shift.imag) * (
@@ -33,28 +32,39 @@ class EigenvalueTVAcousticSolver(EigenvalueSolver):
             boundary_components = dolf.lhs(-sum(self.forms.boundary_components()))
         else:
             boundary_components = 0
-
-        AA = dolf.PETScMatrix()
-        AA = dolf.assemble(
+        return (
             spatial_component
             + boundary_components
             + imag_shift_components
-            + real_shift_components,
-            tensor=AA,
+            + real_shift_components
         )
+
+    @property
+    def lhs(self):
+        """
+        Constructs the LHS matrix (spatial components), AA of the eigenvalue problem.
+        """
+        AA = dolf.PETScMatrix()
+        AA = dolf.assemble(self._lhs_forms(), tensor=AA)
         for bc in self.forms.dirichlet_boundary_conditions():
             bc.apply(AA)
 
         return AA.mat()
+
+    def _rhs_forms(self):
+        """
+        Constructs the RHS forms (temporal components), BB of the eigenvalue problem.
+        """
+        temporal_component = self.forms.temporal_component()
+        return temporal_component
 
     @property
     def rhs(self):
         """
         Constructs the RHS matrix (temporal components), BB of the eigenvalue problem.
         """
-        temporal_component = self.forms.temporal_component()
         BB = dolf.PETScMatrix()
-        BB = dolf.assemble(temporal_component, tensor=BB)
+        BB = dolf.assemble(self._rhs_forms(), tensor=BB)
         for bc in self.forms.dirichlet_boundary_conditions():
             bc.zero(BB)
 
@@ -96,6 +106,7 @@ class EigenvalueTVAcousticSolver(EigenvalueSolver):
         which appeared after doubling the space of the problem.
         See appendix of my First Year Report.
 
+        :param verbose: output solution norm to verify it is non zero
         :param rx: real part vector of the solution
         :param ix: imaginary part vector of the solution
         :return: a tuple of (eigenvalue, real part of the eigenmode,imaginary part of the eigenmode)

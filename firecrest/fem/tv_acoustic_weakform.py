@@ -471,7 +471,8 @@ class ComplexTVAcousticWeakForm(BaseTVAcousticWeakForm):
         we generate a dolfin DirichletBC based on the boundary expression for this boundary condition.
         
         TODO:
-            - add complex parameters
+            - add complex boundary conditions: now we set the same value to both real and imag components,
+            while it should be different (only for non-eingenvalue problems)
             - Deal with is_linearised=False flag
         """
         bc_to_fs = {
