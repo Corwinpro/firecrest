@@ -10,7 +10,7 @@ boundary1 = LineElement(
     control_points_1, el_size=0.03, bcond={"noslip": True, "isothermal": True}
 )
 boundary2 = LineElement(
-    control_points_2, el_size=0.03, bcond={"impedance": 1.0, "adiabatic": True}
+    control_points_2, el_size=0.03, bcond={"impedance": 0.0, "adiabatic": True}
 )
 domain_boundaries = (boundary1, boundary2)
 domain = SimpleDomain(domain_boundaries)

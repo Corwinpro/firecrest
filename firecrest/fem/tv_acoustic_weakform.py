@@ -186,7 +186,7 @@ class BaseTVAcousticWeakForm(BaseComplexWeakForm, ABC):
             * self.domain.dx
         )
 
-    def spatial_component(self, trial, test):
+    def spatial_component(self, trial, test, shift=None):
         """
         Generates spatial component of the TVAcoustic weak form equation.
         """
@@ -204,9 +204,14 @@ class BaseTVAcousticWeakForm(BaseComplexWeakForm, ABC):
             dolf.grad(test_temperature), self.heat_flux(temperature)
         )
 
+        if shift is None:
+            shift = 1.0 + 0.0j
+
         return (
-            continuity_component + momentum_component + energy_component
-        ) * self.domain.dx
+            self._parse_dolf_expression(shift)
+            * (continuity_component + momentum_component + energy_component)
+            * self.domain.dx
+        )
 
     def boundary_components(self, trial, test):
         """
