@@ -545,13 +545,15 @@
         <span class="c1"># TODO: parse complex boundary conditions</span>
         <span class="k">return</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">boundary_components</span><span class="p">(</span><span class="n">trial</span><span class="p">,</span> <span class="n">test</span><span class="p">)</span></div>
 
-    <span class="k">def</span> <span class="nf">_generate_dirichlet_bc</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">boundary</span><span class="p">,</span> <span class="n">bc_type</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">_generate_dirichlet_bc</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">boundary</span><span class="p">,</span> <span class="n">bc_type</span><span class="p">,</span> <span class="n">is_linearised</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Given a boundary and a boundary condition type (one from the &#39;bc_to_fs&#39; dict),</span>
 <span class="sd">        we generate a dolfin DirichletBC based on the boundary expression for this boundary condition.</span>
 <span class="sd">        </span>
 <span class="sd">        TODO:</span>
-<span class="sd">            - add complex parameters</span>
+<span class="sd">            - add complex boundary conditions: now we set the same value to both real and imag components,</span>
+<span class="sd">            while it should be different (only for non-eingenvalue problems)</span>
+<span class="sd">            - Deal with is_linearised=False flag</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">bc_to_fs</span> <span class="o">=</span> <span class="p">{</span>
             <span class="s2">&quot;noslip&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">velocity_function_space</span><span class="p">,</span>
