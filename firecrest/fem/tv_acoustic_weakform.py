@@ -234,8 +234,8 @@ class BaseTVAcousticWeakForm(ABC):
         _, velocity, temperature = trial
         _, test_velocity, test_temperature = test
 
-        stress_boundary_component = dolf.Constant(0.0) * self.domain.ds
-        temperature_boundary_component = dolf.Constant(0.0) * self.domain.ds
+        stress_boundary_component = dolf.Constant(0.0) * self.domain.ds()
+        temperature_boundary_component = dolf.Constant(0.0) * self.domain.ds()
 
         for boundary in self.domain.boundary_elements:
             # Step 1. Parse boundary condition data provided by boundary elements.

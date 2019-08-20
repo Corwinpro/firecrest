@@ -36,8 +36,7 @@ def test_create_temporal_forms(forms):
 
 
 def test_create_boundary_forms(forms):
-    stress_bcomponents, temp_bcomponents = forms.boundary_components()
-    assert stress_bcomponents
-    assert temp_bcomponents
+    bcomponents = forms.boundary_components()
+    assert bcomponents
     bcs = forms.dirichlet_boundary_conditions()
     assert len(bcs) == 2
