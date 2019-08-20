@@ -68,8 +68,14 @@ class BaseComplexWeakForm(BaseWeakForm):
             try:
                 expression = expression.real
             except AttributeError:
-                pass
+                try:
+                    expression = tuple(el.real for el in expression)
+                except AttributeError:
+                    pass
         if self.complex_forms_flag == "imag":
-            expression = expression.imag
+            try:
+                expression = expression.imag
+            except AttributeError:
+                expression = tuple(el.imag for el in expression)
 
         return super()._parse_dolf_expression(expression)

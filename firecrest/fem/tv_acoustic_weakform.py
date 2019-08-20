@@ -1,5 +1,6 @@
 import functools
 from abc import ABC, abstractmethod
+from firecrest.misc.complex_template import Complex
 from firecrest.fem.base_weakform import BaseWeakForm, BaseComplexWeakForm
 from firecrest.fem.tv_acoustic_fspace import (
     TVAcousticFunctionSpace,
@@ -261,9 +262,9 @@ class BaseTVAcousticWeakForm(BaseComplexWeakForm, ABC):
 
             # Same for stress / velocity boundary conditions
             stress_bc = self._pop_boundary_condition(
-                boundary.bcond, TVAcousticWeakForm.allowed_stress_bcs
+                boundary.bcond, self.allowed_stress_bcs
             )
-            stress_bc_type = TVAcousticWeakForm.allowed_stress_bcs[stress_bc]
+            stress_bc_type = self.allowed_stress_bcs[stress_bc]
 
             if stress_bc_type == "Neumann" or stress_bc_type == "Robin":
                 if stress_bc == "free":
@@ -481,7 +482,6 @@ class ComplexTVAcousticWeakForm(BaseTVAcousticWeakForm):
 
     @parse_trialtest
     def boundary_components(self, trial=None, test=None):
-        # TODO: parse complex boundary conditions
         return super().boundary_components(trial, test)
 
     def _generate_dirichlet_bc(self, boundary, bc_type, is_linearised=False):
@@ -502,11 +502,17 @@ class ComplexTVAcousticWeakForm(BaseTVAcousticWeakForm):
         }
 
         if bc_type == "noslip":
-            value = dolf.Constant((0.0,) * self.geometric_dimension)
+            value = Complex(dolf.Constant((0.0,) * self.geometric_dimension))
         elif bc_type == "isothermal":
-            value = dolf.Constant(0.0)
+            value = Complex(dolf.Constant(0.0))
         elif bc_type == "inflow" or bc_type == "temperature":
-            value = self._parse_dolf_expression(boundary.bcond[bc_type])
+            _flag = self.complex_forms_flag
+            self.complex_forms_flag = "real"
+            _real_value = self._parse_dolf_expression(boundary.bcond[bc_type])
+            self.complex_forms_flag = "imag"
+            _imag_value = self._parse_dolf_expression(boundary.bcond[bc_type])
+            self.complex_forms_flag = _flag
+            value = Complex(_real_value, _imag_value)
         else:
             raise TypeError(f"Invalid boundary condition type for Dirichlet condition.")
 
@@ -514,10 +520,31 @@ class ComplexTVAcousticWeakForm(BaseTVAcousticWeakForm):
 
         return [
             dolf.DirichletBC(
-                function_space,
-                value,
+                function_spaces[0],
+                value.real,
                 self.domain.boundary_parts,
                 boundary.surface_index,
-            )
-            for function_space in function_spaces
+            ),
+            dolf.DirichletBC(
+                function_spaces[1],
+                value.imag,
+                self.domain.boundary_parts,
+                boundary.surface_index,
+            ),
         ]
+
+    def _lhs_forms(self):
+        """
+        Constructs the LHS forms (spatial components), AA of the problem AA*x = s*BB*x.
+        """
+        spatial_component = self.spatial_component()
+        boundary_components = self.boundary_components()
+
+        return spatial_component + boundary_components
+
+    def _rhs_forms(self, shift=None):
+        """
+        Constructs the RHS forms (temporal components), BB of the problem AA*x = s*BB*x.
+        """
+        temporal_component = self.temporal_component(shift=shift)
+        return temporal_component
