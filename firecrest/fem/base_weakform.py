@@ -9,11 +9,16 @@ from firecrest.misc.type_checker import (
 
 
 class BaseWeakForm(ABC):
-    def __init__(self, domain, **kwargs):
-        self.domain = domain
+    def __init__(self, domain, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._domain = domain
         self.geometric_dimension = self.domain.mesh.ufl_cell().geometric_dimension()
-        self.I = dolf.Identity(self.geometric_dimension)
+        self.identity_tensor = dolf.Identity(self.geometric_dimension)
         self.dirichlet_bcs = []
+
+    @property
+    def domain(self):
+        return self._domain
 
     def _parse_dolf_expression(self, expression):
         """

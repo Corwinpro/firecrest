@@ -65,7 +65,7 @@ def parse_trialtest(component):
     return inner
 
 
-class BaseTVAcousticWeakForm(BaseComplexWeakForm, ABC):
+class BaseTVAcousticWeakForm(ABC):
     """
     Base class for Thermoviscous acoustic weak forms generation.
     """
@@ -89,9 +89,18 @@ class BaseTVAcousticWeakForm(BaseComplexWeakForm, ABC):
         "thermal_accommodation": "Robin",
     }
 
-    def __init__(self, domain, **kwargs):
-        super().__init__(domain, **kwargs)
+    def __init__(self, *args, **kwargs):
+        # super().__init__(*args, **kwargs)
         self.dolf_constants = self.get_constants(kwargs)
+
+    @abstractmethod
+    def _parse_dolf_expression(self, expression):
+        pass
+
+    @property
+    @abstractmethod
+    def domain(self):
+        pass
 
     def get_constants(self, kwargs):
         self._gamma = kwargs.get("gamma", 1.4)
@@ -148,7 +157,7 @@ class BaseTVAcousticWeakForm(BaseComplexWeakForm, ABC):
         i, j = ufl.indices(2)
         shear_stress = (
             velocity[i].dx(j)
-            + dolf.Constant(1.0 / 3.0) * self.I[i, j] * dolf.div(velocity)
+            + dolf.Constant(1.0 / 3.0) * self.identity_tensor[i, j] * dolf.div(velocity)
         ) / self.dolf_constants.Re
         # shear_stress = (
         #     velocity[i].dx(j)
@@ -158,7 +167,7 @@ class BaseTVAcousticWeakForm(BaseComplexWeakForm, ABC):
         return dolf.as_tensor(shear_stress, (i, j))
 
     def stress(self, pressure, velocity):
-        return self.shear_stress(velocity) - pressure * self.I
+        return self.shear_stress(velocity) - pressure * self.identity_tensor
 
     def heat_flux(self, temperature):
         return (
@@ -179,7 +188,7 @@ class BaseTVAcousticWeakForm(BaseComplexWeakForm, ABC):
         energy_component = self.entropy(pressure, temperature) * test_temperature
 
         if shift is None:
-            shift = 1.0 + 0.0j
+            shift = 1.0
 
         return (
             self._parse_dolf_expression(shift)
@@ -206,7 +215,7 @@ class BaseTVAcousticWeakForm(BaseComplexWeakForm, ABC):
         )
 
         if shift is None:
-            shift = 1.0 + 0.0j
+            shift = 1.0
 
         return (
             self._parse_dolf_expression(shift)
@@ -352,7 +361,7 @@ class BaseTVAcousticWeakForm(BaseComplexWeakForm, ABC):
         pass
 
 
-class TVAcousticWeakForm(BaseTVAcousticWeakForm):
+class TVAcousticWeakForm(BaseWeakForm, BaseTVAcousticWeakForm):
     function_space_factory = None
     complex_forms_flag = "real"
 
@@ -424,7 +433,7 @@ class TVAcousticWeakForm(BaseTVAcousticWeakForm):
         return dolf.assemble(self.temporal_component(state, state)) / 2.0
 
 
-class ComplexTVAcousticWeakForm(BaseTVAcousticWeakForm):
+class ComplexTVAcousticWeakForm(BaseComplexWeakForm, BaseTVAcousticWeakForm):
     """
     Weak forms for complex TVAcoustic problem.
     """
