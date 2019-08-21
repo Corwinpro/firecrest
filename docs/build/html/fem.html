@@ -128,8 +128,21 @@ params:
 <span id="fem-base-weakform-module"></span><h2>fem.base_weakform module<a class="headerlink" href="#module-fem.base_weakform" title="Permalink to this headline">¶</a></h2>
 <dl class="class">
 <dt id="fem.base_weakform.BaseWeakForm">
-<em class="property">class </em><code class="sig-prename descclassname">fem.base_weakform.</code><code class="sig-name descname">BaseWeakForm</code><span class="sig-paren">(</span><em class="sig-param">domain</em>, <em class="sig-param">**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/fem/base_weakform.html#BaseWeakForm"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#fem.base_weakform.BaseWeakForm" title="Permalink to this definition">¶</a></dt>
-<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">abc.ABC</span></code></p>
+<em class="property">class </em><code class="sig-prename descclassname">fem.base_weakform.</code><code class="sig-name descname">BaseWeakForm</code><span class="sig-paren">(</span><em class="sig-param">domain</em>, <em class="sig-param">*args</em>, <em class="sig-param">**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/fem/base_weakform.html#BaseWeakForm"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#fem.base_weakform.BaseWeakForm" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p><cite>_complex_forms_flag</cite> implements a special flag for complex valued boundary conditions.
+This allows us to switch between the real and complex values, and use the same forms
+generator for both the real, and the imaginary components of boundary conditions.</p>
+<dl class="method">
+<dt id="fem.base_weakform.BaseWeakForm.complex_forms_flag">
+<em class="property">property </em><code class="sig-name descname">complex_forms_flag</code><a class="headerlink" href="#fem.base_weakform.BaseWeakForm.complex_forms_flag" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="fem.base_weakform.BaseWeakForm.domain">
+<em class="property">property </em><code class="sig-name descname">domain</code><a class="headerlink" href="#fem.base_weakform.BaseWeakForm.domain" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
 </dd></dl>
 
 </div>
@@ -255,8 +268,8 @@ Chosen function spaces are:
 <span id="fem-tv-acoustic-weakform-module"></span><h2>fem.tv_acoustic_weakform module<a class="headerlink" href="#module-fem.tv_acoustic_weakform" title="Permalink to this headline">¶</a></h2>
 <dl class="class">
 <dt id="fem.tv_acoustic_weakform.BaseTVAcousticWeakForm">
-<em class="property">class </em><code class="sig-prename descclassname">fem.tv_acoustic_weakform.</code><code class="sig-name descname">BaseTVAcousticWeakForm</code><span class="sig-paren">(</span><em class="sig-param">domain</em>, <em class="sig-param">**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/fem/tv_acoustic_weakform.html#BaseTVAcousticWeakForm"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#fem.tv_acoustic_weakform.BaseTVAcousticWeakForm" title="Permalink to this definition">¶</a></dt>
-<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">firecrest.fem.base_weakform.BaseWeakForm</span></code>, <code class="xref py py-class docutils literal notranslate"><span class="pre">abc.ABC</span></code></p>
+<em class="property">class </em><code class="sig-prename descclassname">fem.tv_acoustic_weakform.</code><code class="sig-name descname">BaseTVAcousticWeakForm</code><span class="sig-paren">(</span><em class="sig-param">*args</em>, <em class="sig-param">**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/fem/tv_acoustic_weakform.html#BaseTVAcousticWeakForm"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#fem.tv_acoustic_weakform.BaseTVAcousticWeakForm" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">abc.ABC</span></code>, <code class="xref py py-class docutils literal notranslate"><span class="pre">firecrest.fem.base_weakform.BaseWeakForm</span></code></p>
 <p>Base class for Thermoviscous acoustic weak forms generation.</p>
 <dl class="attribute">
 <dt id="fem.tv_acoustic_weakform.BaseTVAcousticWeakForm.allowed_stress_bcs">
@@ -327,7 +340,7 @@ of the TVAcoustic weak form equation.</p>
 
 <dl class="method">
 <dt id="fem.tv_acoustic_weakform.BaseTVAcousticWeakForm.spatial_component">
-<code class="sig-name descname">spatial_component</code><span class="sig-paren">(</span><em class="sig-param">trial</em>, <em class="sig-param">test</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/fem/tv_acoustic_weakform.html#BaseTVAcousticWeakForm.spatial_component"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#fem.tv_acoustic_weakform.BaseTVAcousticWeakForm.spatial_component" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">spatial_component</code><span class="sig-paren">(</span><em class="sig-param">trial</em>, <em class="sig-param">test</em>, <em class="sig-param">shift=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/fem/tv_acoustic_weakform.html#BaseTVAcousticWeakForm.spatial_component"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#fem.tv_acoustic_weakform.BaseTVAcousticWeakForm.spatial_component" title="Permalink to this definition">¶</a></dt>
 <dd><p>Generates spatial component of the TVAcoustic weak form equation.</p>
 </dd></dl>
 
@@ -343,7 +356,7 @@ of the TVAcoustic weak form equation.</p>
 
 <dl class="method">
 <dt id="fem.tv_acoustic_weakform.BaseTVAcousticWeakForm.temporal_component">
-<code class="sig-name descname">temporal_component</code><span class="sig-paren">(</span><em class="sig-param">trial</em>, <em class="sig-param">test</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/fem/tv_acoustic_weakform.html#BaseTVAcousticWeakForm.temporal_component"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#fem.tv_acoustic_weakform.BaseTVAcousticWeakForm.temporal_component" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">temporal_component</code><span class="sig-paren">(</span><em class="sig-param">trial</em>, <em class="sig-param">test</em>, <em class="sig-param">shift=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/fem/tv_acoustic_weakform.html#BaseTVAcousticWeakForm.temporal_component"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#fem.tv_acoustic_weakform.BaseTVAcousticWeakForm.temporal_component" title="Permalink to this definition">¶</a></dt>
 <dd><p>Generates temporal component of the TVAcoustic weak form equation.</p>
 </dd></dl>
 
@@ -393,7 +406,7 @@ of the TVAcoustic weak form equation.</p>
 
 <dl class="method">
 <dt id="fem.tv_acoustic_weakform.ComplexTVAcousticWeakForm.temporal_component">
-<code class="sig-name descname">temporal_component</code><span class="sig-paren">(</span><em class="sig-param">trial=None</em>, <em class="sig-param">test=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/fem/tv_acoustic_weakform.html#ComplexTVAcousticWeakForm.temporal_component"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#fem.tv_acoustic_weakform.ComplexTVAcousticWeakForm.temporal_component" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">temporal_component</code><span class="sig-paren">(</span><em class="sig-param">trial=None</em>, <em class="sig-param">test=None</em>, <em class="sig-param">shift=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/fem/tv_acoustic_weakform.html#ComplexTVAcousticWeakForm.temporal_component"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#fem.tv_acoustic_weakform.ComplexTVAcousticWeakForm.temporal_component" title="Permalink to this definition">¶</a></dt>
 <dd><p>Generates temporal component of the TVAcoustic weak form equation.</p>
 </dd></dl>
 

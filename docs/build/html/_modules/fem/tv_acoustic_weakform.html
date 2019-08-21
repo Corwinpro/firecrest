@@ -80,6 +80,7 @@
   <h1>Source code for fem.tv_acoustic_weakform</h1><div class="highlight"><pre>
 <span></span><span class="kn">import</span> <span class="nn">functools</span>
 <span class="kn">from</span> <span class="nn">abc</span> <span class="k">import</span> <span class="n">ABC</span><span class="p">,</span> <span class="n">abstractmethod</span>
+<span class="kn">from</span> <span class="nn">firecrest.misc.complex_template</span> <span class="k">import</span> <span class="n">Complex</span>
 <span class="kn">from</span> <span class="nn">firecrest.fem.base_weakform</span> <span class="k">import</span> <span class="n">BaseWeakForm</span>
 <span class="kn">from</span> <span class="nn">firecrest.fem.tv_acoustic_fspace</span> <span class="k">import</span> <span class="p">(</span>
     <span class="n">TVAcousticFunctionSpace</span><span class="p">,</span>
@@ -96,7 +97,7 @@
 <span class="sd">    &quot;&quot;&quot;</span>
 
     <span class="nd">@functools</span><span class="o">.</span><span class="n">wraps</span><span class="p">(</span><span class="n">component</span><span class="p">)</span>
-    <span class="k">def</span> <span class="nf">inner</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">trial</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">test</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">inner</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">trial</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">test</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
         <span class="k">if</span> <span class="n">trial</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">test</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
             <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">            With empty arguments we implement default trial/test complex component</span>
@@ -112,23 +113,31 @@
 
         <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">trial</span><span class="p">)</span> <span class="o">==</span> <span class="mi">3</span> <span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="n">test</span><span class="p">)</span> <span class="o">==</span> <span class="mi">3</span><span class="p">:</span>
             <span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">            If triplets trial and test are given, we contstruct real component</span>
+<span class="sd">            If triplets trial and test are given, we construct real component</span>
 <span class="sd">            &quot;&quot;&quot;</span>
             <span class="k">return</span> <span class="n">component</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">trial</span><span class="p">,</span> <span class="n">test</span><span class="p">)</span>
         <span class="k">elif</span> <span class="nb">len</span><span class="p">(</span><span class="n">trial</span><span class="p">)</span> <span class="o">==</span> <span class="mi">6</span> <span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="n">test</span><span class="p">)</span> <span class="o">==</span> <span class="mi">6</span><span class="p">:</span>
             <span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">            If triplets*2 trial and test are given, we contstruct complex component</span>
-<span class="sd">            TODO:</span>
-<span class="sd">                Use complex_component method instead of explicit indexing</span>
+<span class="sd">            If triplets*2 trial and test are given, we construct complex component</span>
 <span class="sd">            &quot;&quot;&quot;</span>
-            <span class="k">return</span> <span class="n">component</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">trial</span><span class="p">[:</span><span class="mi">3</span><span class="p">],</span> <span class="n">test</span><span class="p">[:</span><span class="mi">3</span><span class="p">])</span> <span class="o">+</span> <span class="n">component</span><span class="p">(</span>
-                <span class="bp">self</span><span class="p">,</span> <span class="n">trial</span><span class="p">[</span><span class="mi">3</span><span class="p">:],</span> <span class="n">test</span><span class="p">[</span><span class="mi">3</span><span class="p">:]</span>
+            <span class="n">_flag</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">complex_forms_flag</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">complex_forms_flag</span> <span class="o">=</span> <span class="s2">&quot;real&quot;</span>
+            <span class="n">forms</span> <span class="o">=</span> <span class="n">component</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">trial</span><span class="p">[:</span><span class="mi">3</span><span class="p">],</span> <span class="n">test</span><span class="p">[:</span><span class="mi">3</span><span class="p">],</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span> <span class="o">+</span> <span class="n">component</span><span class="p">(</span>
+                <span class="bp">self</span><span class="p">,</span> <span class="n">trial</span><span class="p">[</span><span class="mi">3</span><span class="p">:],</span> <span class="n">test</span><span class="p">[</span><span class="mi">3</span><span class="p">:],</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span>
             <span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">complex_forms_flag</span> <span class="o">=</span> <span class="s2">&quot;imag&quot;</span>
+            <span class="n">forms</span> <span class="o">+=</span> <span class="n">component</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">trial</span><span class="p">[:</span><span class="mi">3</span><span class="p">],</span> <span class="n">test</span><span class="p">[</span><span class="mi">3</span><span class="p">:],</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span> <span class="o">-</span> <span class="n">component</span><span class="p">(</span>
+                <span class="bp">self</span><span class="p">,</span> <span class="n">trial</span><span class="p">[</span><span class="mi">3</span><span class="p">:],</span> <span class="n">test</span><span class="p">[:</span><span class="mi">3</span><span class="p">],</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span>
+            <span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">complex_forms_flag</span> <span class="o">=</span> <span class="n">_flag</span>
+            <span class="k">return</span> <span class="n">forms</span>
         <span class="k">elif</span> <span class="p">(</span><span class="n">trial</span> <span class="ow">in</span> <span class="p">[</span><span class="s2">&quot;real&quot;</span><span class="p">,</span> <span class="s2">&quot;imag&quot;</span><span class="p">])</span> <span class="ow">and</span> <span class="p">(</span><span class="n">test</span> <span class="ow">in</span> <span class="p">[</span><span class="s2">&quot;real&quot;</span><span class="p">,</span> <span class="s2">&quot;imag&quot;</span><span class="p">]):</span>
             <span class="k">return</span> <span class="n">component</span><span class="p">(</span>
                 <span class="bp">self</span><span class="p">,</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">complex_component</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">trial_functions</span><span class="p">,</span> <span class="n">trial</span><span class="p">),</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">complex_component</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">test_functions</span><span class="p">,</span> <span class="n">test</span><span class="p">),</span>
+                <span class="o">*</span><span class="n">args</span><span class="p">,</span>
+                <span class="o">**</span><span class="n">kwargs</span><span class="p">,</span>
             <span class="p">)</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="k">raise</span> <span class="ne">ValueError</span>
@@ -136,7 +145,7 @@
     <span class="k">return</span> <span class="n">inner</span></div>
 
 
-<div class="viewcode-block" id="BaseTVAcousticWeakForm"><a class="viewcode-back" href="../../fem.html#fem.tv_acoustic_weakform.BaseTVAcousticWeakForm">[docs]</a><span class="k">class</span> <span class="nc">BaseTVAcousticWeakForm</span><span class="p">(</span><span class="n">BaseWeakForm</span><span class="p">,</span> <span class="n">ABC</span><span class="p">):</span>
+<div class="viewcode-block" id="BaseTVAcousticWeakForm"><a class="viewcode-back" href="../../fem.html#fem.tv_acoustic_weakform.BaseTVAcousticWeakForm">[docs]</a><span class="k">class</span> <span class="nc">BaseTVAcousticWeakForm</span><span class="p">(</span><span class="n">ABC</span><span class="p">,</span> <span class="n">BaseWeakForm</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Base class for Thermoviscous acoustic weak forms generation.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
@@ -160,9 +169,11 @@
         <span class="s2">&quot;thermal_accommodation&quot;</span><span class="p">:</span> <span class="s2">&quot;Robin&quot;</span><span class="p">,</span>
     <span class="p">}</span>
 
-    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">domain</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
-        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">domain</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">dolf_constants</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_constants</span><span class="p">(</span><span class="n">kwargs</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">trial_functions</span> <span class="o">=</span> <span class="n">dolf</span><span class="o">.</span><span class="n">TrialFunctions</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">function_space</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">test_functions</span> <span class="o">=</span> <span class="n">dolf</span><span class="o">.</span><span class="n">TestFunctions</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">function_space</span><span class="p">)</span>
 
 <div class="viewcode-block" id="BaseTVAcousticWeakForm.get_constants"><a class="viewcode-back" href="../../fem.html#fem.tv_acoustic_weakform.BaseTVAcousticWeakForm.get_constants">[docs]</a>    <span class="k">def</span> <span class="nf">get_constants</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">kwargs</span><span class="p">):</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_gamma</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;gamma&quot;</span><span class="p">,</span> <span class="mf">1.4</span><span class="p">)</span>
@@ -219,7 +230,7 @@
         <span class="n">i</span><span class="p">,</span> <span class="n">j</span> <span class="o">=</span> <span class="n">ufl</span><span class="o">.</span><span class="n">indices</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span>
         <span class="n">shear_stress</span> <span class="o">=</span> <span class="p">(</span>
             <span class="n">velocity</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">dx</span><span class="p">(</span><span class="n">j</span><span class="p">)</span>
-            <span class="o">+</span> <span class="n">dolf</span><span class="o">.</span><span class="n">Constant</span><span class="p">(</span><span class="mf">1.0</span> <span class="o">/</span> <span class="mf">3.0</span><span class="p">)</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">I</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="n">j</span><span class="p">]</span> <span class="o">*</span> <span class="n">dolf</span><span class="o">.</span><span class="n">div</span><span class="p">(</span><span class="n">velocity</span><span class="p">)</span>
+            <span class="o">+</span> <span class="n">dolf</span><span class="o">.</span><span class="n">Constant</span><span class="p">(</span><span class="mf">1.0</span> <span class="o">/</span> <span class="mf">3.0</span><span class="p">)</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">identity_tensor</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="n">j</span><span class="p">]</span> <span class="o">*</span> <span class="n">dolf</span><span class="o">.</span><span class="n">div</span><span class="p">(</span><span class="n">velocity</span><span class="p">)</span>
         <span class="p">)</span> <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">dolf_constants</span><span class="o">.</span><span class="n">Re</span>
         <span class="c1"># shear_stress = (</span>
         <span class="c1">#     velocity[i].dx(j)</span>
@@ -229,7 +240,7 @@
         <span class="k">return</span> <span class="n">dolf</span><span class="o">.</span><span class="n">as_tensor</span><span class="p">(</span><span class="n">shear_stress</span><span class="p">,</span> <span class="p">(</span><span class="n">i</span><span class="p">,</span> <span class="n">j</span><span class="p">))</span></div>
 
 <div class="viewcode-block" id="BaseTVAcousticWeakForm.stress"><a class="viewcode-back" href="../../fem.html#fem.tv_acoustic_weakform.BaseTVAcousticWeakForm.stress">[docs]</a>    <span class="k">def</span> <span class="nf">stress</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">pressure</span><span class="p">,</span> <span class="n">velocity</span><span class="p">):</span>
-        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">shear_stress</span><span class="p">(</span><span class="n">velocity</span><span class="p">)</span> <span class="o">-</span> <span class="n">pressure</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">I</span></div>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">shear_stress</span><span class="p">(</span><span class="n">velocity</span><span class="p">)</span> <span class="o">-</span> <span class="n">pressure</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">identity_tensor</span></div>
 
 <div class="viewcode-block" id="BaseTVAcousticWeakForm.heat_flux"><a class="viewcode-back" href="../../fem.html#fem.tv_acoustic_weakform.BaseTVAcousticWeakForm.heat_flux">[docs]</a>    <span class="k">def</span> <span class="nf">heat_flux</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">temperature</span><span class="p">):</span>
         <span class="k">return</span> <span class="p">(</span>
@@ -238,7 +249,7 @@
             <span class="o">/</span> <span class="n">dolf</span><span class="o">.</span><span class="n">Constant</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">dolf_constants</span><span class="o">.</span><span class="n">gamma</span> <span class="o">-</span> <span class="mf">1.0</span><span class="p">)</span>
         <span class="p">)</span></div>
 
-<div class="viewcode-block" id="BaseTVAcousticWeakForm.temporal_component"><a class="viewcode-back" href="../../fem.html#fem.tv_acoustic_weakform.BaseTVAcousticWeakForm.temporal_component">[docs]</a>    <span class="k">def</span> <span class="nf">temporal_component</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">trial</span><span class="p">,</span> <span class="n">test</span><span class="p">):</span>
+<div class="viewcode-block" id="BaseTVAcousticWeakForm.temporal_component"><a class="viewcode-back" href="../../fem.html#fem.tv_acoustic_weakform.BaseTVAcousticWeakForm.temporal_component">[docs]</a>    <span class="k">def</span> <span class="nf">temporal_component</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">trial</span><span class="p">,</span> <span class="n">test</span><span class="p">,</span> <span class="n">shift</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Generates temporal component of the TVAcoustic weak form equation.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
@@ -249,11 +260,16 @@
         <span class="n">momentum_component</span> <span class="o">=</span> <span class="n">dolf</span><span class="o">.</span><span class="n">inner</span><span class="p">(</span><span class="n">velocity</span><span class="p">,</span> <span class="n">test_velocity</span><span class="p">)</span>
         <span class="n">energy_component</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">entropy</span><span class="p">(</span><span class="n">pressure</span><span class="p">,</span> <span class="n">temperature</span><span class="p">)</span> <span class="o">*</span> <span class="n">test_temperature</span>
 
-        <span class="k">return</span> <span class="p">(</span>
-            <span class="n">continuity_component</span> <span class="o">+</span> <span class="n">momentum_component</span> <span class="o">+</span> <span class="n">energy_component</span>
-        <span class="p">)</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">domain</span><span class="o">.</span><span class="n">dx</span></div>
+        <span class="k">if</span> <span class="n">shift</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">shift</span> <span class="o">=</span> <span class="mf">1.0</span>
 
-<div class="viewcode-block" id="BaseTVAcousticWeakForm.spatial_component"><a class="viewcode-back" href="../../fem.html#fem.tv_acoustic_weakform.BaseTVAcousticWeakForm.spatial_component">[docs]</a>    <span class="k">def</span> <span class="nf">spatial_component</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">trial</span><span class="p">,</span> <span class="n">test</span><span class="p">):</span>
+        <span class="k">return</span> <span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_parse_dolf_expression</span><span class="p">(</span><span class="n">shift</span><span class="p">)</span>
+            <span class="o">*</span> <span class="p">(</span><span class="n">continuity_component</span> <span class="o">+</span> <span class="n">momentum_component</span> <span class="o">+</span> <span class="n">energy_component</span><span class="p">)</span>
+            <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">domain</span><span class="o">.</span><span class="n">dx</span>
+        <span class="p">)</span></div>
+
+<div class="viewcode-block" id="BaseTVAcousticWeakForm.spatial_component"><a class="viewcode-back" href="../../fem.html#fem.tv_acoustic_weakform.BaseTVAcousticWeakForm.spatial_component">[docs]</a>    <span class="k">def</span> <span class="nf">spatial_component</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">trial</span><span class="p">,</span> <span class="n">test</span><span class="p">,</span> <span class="n">shift</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Generates spatial component of the TVAcoustic weak form equation.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
@@ -271,9 +287,14 @@
             <span class="n">dolf</span><span class="o">.</span><span class="n">grad</span><span class="p">(</span><span class="n">test_temperature</span><span class="p">),</span> <span class="bp">self</span><span class="o">.</span><span class="n">heat_flux</span><span class="p">(</span><span class="n">temperature</span><span class="p">)</span>
         <span class="p">)</span>
 
+        <span class="k">if</span> <span class="n">shift</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">shift</span> <span class="o">=</span> <span class="mf">1.0</span>
+
         <span class="k">return</span> <span class="p">(</span>
-            <span class="n">continuity_component</span> <span class="o">+</span> <span class="n">momentum_component</span> <span class="o">+</span> <span class="n">energy_component</span>
-        <span class="p">)</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">domain</span><span class="o">.</span><span class="n">dx</span></div>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_parse_dolf_expression</span><span class="p">(</span><span class="n">shift</span><span class="p">)</span>
+            <span class="o">*</span> <span class="p">(</span><span class="n">continuity_component</span> <span class="o">+</span> <span class="n">momentum_component</span> <span class="o">+</span> <span class="n">energy_component</span><span class="p">)</span>
+            <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">domain</span><span class="o">.</span><span class="n">dx</span>
+        <span class="p">)</span></div>
 
 <div class="viewcode-block" id="BaseTVAcousticWeakForm.boundary_components"><a class="viewcode-back" href="../../fem.html#fem.tv_acoustic_weakform.BaseTVAcousticWeakForm.boundary_components">[docs]</a>    <span class="k">def</span> <span class="nf">boundary_components</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">trial</span><span class="p">,</span> <span class="n">test</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
@@ -286,8 +307,8 @@
         <span class="n">_</span><span class="p">,</span> <span class="n">velocity</span><span class="p">,</span> <span class="n">temperature</span> <span class="o">=</span> <span class="n">trial</span>
         <span class="n">_</span><span class="p">,</span> <span class="n">test_velocity</span><span class="p">,</span> <span class="n">test_temperature</span> <span class="o">=</span> <span class="n">test</span>
 
-        <span class="n">stress_boundary_component</span> <span class="o">=</span> <span class="n">dolf</span><span class="o">.</span><span class="n">Constant</span><span class="p">(</span><span class="mf">0.0</span><span class="p">)</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">domain</span><span class="o">.</span><span class="n">ds</span>
-        <span class="n">temperature_boundary_component</span> <span class="o">=</span> <span class="n">dolf</span><span class="o">.</span><span class="n">Constant</span><span class="p">(</span><span class="mf">0.0</span><span class="p">)</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">domain</span><span class="o">.</span><span class="n">ds</span>
+        <span class="n">stress_boundary_component</span> <span class="o">=</span> <span class="n">dolf</span><span class="o">.</span><span class="n">Constant</span><span class="p">(</span><span class="mf">0.0</span><span class="p">)</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">domain</span><span class="o">.</span><span class="n">ds</span><span class="p">()</span>
+        <span class="n">temperature_boundary_component</span> <span class="o">=</span> <span class="n">dolf</span><span class="o">.</span><span class="n">Constant</span><span class="p">(</span><span class="mf">0.0</span><span class="p">)</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">domain</span><span class="o">.</span><span class="n">ds</span><span class="p">()</span>
 
         <span class="k">for</span> <span class="n">boundary</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">domain</span><span class="o">.</span><span class="n">boundary_elements</span><span class="p">:</span>
             <span class="c1"># Step 1. Parse boundary condition data provided by boundary elements.</span>
@@ -323,9 +344,9 @@
 
             <span class="c1"># Same for stress / velocity boundary conditions</span>
             <span class="n">stress_bc</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_pop_boundary_condition</span><span class="p">(</span>
-                <span class="n">boundary</span><span class="o">.</span><span class="n">bcond</span><span class="p">,</span> <span class="n">TVAcousticWeakForm</span><span class="o">.</span><span class="n">allowed_stress_bcs</span>
+                <span class="n">boundary</span><span class="o">.</span><span class="n">bcond</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">allowed_stress_bcs</span>
             <span class="p">)</span>
-            <span class="n">stress_bc_type</span> <span class="o">=</span> <span class="n">TVAcousticWeakForm</span><span class="o">.</span><span class="n">allowed_stress_bcs</span><span class="p">[</span><span class="n">stress_bc</span><span class="p">]</span>
+            <span class="n">stress_bc_type</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">allowed_stress_bcs</span><span class="p">[</span><span class="n">stress_bc</span><span class="p">]</span>
 
             <span class="k">if</span> <span class="n">stress_bc_type</span> <span class="o">==</span> <span class="s2">&quot;Neumann&quot;</span> <span class="ow">or</span> <span class="n">stress_bc_type</span> <span class="o">==</span> <span class="s2">&quot;Robin&quot;</span><span class="p">:</span>
                 <span class="k">if</span> <span class="n">stress_bc</span> <span class="o">==</span> <span class="s2">&quot;free&quot;</span><span class="p">:</span>
@@ -362,7 +383,7 @@
                     <span class="n">stress</span><span class="p">,</span> <span class="n">test_velocity</span>
                 <span class="p">)</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">domain</span><span class="o">.</span><span class="n">ds</span><span class="p">((</span><span class="n">boundary</span><span class="o">.</span><span class="n">surface_index</span><span class="p">,))</span>
 
-        <span class="k">return</span> <span class="n">stress_boundary_component</span><span class="p">,</span> <span class="n">temperature_boundary_component</span></div>
+        <span class="k">return</span> <span class="n">stress_boundary_component</span> <span class="o">+</span> <span class="n">temperature_boundary_component</span></div>
 
     <span class="nd">@staticmethod</span>
     <span class="k">def</span> <span class="nf">_pop_boundary_condition</span><span class="p">(</span><span class="n">bcond</span><span class="p">,</span> <span class="n">allowed_bconds</span><span class="p">):</span>
@@ -410,22 +431,27 @@
 
     <span class="nd">@abstractmethod</span>
     <span class="k">def</span> <span class="nf">_generate_dirichlet_bc</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">boundary</span><span class="p">,</span> <span class="n">bc_type</span><span class="p">,</span> <span class="n">is_linearised</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
-        <span class="k">pass</span></div>
+        <span class="k">pass</span>
+
+    <span class="k">def</span> <span class="nf">_lhs_forms</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Constructs the LHS forms (spatial components), AA of the problem AA*x = (...)*BB*x.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">spatial_component</span><span class="p">()</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">boundary_components</span><span class="p">()</span>
+
+    <span class="k">def</span> <span class="nf">_rhs_forms</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">shift</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Constructs the RHS forms (temporal components), BB of the problem AA*x = (...)*BB*x.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">temporal_component</span><span class="p">(</span><span class="n">shift</span><span class="o">=</span><span class="n">shift</span><span class="p">)</span></div>
 
 
 <div class="viewcode-block" id="TVAcousticWeakForm"><a class="viewcode-back" href="../../fem.html#fem.tv_acoustic_weakform.TVAcousticWeakForm">[docs]</a><span class="k">class</span> <span class="nc">TVAcousticWeakForm</span><span class="p">(</span><span class="n">BaseTVAcousticWeakForm</span><span class="p">):</span>
     <span class="n">function_space_factory</span> <span class="o">=</span> <span class="kc">None</span>
 
     <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">domain</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">function_space_factory</span> <span class="o">=</span> <span class="n">TVAcousticFunctionSpace</span><span class="p">(</span><span class="n">domain</span><span class="p">)</span>
         <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">domain</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">function_space_factory</span> <span class="o">=</span> <span class="n">TVAcousticFunctionSpace</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">domain</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">trial_functions</span> <span class="o">=</span> <span class="n">dolf</span><span class="o">.</span><span class="n">TrialFunctions</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">function_space</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">test_functions</span> <span class="o">=</span> <span class="n">dolf</span><span class="o">.</span><span class="n">TestFunctions</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">function_space</span><span class="p">)</span>
-
-        <span class="bp">self</span><span class="o">.</span><span class="n">pressure</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">velocity</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">temperature</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">trial_functions</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">test_pressure</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">test_velocity</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">test_temperature</span> <span class="o">=</span> <span class="p">(</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">test_functions</span>
-        <span class="p">)</span>
 
     <span class="nd">@staticmethod</span>
     <span class="k">def</span> <span class="nf">_unpack_functions</span><span class="p">(</span><span class="n">functions</span><span class="p">):</span>
@@ -492,29 +518,9 @@
     <span class="n">function_space_factory</span> <span class="o">=</span> <span class="kc">None</span>
 
     <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">domain</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">function_space_factory</span> <span class="o">=</span> <span class="n">ComplexTVAcousticFunctionSpace</span><span class="p">(</span><span class="n">domain</span><span class="p">)</span>
         <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">domain</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">function_space_factory</span> <span class="o">=</span> <span class="n">ComplexTVAcousticFunctionSpace</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">domain</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">real_function_space_factory</span> <span class="o">=</span> <span class="kc">None</span>
-
-        <span class="bp">self</span><span class="o">.</span><span class="n">trial_functions</span> <span class="o">=</span> <span class="n">dolf</span><span class="o">.</span><span class="n">TrialFunctions</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">function_space</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">test_functions</span> <span class="o">=</span> <span class="n">dolf</span><span class="o">.</span><span class="n">TestFunctions</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">function_space</span><span class="p">)</span>
-
-        <span class="p">(</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">real_pressure</span><span class="p">,</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">real_velocity</span><span class="p">,</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">real_temperature</span><span class="p">,</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">imag_pressure</span><span class="p">,</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">imag_velocity</span><span class="p">,</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">imag_temperature</span><span class="p">,</span>
-        <span class="p">)</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">trial_functions</span>
-        <span class="p">(</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">test_real_pressure</span><span class="p">,</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">test_real_velocity</span><span class="p">,</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">test_real_temperature</span><span class="p">,</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">test_imag_pressure</span><span class="p">,</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">test_imag_velocity</span><span class="p">,</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">test_imag_temperature</span><span class="p">,</span>
-        <span class="p">)</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">test_functions</span>
 
 <div class="viewcode-block" id="ComplexTVAcousticWeakForm.complex_component"><a class="viewcode-back" href="../../fem.html#fem.tv_acoustic_weakform.ComplexTVAcousticWeakForm.complex_component">[docs]</a>    <span class="nd">@staticmethod</span>
     <span class="k">def</span> <span class="nf">complex_component</span><span class="p">(</span><span class="n">functions</span><span class="p">,</span> <span class="n">complex_flag</span><span class="p">):</span>
@@ -533,8 +539,8 @@
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">real_function_space_factory</span><span class="o">.</span><span class="n">function_spaces</span>
 
 <div class="viewcode-block" id="ComplexTVAcousticWeakForm.temporal_component"><a class="viewcode-back" href="../../fem.html#fem.tv_acoustic_weakform.ComplexTVAcousticWeakForm.temporal_component">[docs]</a>    <span class="nd">@parse_trialtest</span>
-    <span class="k">def</span> <span class="nf">temporal_component</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">trial</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">test</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
-        <span class="k">return</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">temporal_component</span><span class="p">(</span><span class="n">trial</span><span class="p">,</span> <span class="n">test</span><span class="p">)</span></div>
+    <span class="k">def</span> <span class="nf">temporal_component</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">trial</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">test</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">shift</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="k">return</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">temporal_component</span><span class="p">(</span><span class="n">trial</span><span class="p">,</span> <span class="n">test</span><span class="p">,</span> <span class="n">shift</span><span class="o">=</span><span class="n">shift</span><span class="p">)</span></div>
 
 <div class="viewcode-block" id="ComplexTVAcousticWeakForm.spatial_component"><a class="viewcode-back" href="../../fem.html#fem.tv_acoustic_weakform.ComplexTVAcousticWeakForm.spatial_component">[docs]</a>    <span class="nd">@parse_trialtest</span>
     <span class="k">def</span> <span class="nf">spatial_component</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">trial</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">test</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
@@ -542,18 +548,12 @@
 
 <div class="viewcode-block" id="ComplexTVAcousticWeakForm.boundary_components"><a class="viewcode-back" href="../../fem.html#fem.tv_acoustic_weakform.ComplexTVAcousticWeakForm.boundary_components">[docs]</a>    <span class="nd">@parse_trialtest</span>
     <span class="k">def</span> <span class="nf">boundary_components</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">trial</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">test</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
-        <span class="c1"># TODO: parse complex boundary conditions</span>
         <span class="k">return</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">boundary_components</span><span class="p">(</span><span class="n">trial</span><span class="p">,</span> <span class="n">test</span><span class="p">)</span></div>
 
     <span class="k">def</span> <span class="nf">_generate_dirichlet_bc</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">boundary</span><span class="p">,</span> <span class="n">bc_type</span><span class="p">,</span> <span class="n">is_linearised</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Given a boundary and a boundary condition type (one from the &#39;bc_to_fs&#39; dict),</span>
 <span class="sd">        we generate a dolfin DirichletBC based on the boundary expression for this boundary condition.</span>
-<span class="sd">        </span>
-<span class="sd">        TODO:</span>
-<span class="sd">            - add complex boundary conditions: now we set the same value to both real and imag components,</span>
-<span class="sd">            while it should be different (only for non-eingenvalue problems)</span>
-<span class="sd">            - Deal with is_linearised=False flag</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">bc_to_fs</span> <span class="o">=</span> <span class="p">{</span>
             <span class="s2">&quot;noslip&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">velocity_function_space</span><span class="p">,</span>
@@ -563,11 +563,17 @@
         <span class="p">}</span>
 
         <span class="k">if</span> <span class="n">bc_type</span> <span class="o">==</span> <span class="s2">&quot;noslip&quot;</span><span class="p">:</span>
-            <span class="n">value</span> <span class="o">=</span> <span class="n">dolf</span><span class="o">.</span><span class="n">Constant</span><span class="p">((</span><span class="mf">0.0</span><span class="p">,)</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">geometric_dimension</span><span class="p">)</span>
+            <span class="n">value</span> <span class="o">=</span> <span class="n">Complex</span><span class="p">(</span><span class="n">dolf</span><span class="o">.</span><span class="n">Constant</span><span class="p">((</span><span class="mf">0.0</span><span class="p">,)</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">geometric_dimension</span><span class="p">))</span>
         <span class="k">elif</span> <span class="n">bc_type</span> <span class="o">==</span> <span class="s2">&quot;isothermal&quot;</span><span class="p">:</span>
-            <span class="n">value</span> <span class="o">=</span> <span class="n">dolf</span><span class="o">.</span><span class="n">Constant</span><span class="p">(</span><span class="mf">0.0</span><span class="p">)</span>
+            <span class="n">value</span> <span class="o">=</span> <span class="n">Complex</span><span class="p">(</span><span class="n">dolf</span><span class="o">.</span><span class="n">Constant</span><span class="p">(</span><span class="mf">0.0</span><span class="p">))</span>
         <span class="k">elif</span> <span class="n">bc_type</span> <span class="o">==</span> <span class="s2">&quot;inflow&quot;</span> <span class="ow">or</span> <span class="n">bc_type</span> <span class="o">==</span> <span class="s2">&quot;temperature&quot;</span><span class="p">:</span>
-            <span class="n">value</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_parse_dolf_expression</span><span class="p">(</span><span class="n">boundary</span><span class="o">.</span><span class="n">bcond</span><span class="p">[</span><span class="n">bc_type</span><span class="p">])</span>
+            <span class="n">_flag</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">complex_forms_flag</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">complex_forms_flag</span> <span class="o">=</span> <span class="s2">&quot;real&quot;</span>
+            <span class="n">_real_value</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_parse_dolf_expression</span><span class="p">(</span><span class="n">boundary</span><span class="o">.</span><span class="n">bcond</span><span class="p">[</span><span class="n">bc_type</span><span class="p">])</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">complex_forms_flag</span> <span class="o">=</span> <span class="s2">&quot;imag&quot;</span>
+            <span class="n">_imag_value</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_parse_dolf_expression</span><span class="p">(</span><span class="n">boundary</span><span class="o">.</span><span class="n">bcond</span><span class="p">[</span><span class="n">bc_type</span><span class="p">])</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">complex_forms_flag</span> <span class="o">=</span> <span class="n">_flag</span>
+            <span class="n">value</span> <span class="o">=</span> <span class="n">Complex</span><span class="p">(</span><span class="n">_real_value</span><span class="p">,</span> <span class="n">_imag_value</span><span class="p">)</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="n">f</span><span class="s2">&quot;Invalid boundary condition type for Dirichlet condition.&quot;</span><span class="p">)</span>
 
@@ -575,12 +581,17 @@
 
         <span class="k">return</span> <span class="p">[</span>
             <span class="n">dolf</span><span class="o">.</span><span class="n">DirichletBC</span><span class="p">(</span>
-                <span class="n">function_space</span><span class="p">,</span>
-                <span class="n">value</span><span class="p">,</span>
+                <span class="n">function_spaces</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span>
+                <span class="n">value</span><span class="o">.</span><span class="n">real</span><span class="p">,</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">domain</span><span class="o">.</span><span class="n">boundary_parts</span><span class="p">,</span>
                 <span class="n">boundary</span><span class="o">.</span><span class="n">surface_index</span><span class="p">,</span>
-            <span class="p">)</span>
-            <span class="k">for</span> <span class="n">function_space</span> <span class="ow">in</span> <span class="n">function_spaces</span>
+            <span class="p">),</span>
+            <span class="n">dolf</span><span class="o">.</span><span class="n">DirichletBC</span><span class="p">(</span>
+                <span class="n">function_spaces</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span>
+                <span class="n">value</span><span class="o">.</span><span class="n">imag</span><span class="p">,</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">domain</span><span class="o">.</span><span class="n">boundary_parts</span><span class="p">,</span>
+                <span class="n">boundary</span><span class="o">.</span><span class="n">surface_index</span><span class="p">,</span>
+            <span class="p">),</span>
         <span class="p">]</span></div>
 </pre></div>
 
