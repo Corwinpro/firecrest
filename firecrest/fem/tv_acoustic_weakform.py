@@ -319,6 +319,15 @@ class BaseTVAcousticWeakForm(ABC, BaseWeakForm):
             )
         return bc.pop()
 
+    @property
+    def bc_to_fs(self):
+        return {
+            "noslip": self.velocity_function_space,
+            "inflow": self.velocity_function_space,
+            "isothermal": self.temperature_function_space,
+            "temperature": self.temperature_function_space,
+        }
+
     def dirichlet_boundary_conditions(self, is_linearised=False):
         """
         Generates DirichletBCs on all appropriate boundary elements.
@@ -349,9 +358,31 @@ class BaseTVAcousticWeakForm(ABC, BaseWeakForm):
 
         return dirichlet_bcs
 
-    @abstractmethod
     def _generate_dirichlet_bc(self, boundary, bc_type, is_linearised=False):
-        pass
+        """
+        Given a boundary and a boundary condition type (one from the 'bc_to_fs' dict),
+        we generate a dolfin DirichletBC based on the boundary expression for this boundary condition.
+        """
+
+        if bc_type == "noslip" or (bc_type == "inflow" and is_linearised):
+            value = dolf.Constant((0.0,) * self.geometric_dimension)
+        elif bc_type == "isothermal" or (bc_type == "temperature" and is_linearised):
+            value = dolf.Constant(0.0)
+        elif bc_type == "inflow" or bc_type == "temperature":
+            value = self._parse_dolf_expression(boundary.bcond[bc_type])
+        else:
+            raise TypeError(f"Invalid boundary condition type for Dirichlet condition.")
+
+        function_space = self.bc_to_fs[bc_type]
+
+        return [
+            dolf.DirichletBC(
+                function_space,
+                value,
+                self.domain.boundary_parts,
+                boundary.surface_index,
+            )
+        ]
 
     def _lhs_forms(self):
         """
@@ -393,38 +424,6 @@ class TVAcousticWeakForm(BaseTVAcousticWeakForm):
     @parse_trialtest
     def boundary_components(self, trial=None, test=None):
         return super().boundary_components(trial, test)
-
-    def _generate_dirichlet_bc(self, boundary, bc_type, is_linearised=False):
-        """
-        Given a boundary and a boundary condition type (one from the 'bc_to_fs' dict),
-        we generate a dolfin DirichletBC based on the boundary expression for this boundary condition.
-        """
-        bc_to_fs = {
-            "noslip": self.velocity_function_space,
-            "inflow": self.velocity_function_space,
-            "isothermal": self.temperature_function_space,
-            "temperature": self.temperature_function_space,
-        }
-
-        if bc_type == "noslip" or (bc_type == "inflow" and is_linearised):
-            value = dolf.Constant((0.0,) * self.geometric_dimension)
-        elif bc_type == "isothermal" or (bc_type == "temperature" and is_linearised):
-            value = dolf.Constant(0.0)
-        elif bc_type == "inflow" or bc_type == "temperature":
-            value = self._parse_dolf_expression(boundary.bcond[bc_type])
-        else:
-            raise TypeError(f"Invalid boundary condition type for Dirichlet condition.")
-
-        function_space = bc_to_fs[bc_type]
-
-        return [
-            dolf.DirichletBC(
-                function_space,
-                value,
-                self.domain.boundary_parts,
-                boundary.surface_index,
-            )
-        ]
 
     def energy(self, state):
         return dolf.assemble(self.temporal_component(state, state)) / 2.0
@@ -470,46 +469,36 @@ class ComplexTVAcousticWeakForm(BaseTVAcousticWeakForm):
     def boundary_components(self, trial=None, test=None):
         return super().boundary_components(trial, test)
 
+    @property
+    def velocity_function_space(self):
+        complex_fspace = super().velocity_function_space
+        if self.complex_forms_flag == "real":
+            return complex_fspace[0]
+        elif self.complex_forms_flag == "imag":
+            return complex_fspace[1]
+
+    @property
+    def temperature_function_space(self):
+        complex_fspace = super().temperature_function_space
+        if self.complex_forms_flag == "real":
+            return complex_fspace[0]
+        elif self.complex_forms_flag == "imag":
+            return complex_fspace[1]
+
     def _generate_dirichlet_bc(self, boundary, bc_type, is_linearised=False):
         """
-        Given a boundary and a boundary condition type (one from the 'bc_to_fs' dict),
-        we generate a dolfin DirichletBC based on the boundary expression for this boundary condition.
+        Generates a complex boundary condition with the use of the `complex_forms_flag`.
         """
-        bc_to_fs = {
-            "noslip": self.velocity_function_space,
-            "inflow": self.velocity_function_space,
-            "isothermal": self.temperature_function_space,
-            "temperature": self.temperature_function_space,
-        }
+        _flag = self.complex_forms_flag
+        self.complex_forms_flag = "real"
+        bc = super()._generate_dirichlet_bc(
+            boundary, bc_type, is_linearised=is_linearised
+        )
 
-        if bc_type == "noslip":
-            value = Complex(dolf.Constant((0.0,) * self.geometric_dimension))
-        elif bc_type == "isothermal":
-            value = Complex(dolf.Constant(0.0))
-        elif bc_type == "inflow" or bc_type == "temperature":
-            _flag = self.complex_forms_flag
-            self.complex_forms_flag = "real"
-            _real_value = self._parse_dolf_expression(boundary.bcond[bc_type])
-            self.complex_forms_flag = "imag"
-            _imag_value = self._parse_dolf_expression(boundary.bcond[bc_type])
-            self.complex_forms_flag = _flag
-            value = Complex(_real_value, _imag_value)
-        else:
-            raise TypeError(f"Invalid boundary condition type for Dirichlet condition.")
+        self.complex_forms_flag = "imag"
+        bc += super()._generate_dirichlet_bc(
+            boundary, bc_type, is_linearised=is_linearised
+        )
 
-        function_spaces = bc_to_fs[bc_type]
-
-        return [
-            dolf.DirichletBC(
-                function_spaces[0],
-                value.real,
-                self.domain.boundary_parts,
-                boundary.surface_index,
-            ),
-            dolf.DirichletBC(
-                function_spaces[1],
-                value.imag,
-                self.domain.boundary_parts,
-                boundary.surface_index,
-            ),
-        ]
+        self.complex_forms_flag = _flag
+        return bc
