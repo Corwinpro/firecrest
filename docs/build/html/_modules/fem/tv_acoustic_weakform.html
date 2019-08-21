@@ -399,6 +399,15 @@
             <span class="p">)</span>
         <span class="k">return</span> <span class="n">bc</span><span class="o">.</span><span class="n">pop</span><span class="p">()</span>
 
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">bc_to_fs</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="p">{</span>
+            <span class="s2">&quot;noslip&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">velocity_function_space</span><span class="p">,</span>
+            <span class="s2">&quot;inflow&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">velocity_function_space</span><span class="p">,</span>
+            <span class="s2">&quot;isothermal&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">temperature_function_space</span><span class="p">,</span>
+            <span class="s2">&quot;temperature&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">temperature_function_space</span><span class="p">,</span>
+        <span class="p">}</span>
+
 <div class="viewcode-block" id="BaseTVAcousticWeakForm.dirichlet_boundary_conditions"><a class="viewcode-back" href="../../fem.html#fem.tv_acoustic_weakform.BaseTVAcousticWeakForm.dirichlet_boundary_conditions">[docs]</a>    <span class="k">def</span> <span class="nf">dirichlet_boundary_conditions</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">is_linearised</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Generates DirichletBCs on all appropriate boundary elements.</span>
@@ -429,9 +438,31 @@
 
         <span class="k">return</span> <span class="n">dirichlet_bcs</span></div>
 
-    <span class="nd">@abstractmethod</span>
     <span class="k">def</span> <span class="nf">_generate_dirichlet_bc</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">boundary</span><span class="p">,</span> <span class="n">bc_type</span><span class="p">,</span> <span class="n">is_linearised</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
-        <span class="k">pass</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Given a boundary and a boundary condition type (one from the &#39;bc_to_fs&#39; dict),</span>
+<span class="sd">        we generate a dolfin DirichletBC based on the boundary expression for this boundary condition.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="k">if</span> <span class="n">bc_type</span> <span class="o">==</span> <span class="s2">&quot;noslip&quot;</span> <span class="ow">or</span> <span class="p">(</span><span class="n">bc_type</span> <span class="o">==</span> <span class="s2">&quot;inflow&quot;</span> <span class="ow">and</span> <span class="n">is_linearised</span><span class="p">):</span>
+            <span class="n">value</span> <span class="o">=</span> <span class="n">dolf</span><span class="o">.</span><span class="n">Constant</span><span class="p">((</span><span class="mf">0.0</span><span class="p">,)</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">geometric_dimension</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">bc_type</span> <span class="o">==</span> <span class="s2">&quot;isothermal&quot;</span> <span class="ow">or</span> <span class="p">(</span><span class="n">bc_type</span> <span class="o">==</span> <span class="s2">&quot;temperature&quot;</span> <span class="ow">and</span> <span class="n">is_linearised</span><span class="p">):</span>
+            <span class="n">value</span> <span class="o">=</span> <span class="n">dolf</span><span class="o">.</span><span class="n">Constant</span><span class="p">(</span><span class="mf">0.0</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">bc_type</span> <span class="o">==</span> <span class="s2">&quot;inflow&quot;</span> <span class="ow">or</span> <span class="n">bc_type</span> <span class="o">==</span> <span class="s2">&quot;temperature&quot;</span><span class="p">:</span>
+            <span class="n">value</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_parse_dolf_expression</span><span class="p">(</span><span class="n">boundary</span><span class="o">.</span><span class="n">bcond</span><span class="p">[</span><span class="n">bc_type</span><span class="p">])</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="n">f</span><span class="s2">&quot;Invalid boundary condition type for Dirichlet condition.&quot;</span><span class="p">)</span>
+
+        <span class="n">function_space</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">bc_to_fs</span><span class="p">[</span><span class="n">bc_type</span><span class="p">]</span>
+
+        <span class="k">return</span> <span class="p">[</span>
+            <span class="n">dolf</span><span class="o">.</span><span class="n">DirichletBC</span><span class="p">(</span>
+                <span class="n">function_space</span><span class="p">,</span>
+                <span class="n">value</span><span class="p">,</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">domain</span><span class="o">.</span><span class="n">boundary_parts</span><span class="p">,</span>
+                <span class="n">boundary</span><span class="o">.</span><span class="n">surface_index</span><span class="p">,</span>
+            <span class="p">)</span>
+        <span class="p">]</span>
 
     <span class="k">def</span> <span class="nf">_lhs_forms</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
@@ -473,38 +504,6 @@
 <div class="viewcode-block" id="TVAcousticWeakForm.boundary_components"><a class="viewcode-back" href="../../fem.html#fem.tv_acoustic_weakform.TVAcousticWeakForm.boundary_components">[docs]</a>    <span class="nd">@parse_trialtest</span>
     <span class="k">def</span> <span class="nf">boundary_components</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">trial</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">test</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
         <span class="k">return</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">boundary_components</span><span class="p">(</span><span class="n">trial</span><span class="p">,</span> <span class="n">test</span><span class="p">)</span></div>
-
-    <span class="k">def</span> <span class="nf">_generate_dirichlet_bc</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">boundary</span><span class="p">,</span> <span class="n">bc_type</span><span class="p">,</span> <span class="n">is_linearised</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Given a boundary and a boundary condition type (one from the &#39;bc_to_fs&#39; dict),</span>
-<span class="sd">        we generate a dolfin DirichletBC based on the boundary expression for this boundary condition.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
-        <span class="n">bc_to_fs</span> <span class="o">=</span> <span class="p">{</span>
-            <span class="s2">&quot;noslip&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">velocity_function_space</span><span class="p">,</span>
-            <span class="s2">&quot;inflow&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">velocity_function_space</span><span class="p">,</span>
-            <span class="s2">&quot;isothermal&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">temperature_function_space</span><span class="p">,</span>
-            <span class="s2">&quot;temperature&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">temperature_function_space</span><span class="p">,</span>
-        <span class="p">}</span>
-
-        <span class="k">if</span> <span class="n">bc_type</span> <span class="o">==</span> <span class="s2">&quot;noslip&quot;</span> <span class="ow">or</span> <span class="p">(</span><span class="n">bc_type</span> <span class="o">==</span> <span class="s2">&quot;inflow&quot;</span> <span class="ow">and</span> <span class="n">is_linearised</span><span class="p">):</span>
-            <span class="n">value</span> <span class="o">=</span> <span class="n">dolf</span><span class="o">.</span><span class="n">Constant</span><span class="p">((</span><span class="mf">0.0</span><span class="p">,)</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">geometric_dimension</span><span class="p">)</span>
-        <span class="k">elif</span> <span class="n">bc_type</span> <span class="o">==</span> <span class="s2">&quot;isothermal&quot;</span> <span class="ow">or</span> <span class="p">(</span><span class="n">bc_type</span> <span class="o">==</span> <span class="s2">&quot;temperature&quot;</span> <span class="ow">and</span> <span class="n">is_linearised</span><span class="p">):</span>
-            <span class="n">value</span> <span class="o">=</span> <span class="n">dolf</span><span class="o">.</span><span class="n">Constant</span><span class="p">(</span><span class="mf">0.0</span><span class="p">)</span>
-        <span class="k">elif</span> <span class="n">bc_type</span> <span class="o">==</span> <span class="s2">&quot;inflow&quot;</span> <span class="ow">or</span> <span class="n">bc_type</span> <span class="o">==</span> <span class="s2">&quot;temperature&quot;</span><span class="p">:</span>
-            <span class="n">value</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_parse_dolf_expression</span><span class="p">(</span><span class="n">boundary</span><span class="o">.</span><span class="n">bcond</span><span class="p">[</span><span class="n">bc_type</span><span class="p">])</span>
-        <span class="k">else</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="n">f</span><span class="s2">&quot;Invalid boundary condition type for Dirichlet condition.&quot;</span><span class="p">)</span>
-
-        <span class="n">function_space</span> <span class="o">=</span> <span class="n">bc_to_fs</span><span class="p">[</span><span class="n">bc_type</span><span class="p">]</span>
-
-        <span class="k">return</span> <span class="p">[</span>
-            <span class="n">dolf</span><span class="o">.</span><span class="n">DirichletBC</span><span class="p">(</span>
-                <span class="n">function_space</span><span class="p">,</span>
-                <span class="n">value</span><span class="p">,</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">domain</span><span class="o">.</span><span class="n">boundary_parts</span><span class="p">,</span>
-                <span class="n">boundary</span><span class="o">.</span><span class="n">surface_index</span><span class="p">,</span>
-            <span class="p">)</span>
-        <span class="p">]</span>
 
 <div class="viewcode-block" id="TVAcousticWeakForm.energy"><a class="viewcode-back" href="../../fem.html#fem.tv_acoustic_weakform.TVAcousticWeakForm.energy">[docs]</a>    <span class="k">def</span> <span class="nf">energy</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">state</span><span class="p">):</span>
         <span class="k">return</span> <span class="n">dolf</span><span class="o">.</span><span class="n">assemble</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">temporal_component</span><span class="p">(</span><span class="n">state</span><span class="p">,</span> <span class="n">state</span><span class="p">))</span> <span class="o">/</span> <span class="mf">2.0</span></div></div>
@@ -550,49 +549,39 @@
     <span class="k">def</span> <span class="nf">boundary_components</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">trial</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">test</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
         <span class="k">return</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">boundary_components</span><span class="p">(</span><span class="n">trial</span><span class="p">,</span> <span class="n">test</span><span class="p">)</span></div>
 
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">velocity_function_space</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">complex_fspace</span> <span class="o">=</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">velocity_function_space</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">complex_forms_flag</span> <span class="o">==</span> <span class="s2">&quot;real&quot;</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">complex_fspace</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">complex_forms_flag</span> <span class="o">==</span> <span class="s2">&quot;imag&quot;</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">complex_fspace</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">temperature_function_space</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">complex_fspace</span> <span class="o">=</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">temperature_function_space</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">complex_forms_flag</span> <span class="o">==</span> <span class="s2">&quot;real&quot;</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">complex_fspace</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">complex_forms_flag</span> <span class="o">==</span> <span class="s2">&quot;imag&quot;</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">complex_fspace</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+
     <span class="k">def</span> <span class="nf">_generate_dirichlet_bc</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">boundary</span><span class="p">,</span> <span class="n">bc_type</span><span class="p">,</span> <span class="n">is_linearised</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Given a boundary and a boundary condition type (one from the &#39;bc_to_fs&#39; dict),</span>
-<span class="sd">        we generate a dolfin DirichletBC based on the boundary expression for this boundary condition.</span>
+<span class="sd">        Generates a complex boundary condition with the use of the `complex_forms_flag`.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="n">bc_to_fs</span> <span class="o">=</span> <span class="p">{</span>
-            <span class="s2">&quot;noslip&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">velocity_function_space</span><span class="p">,</span>
-            <span class="s2">&quot;inflow&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">velocity_function_space</span><span class="p">,</span>
-            <span class="s2">&quot;isothermal&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">temperature_function_space</span><span class="p">,</span>
-            <span class="s2">&quot;temperature&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">temperature_function_space</span><span class="p">,</span>
-        <span class="p">}</span>
+        <span class="n">_flag</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">complex_forms_flag</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">complex_forms_flag</span> <span class="o">=</span> <span class="s2">&quot;real&quot;</span>
+        <span class="n">bc</span> <span class="o">=</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">_generate_dirichlet_bc</span><span class="p">(</span>
+            <span class="n">boundary</span><span class="p">,</span> <span class="n">bc_type</span><span class="p">,</span> <span class="n">is_linearised</span><span class="o">=</span><span class="n">is_linearised</span>
+        <span class="p">)</span>
 
-        <span class="k">if</span> <span class="n">bc_type</span> <span class="o">==</span> <span class="s2">&quot;noslip&quot;</span><span class="p">:</span>
-            <span class="n">value</span> <span class="o">=</span> <span class="n">Complex</span><span class="p">(</span><span class="n">dolf</span><span class="o">.</span><span class="n">Constant</span><span class="p">((</span><span class="mf">0.0</span><span class="p">,)</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">geometric_dimension</span><span class="p">))</span>
-        <span class="k">elif</span> <span class="n">bc_type</span> <span class="o">==</span> <span class="s2">&quot;isothermal&quot;</span><span class="p">:</span>
-            <span class="n">value</span> <span class="o">=</span> <span class="n">Complex</span><span class="p">(</span><span class="n">dolf</span><span class="o">.</span><span class="n">Constant</span><span class="p">(</span><span class="mf">0.0</span><span class="p">))</span>
-        <span class="k">elif</span> <span class="n">bc_type</span> <span class="o">==</span> <span class="s2">&quot;inflow&quot;</span> <span class="ow">or</span> <span class="n">bc_type</span> <span class="o">==</span> <span class="s2">&quot;temperature&quot;</span><span class="p">:</span>
-            <span class="n">_flag</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">complex_forms_flag</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">complex_forms_flag</span> <span class="o">=</span> <span class="s2">&quot;real&quot;</span>
-            <span class="n">_real_value</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_parse_dolf_expression</span><span class="p">(</span><span class="n">boundary</span><span class="o">.</span><span class="n">bcond</span><span class="p">[</span><span class="n">bc_type</span><span class="p">])</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">complex_forms_flag</span> <span class="o">=</span> <span class="s2">&quot;imag&quot;</span>
-            <span class="n">_imag_value</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_parse_dolf_expression</span><span class="p">(</span><span class="n">boundary</span><span class="o">.</span><span class="n">bcond</span><span class="p">[</span><span class="n">bc_type</span><span class="p">])</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">complex_forms_flag</span> <span class="o">=</span> <span class="n">_flag</span>
-            <span class="n">value</span> <span class="o">=</span> <span class="n">Complex</span><span class="p">(</span><span class="n">_real_value</span><span class="p">,</span> <span class="n">_imag_value</span><span class="p">)</span>
-        <span class="k">else</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="n">f</span><span class="s2">&quot;Invalid boundary condition type for Dirichlet condition.&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">complex_forms_flag</span> <span class="o">=</span> <span class="s2">&quot;imag&quot;</span>
+        <span class="n">bc</span> <span class="o">+=</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">_generate_dirichlet_bc</span><span class="p">(</span>
+            <span class="n">boundary</span><span class="p">,</span> <span class="n">bc_type</span><span class="p">,</span> <span class="n">is_linearised</span><span class="o">=</span><span class="n">is_linearised</span>
+        <span class="p">)</span>
 
-        <span class="n">function_spaces</span> <span class="o">=</span> <span class="n">bc_to_fs</span><span class="p">[</span><span class="n">bc_type</span><span class="p">]</span>
-
-        <span class="k">return</span> <span class="p">[</span>
-            <span class="n">dolf</span><span class="o">.</span><span class="n">DirichletBC</span><span class="p">(</span>
-                <span class="n">function_spaces</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span>
-                <span class="n">value</span><span class="o">.</span><span class="n">real</span><span class="p">,</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">domain</span><span class="o">.</span><span class="n">boundary_parts</span><span class="p">,</span>
-                <span class="n">boundary</span><span class="o">.</span><span class="n">surface_index</span><span class="p">,</span>
-            <span class="p">),</span>
-            <span class="n">dolf</span><span class="o">.</span><span class="n">DirichletBC</span><span class="p">(</span>
-                <span class="n">function_spaces</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span>
-                <span class="n">value</span><span class="o">.</span><span class="n">imag</span><span class="p">,</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">domain</span><span class="o">.</span><span class="n">boundary_parts</span><span class="p">,</span>
-                <span class="n">boundary</span><span class="o">.</span><span class="n">surface_index</span><span class="p">,</span>
-            <span class="p">),</span>
-        <span class="p">]</span></div>
+        <span class="bp">self</span><span class="o">.</span><span class="n">complex_forms_flag</span> <span class="o">=</span> <span class="n">_flag</span>
+        <span class="k">return</span> <span class="n">bc</span></div>
 </pre></div>
 
           </div>
