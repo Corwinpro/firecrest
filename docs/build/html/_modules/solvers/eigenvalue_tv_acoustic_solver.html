@@ -1,0 +1,252 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml" lang="python3">
+  <head>
+    <meta charset="utf-8" />
+  
+  <!-- Licensed under the Apache 2.0 License -->
+  <link rel="stylesheet" type="text/css" href="../../_static/fonts/open-sans/stylesheet.css" />
+  <!-- Licensed under the SIL Open Font License -->
+  <link rel="stylesheet" type="text/css" href="../../_static/fonts/source-serif-pro/source-serif-pro.css" />
+  <link rel="stylesheet" type="text/css" href="../../_static/css/bootstrap.min.css" />
+  <link rel="stylesheet" type="text/css" href="../../_static/css/bootstrap-theme.min.css" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+    <title>solvers.eigenvalue_tv_acoustic_solver &#8212; firecrest 0.1 documentation</title>
+    <link rel="stylesheet" href="../../_static/guzzle.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="../../" src="../../_static/documentation_options.js"></script>
+    <script type="text/javascript" src="../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../_static/doctools.js"></script>
+    <script type="text/javascript" src="../../_static/language_data.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+  
+   
+
+  </head><body>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../index.html">firecrest 0.1 documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="../index.html" accesskey="U">Module code</a> &#187;</li> 
+      </ul>
+    </div>
+    <div class="container-wrapper">
+
+      <div id="mobile-toggle">
+        <a href="#"><span class="glyphicon glyphicon-align-justify" aria-hidden="true"></span></a>
+      </div>
+  <div id="left-column">
+    <div class="sphinxsidebar">
+<div class="sidebar-block">
+  <div class="sidebar-wrapper">
+    <div id="main-search">
+      <form class="form-inline" action="../../search.html" method="GET" role="form">
+        <div class="input-group">
+          <input name="q" type="text" class="form-control" placeholder="Search...">
+        </div>
+        <input type="hidden" name="check_keywords" value="yes" />
+        <input type="hidden" name="area" value="default" />
+      </form>
+    </div>
+  </div>
+</div>
+      
+    </div>
+  </div>
+        <div id="right-column">
+          
+          <div role="navigation" aria-label="breadcrumbs navigation">
+            <ol class="breadcrumb">
+              <li><a href="../../index.html">Docs</a></li>
+              
+                <li><a href="../index.html">Module code</a></li>
+              
+              <li>solvers.eigenvalue_tv_acoustic_solver</li>
+            </ol>
+          </div>
+          
+          <div class="document clearer body">
+            
+  <h1>Source code for solvers.eigenvalue_tv_acoustic_solver</h1><div class="highlight"><pre>
+<span></span><span class="kn">from</span> <span class="nn">firecrest.solvers.base_solver</span> <span class="k">import</span> <span class="n">EigenvalueSolver</span>
+<span class="kn">from</span> <span class="nn">firecrest.fem.tv_acoustic_weakform</span> <span class="k">import</span> <span class="n">ComplexTVAcousticWeakForm</span>
+<span class="kn">import</span> <span class="nn">dolfin</span> <span class="k">as</span> <span class="nn">dolf</span>
+<span class="kn">from</span> <span class="nn">collections</span> <span class="k">import</span> <span class="n">OrderedDict</span>
+
+
+<div class="viewcode-block" id="EigenvalueTVAcousticSolver"><a class="viewcode-back" href="../../solvers.html#solvers.eigenvalue_tv_acoustic_solver.EigenvalueTVAcousticSolver">[docs]</a><span class="k">class</span> <span class="nc">EigenvalueTVAcousticSolver</span><span class="p">(</span><span class="n">EigenvalueSolver</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Eigenvalue solver for thermoviscous acoustic problem.</span>
+<span class="sd">    The problem is a generalized linear eigenvalue problem AA*x = s*BB*x.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">domain</span><span class="p">,</span> <span class="n">complex_shift</span><span class="o">=</span><span class="mi">0</span> <span class="o">+</span> <span class="mi">0</span><span class="n">j</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">domain</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">complex_shift</span> <span class="o">=</span> <span class="n">complex_shift</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">forms</span> <span class="o">=</span> <span class="n">ComplexTVAcousticWeakForm</span><span class="p">(</span><span class="n">domain</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">set_solver_operators</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">lhs</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">rhs</span><span class="p">)</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">lhs</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Constructs the LHS matrix (spatial components), AA of the eigenvalue problem.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">AA</span> <span class="o">=</span> <span class="n">dolf</span><span class="o">.</span><span class="n">PETScMatrix</span><span class="p">()</span>
+        <span class="n">lhs_forms</span> <span class="o">=</span> <span class="o">-</span><span class="bp">self</span><span class="o">.</span><span class="n">forms</span><span class="o">.</span><span class="n">_lhs_forms</span><span class="p">()</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">forms</span><span class="o">.</span><span class="n">_rhs_forms</span><span class="p">(</span>
+            <span class="n">shift</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">complex_shift</span>
+        <span class="p">)</span>
+        <span class="n">AA</span> <span class="o">=</span> <span class="n">dolf</span><span class="o">.</span><span class="n">assemble</span><span class="p">(</span><span class="n">dolf</span><span class="o">.</span><span class="n">lhs</span><span class="p">(</span><span class="n">lhs_forms</span><span class="p">),</span> <span class="n">tensor</span><span class="o">=</span><span class="n">AA</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">bc</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">forms</span><span class="o">.</span><span class="n">dirichlet_boundary_conditions</span><span class="p">(</span><span class="n">is_linearised</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+            <span class="n">bc</span><span class="o">.</span><span class="n">apply</span><span class="p">(</span><span class="n">AA</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">AA</span><span class="o">.</span><span class="n">mat</span><span class="p">()</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">rhs</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Constructs the RHS matrix (temporal components), BB of the eigenvalue problem.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">BB</span> <span class="o">=</span> <span class="n">dolf</span><span class="o">.</span><span class="n">PETScMatrix</span><span class="p">()</span>
+        <span class="n">BB</span> <span class="o">=</span> <span class="n">dolf</span><span class="o">.</span><span class="n">assemble</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">forms</span><span class="o">.</span><span class="n">_rhs_forms</span><span class="p">(),</span> <span class="n">tensor</span><span class="o">=</span><span class="n">BB</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">bc</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">forms</span><span class="o">.</span><span class="n">dirichlet_boundary_conditions</span><span class="p">(</span><span class="n">is_linearised</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+            <span class="n">bc</span><span class="o">.</span><span class="n">zero</span><span class="p">(</span><span class="n">BB</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">BB</span><span class="o">.</span><span class="n">mat</span><span class="p">()</span>
+
+<div class="viewcode-block" id="EigenvalueTVAcousticSolver.extract_solution"><a class="viewcode-back" href="../../solvers.html#solvers.eigenvalue_tv_acoustic_solver.EigenvalueTVAcousticSolver.extract_solution">[docs]</a>    <span class="k">def</span> <span class="nf">extract_solution</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">index</span><span class="p">,</span> <span class="n">eigenvalue_tolerance</span><span class="o">=</span><span class="mf">1.0e-8</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Instead of passing an actual index from range(1, nof_converged), we pass the pair index.</span>
+<span class="sd">        Then, we calculate the norms of the each solution in this pair, compare them, and return the</span>
+<span class="sd">        one with the highest norm.</span>
+<span class="sd">        :param index: int, number of pair</span>
+<span class="sd">        :param eigenvalue_tolerance: float, tolerance value for difference between the real parts</span>
+<span class="sd">        of the true and ghost solutions</span>
+<span class="sd">        :param verbose: bool</span>
+<span class="sd">        :return: a tuple of (eigenvalue, real part of the eigenmode,imaginary part of the eigenmode)</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">first_ev</span><span class="p">,</span> <span class="n">rx</span><span class="p">,</span> <span class="n">ix</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">retrieve_eigenpair</span><span class="p">(</span><span class="n">index</span> <span class="o">*</span> <span class="mi">2</span><span class="p">)</span>
+        <span class="n">first_norm</span><span class="p">,</span> <span class="n">first_real</span><span class="p">,</span> <span class="n">first_imag</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">reconstruct_eigenpair</span><span class="p">(</span><span class="n">rx</span><span class="p">,</span> <span class="n">ix</span><span class="p">)</span>
+
+        <span class="n">second_ev</span><span class="p">,</span> <span class="n">rx</span><span class="p">,</span> <span class="n">ix</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">retrieve_eigenpair</span><span class="p">(</span><span class="n">index</span> <span class="o">*</span> <span class="mi">2</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span>
+        <span class="n">second_norm</span><span class="p">,</span> <span class="n">second_real</span><span class="p">,</span> <span class="n">second_imag</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">reconstruct_eigenpair</span><span class="p">(</span><span class="n">rx</span><span class="p">,</span> <span class="n">ix</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="nb">abs</span><span class="p">(</span><span class="n">first_ev</span><span class="o">.</span><span class="n">real</span> <span class="o">-</span> <span class="n">second_ev</span><span class="o">.</span><span class="n">real</span><span class="p">)</span> <span class="o">&gt;</span> <span class="n">eigenvalue_tolerance</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Warning, the pair seems to be from different solution pairs.&quot;</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">first_norm</span> <span class="o">&gt;</span> <span class="n">second_norm</span><span class="p">:</span>
+            <span class="n">solution</span> <span class="o">=</span> <span class="n">first_ev</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">complex_shift</span><span class="p">,</span> <span class="n">first_real</span><span class="p">,</span> <span class="n">first_imag</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">solution</span> <span class="o">=</span> <span class="n">second_ev</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">complex_shift</span><span class="p">,</span> <span class="n">second_real</span><span class="p">,</span> <span class="n">second_imag</span>
+
+        <span class="k">if</span> <span class="n">verbose</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="n">solution</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+
+        <span class="k">return</span> <span class="n">solution</span></div>
+
+<div class="viewcode-block" id="EigenvalueTVAcousticSolver.reconstruct_eigenpair"><a class="viewcode-back" href="../../solvers.html#solvers.eigenvalue_tv_acoustic_solver.EigenvalueTVAcousticSolver.reconstruct_eigenpair">[docs]</a>    <span class="k">def</span> <span class="nf">reconstruct_eigenpair</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">rx</span><span class="p">,</span> <span class="n">ix</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Recombine complex vector solution of the eigenvalue problem back to normal,</span>
+<span class="sd">        which appeared after doubling the space of the problem.</span>
+<span class="sd">        See appendix of my First Year Report.</span>
+
+<span class="sd">        :param verbose: output solution norm to verify it is non zero</span>
+<span class="sd">        :param rx: real part vector of the solution</span>
+<span class="sd">        :param ix: imaginary part vector of the solution</span>
+<span class="sd">        :return: a tuple of (eigenvalue, real part of the eigenmode,imaginary part of the eigenmode)</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="n">real_part</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_vec_to_func</span><span class="p">(</span><span class="n">rx</span><span class="p">)</span>
+        <span class="n">imag_part</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_vec_to_func</span><span class="p">(</span><span class="n">ix</span><span class="p">)</span>
+
+        <span class="n">real_part</span> <span class="o">=</span> <span class="n">real_part</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="kc">True</span><span class="p">)</span>
+        <span class="n">imag_part</span> <span class="o">=</span> <span class="n">imag_part</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="kc">True</span><span class="p">)</span>
+
+        <span class="n">mid</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">imag_part</span><span class="p">)</span> <span class="o">/</span> <span class="mi">2</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">real_part</span><span class="p">)):</span>
+            <span class="k">if</span> <span class="n">j</span> <span class="o">&lt;</span> <span class="n">mid</span><span class="p">:</span>
+                <span class="n">real_part</span><span class="p">[</span><span class="n">j</span><span class="p">]</span><span class="o">.</span><span class="n">vector</span><span class="p">()[:]</span> <span class="o">-=</span> <span class="n">imag_part</span><span class="p">[</span><span class="n">j</span> <span class="o">+</span> <span class="n">mid</span><span class="p">]</span><span class="o">.</span><span class="n">vector</span><span class="p">()</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">real_part</span><span class="p">[</span><span class="n">j</span><span class="p">]</span><span class="o">.</span><span class="n">vector</span><span class="p">()[:]</span> <span class="o">+=</span> <span class="n">imag_part</span><span class="p">[</span><span class="n">j</span> <span class="o">-</span> <span class="n">mid</span><span class="p">]</span><span class="o">.</span><span class="n">vector</span><span class="p">()</span>
+
+        <span class="n">norm</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_solution_norm</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_split_func_to_vec</span><span class="p">(</span><span class="n">real_part</span><span class="p">))</span>
+        <span class="k">if</span> <span class="n">verbose</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="n">norm</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">norm</span><span class="p">,</span> <span class="n">real_part</span><span class="p">[:</span><span class="n">mid</span><span class="p">],</span> <span class="n">real_part</span><span class="p">[</span><span class="n">mid</span><span class="p">:]</span></div>
+
+    <span class="k">def</span> <span class="nf">_vec_to_func</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">vector</span><span class="p">,</span> <span class="n">function_space</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">function_space</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">function_space</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">forms</span><span class="o">.</span><span class="n">function_space</span>
+        <span class="k">return</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">_vec_to_func</span><span class="p">(</span><span class="n">vector</span><span class="p">,</span> <span class="n">function_space</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_split_func_to_vec</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">function</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Given a split object (after a function.split(), returns a unified vector representation</span>
+<span class="sd">        :param function: tuple of functions after split</span>
+<span class="sd">        :return: dolfin.vector with elements assigned according to function values</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">dolf_function</span> <span class="o">=</span> <span class="n">dolf</span><span class="o">.</span><span class="n">Function</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">forms</span><span class="o">.</span><span class="n">function_space</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">function</span><span class="p">)):</span>
+            <span class="n">dolf</span><span class="o">.</span><span class="n">assign</span><span class="p">(</span><span class="n">dolf_function</span><span class="o">.</span><span class="n">sub</span><span class="p">(</span><span class="n">i</span><span class="p">),</span> <span class="n">function</span><span class="p">[</span><span class="n">i</span><span class="p">])</span>
+        <span class="k">return</span> <span class="n">dolf_function</span><span class="o">.</span><span class="n">vector</span><span class="p">()</span>
+
+    <span class="k">def</span> <span class="nf">_solution_norm</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">vector</span><span class="p">):</span>
+        <span class="n">empty_vector</span> <span class="o">=</span> <span class="n">dolf</span><span class="o">.</span><span class="n">Function</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">forms</span><span class="o">.</span><span class="n">function_space</span><span class="p">)</span><span class="o">.</span><span class="n">vector</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">lhs</span><span class="o">.</span><span class="n">mult</span><span class="p">(</span><span class="n">vector</span><span class="o">.</span><span class="n">vec</span><span class="p">(),</span> <span class="n">empty_vector</span><span class="o">.</span><span class="n">vec</span><span class="p">())</span>
+        <span class="k">return</span> <span class="n">empty_vector</span><span class="o">.</span><span class="n">norm</span><span class="p">(</span><span class="s2">&quot;linf&quot;</span><span class="p">)</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">visualization_files</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_visualization_files</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_visualization_files</span> <span class="o">=</span> <span class="n">OrderedDict</span><span class="p">(</span>
+                <span class="p">{</span>
+                    <span class="s2">&quot;pR&quot;</span><span class="p">:</span> <span class="n">dolf</span><span class="o">.</span><span class="n">File</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">vis_dir</span> <span class="o">+</span> <span class="s2">&quot;pressure_real.pvd&quot;</span><span class="p">),</span>
+                    <span class="s2">&quot;uR&quot;</span><span class="p">:</span> <span class="n">dolf</span><span class="o">.</span><span class="n">File</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">vis_dir</span> <span class="o">+</span> <span class="s2">&quot;u_real.pvd&quot;</span><span class="p">),</span>
+                    <span class="s2">&quot;TR&quot;</span><span class="p">:</span> <span class="n">dolf</span><span class="o">.</span><span class="n">File</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">vis_dir</span> <span class="o">+</span> <span class="s2">&quot;temperature_real.pvd&quot;</span><span class="p">),</span>
+                    <span class="s2">&quot;pI&quot;</span><span class="p">:</span> <span class="n">dolf</span><span class="o">.</span><span class="n">File</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">vis_dir</span> <span class="o">+</span> <span class="s2">&quot;pressure_imag.pvd&quot;</span><span class="p">),</span>
+                    <span class="s2">&quot;uI&quot;</span><span class="p">:</span> <span class="n">dolf</span><span class="o">.</span><span class="n">File</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">vis_dir</span> <span class="o">+</span> <span class="s2">&quot;u_imag.pvd&quot;</span><span class="p">),</span>
+                    <span class="s2">&quot;TI&quot;</span><span class="p">:</span> <span class="n">dolf</span><span class="o">.</span><span class="n">File</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">vis_dir</span> <span class="o">+</span> <span class="s2">&quot;temperature_imag.pvd&quot;</span><span class="p">),</span>
+                <span class="p">}</span>
+            <span class="p">)</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_visualization_files</span></div>
+</pre></div>
+
+          </div>
+            
+        </div>
+        <div class="clearfix"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../index.html">firecrest 0.1 documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="../index.html" >Module code</a> &#187;</li> 
+      </ul>
+    </div>
+<script type="text/javascript">
+  $("#mobile-toggle a").click(function () {
+    $("#left-column").toggle();
+  });
+</script>
+<script type="text/javascript" src="../../_static/js/bootstrap.js"></script>
+  <div class="footer">
+    &copy; Copyright 2019, Petr Kungurtsev. Created using <a href="http://sphinx.pocoo.org/">Sphinx</a>.
+  </div>
+  </body>
+</html>

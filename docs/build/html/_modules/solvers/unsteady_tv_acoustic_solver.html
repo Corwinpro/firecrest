@@ -1,0 +1,326 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml" lang="python3">
+  <head>
+    <meta charset="utf-8" />
+  
+  <!-- Licensed under the Apache 2.0 License -->
+  <link rel="stylesheet" type="text/css" href="../../_static/fonts/open-sans/stylesheet.css" />
+  <!-- Licensed under the SIL Open Font License -->
+  <link rel="stylesheet" type="text/css" href="../../_static/fonts/source-serif-pro/source-serif-pro.css" />
+  <link rel="stylesheet" type="text/css" href="../../_static/css/bootstrap.min.css" />
+  <link rel="stylesheet" type="text/css" href="../../_static/css/bootstrap-theme.min.css" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+    <title>solvers.unsteady_tv_acoustic_solver &#8212; firecrest 0.1 documentation</title>
+    <link rel="stylesheet" href="../../_static/guzzle.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="../../" src="../../_static/documentation_options.js"></script>
+    <script type="text/javascript" src="../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../_static/doctools.js"></script>
+    <script type="text/javascript" src="../../_static/language_data.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+  
+   
+
+  </head><body>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../index.html">firecrest 0.1 documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="../index.html" accesskey="U">Module code</a> &#187;</li> 
+      </ul>
+    </div>
+    <div class="container-wrapper">
+
+      <div id="mobile-toggle">
+        <a href="#"><span class="glyphicon glyphicon-align-justify" aria-hidden="true"></span></a>
+      </div>
+  <div id="left-column">
+    <div class="sphinxsidebar">
+<div class="sidebar-block">
+  <div class="sidebar-wrapper">
+    <div id="main-search">
+      <form class="form-inline" action="../../search.html" method="GET" role="form">
+        <div class="input-group">
+          <input name="q" type="text" class="form-control" placeholder="Search...">
+        </div>
+        <input type="hidden" name="check_keywords" value="yes" />
+        <input type="hidden" name="area" value="default" />
+      </form>
+    </div>
+  </div>
+</div>
+      
+    </div>
+  </div>
+        <div id="right-column">
+          
+          <div role="navigation" aria-label="breadcrumbs navigation">
+            <ol class="breadcrumb">
+              <li><a href="../../index.html">Docs</a></li>
+              
+                <li><a href="../index.html">Module code</a></li>
+              
+              <li>solvers.unsteady_tv_acoustic_solver</li>
+            </ol>
+          </div>
+          
+          <div class="document clearer body">
+            
+  <h1>Source code for solvers.unsteady_tv_acoustic_solver</h1><div class="highlight"><pre>
+<span></span><span class="kn">from</span> <span class="nn">firecrest.solvers.base_solver</span> <span class="k">import</span> <span class="n">BaseSolver</span>
+<span class="kn">from</span> <span class="nn">firecrest.fem.tv_acoustic_weakform</span> <span class="k">import</span> <span class="n">TVAcousticWeakForm</span>
+<span class="kn">import</span> <span class="nn">dolfin</span> <span class="k">as</span> <span class="nn">dolf</span>
+<span class="kn">from</span> <span class="nn">firecrest.misc.type_checker</span> <span class="k">import</span> <span class="p">(</span>
+    <span class="n">is_numeric_argument</span><span class="p">,</span>
+    <span class="n">is_numeric_tuple</span><span class="p">,</span>
+    <span class="n">is_dolfin_exp</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="kn">from</span> <span class="nn">collections</span> <span class="k">import</span> <span class="n">OrderedDict</span>
+<span class="kn">from</span> <span class="nn">firecrest.misc.time_storage</span> <span class="k">import</span> <span class="n">TimeSeries</span>
+<span class="kn">from</span> <span class="nn">decimal</span> <span class="k">import</span> <span class="n">Decimal</span>
+<span class="kn">import</span> <span class="nn">logging</span>
+
+<span class="n">DEFAULT_DT</span> <span class="o">=</span> <span class="mf">1.0e-3</span>
+
+
+<div class="viewcode-block" id="UnsteadyTVAcousticSolver"><a class="viewcode-back" href="../../solvers.html#solvers.unsteady_tv_acoustic_solver.UnsteadyTVAcousticSolver">[docs]</a><span class="k">class</span> <span class="nc">UnsteadyTVAcousticSolver</span><span class="p">(</span><span class="n">BaseSolver</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">domain</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">domain</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">timer</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;timer&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">timer</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_dt</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">timer</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;dt&quot;</span><span class="p">,</span> <span class="n">DEFAULT_DT</span><span class="p">))</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_dt</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;dt&quot;</span><span class="p">,</span> <span class="n">DEFAULT_DT</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">forms</span> <span class="o">=</span> <span class="n">TVAcousticWeakForm</span><span class="p">(</span><span class="n">domain</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">LUSolver</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">bilinear_form</span> <span class="o">=</span> <span class="kc">None</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_initial_state</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">is_linearised</span> <span class="o">=</span> <span class="kc">False</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">initial_state</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_initial_state</span>
+
+    <span class="nd">@initial_state</span><span class="o">.</span><span class="n">setter</span>
+    <span class="k">def</span> <span class="nf">initial_state</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">state</span><span class="p">):</span>
+        <span class="n">state_list</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">component</span> <span class="ow">in</span> <span class="n">state</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">is_numeric_argument</span><span class="p">(</span><span class="n">component</span><span class="p">)</span> <span class="ow">or</span> <span class="n">is_numeric_tuple</span><span class="p">(</span><span class="n">component</span><span class="p">):</span>
+                <span class="n">state_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
+                    <span class="n">dolf</span><span class="o">.</span><span class="n">Constant</span><span class="p">(</span><span class="n">component</span><span class="p">,</span> <span class="n">cell</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">domain</span><span class="o">.</span><span class="n">mesh</span><span class="o">.</span><span class="n">ufl_cell</span><span class="p">())</span>
+                <span class="p">)</span>
+            <span class="k">elif</span> <span class="n">is_dolfin_exp</span><span class="p">(</span><span class="n">component</span><span class="p">):</span>
+                <span class="n">state_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">component</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span>
+                    <span class="s2">&quot;Numeric argument / iterable, or dolf.Constant / dolf.Expression expected&quot;</span>
+                <span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_initial_state</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">state_list</span><span class="p">)</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">_inverse_dt</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">dolf</span><span class="o">.</span><span class="n">Constant</span><span class="p">(</span><span class="mf">1.0</span> <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">_dt</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_implicit_euler</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">initial_state</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_theta_scheme</span><span class="p">(</span><span class="n">initial_state</span><span class="p">,</span> <span class="n">theta</span><span class="o">=</span><span class="mf">1.0</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_crank_nicolson</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">initial_state</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_theta_scheme</span><span class="p">(</span><span class="n">initial_state</span><span class="p">,</span> <span class="n">theta</span><span class="o">=</span><span class="mf">0.5</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_theta_scheme</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">initial_state</span><span class="p">,</span> <span class="n">theta</span><span class="p">):</span>
+        <span class="n">temporal_component</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">forms</span><span class="o">.</span><span class="n">temporal_component</span><span class="p">()</span>
+        <span class="n">temporal_component_old</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">forms</span><span class="o">.</span><span class="n">temporal_component</span><span class="p">(</span><span class="n">initial_state</span><span class="p">)</span>
+
+        <span class="n">spatial_component</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">forms</span><span class="o">.</span><span class="n">spatial_component</span><span class="p">()</span>
+        <span class="n">boundary_component</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">forms</span><span class="o">.</span><span class="n">boundary_components</span><span class="p">()</span>
+        <span class="n">dirichlet_bcs</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">forms</span><span class="o">.</span><span class="n">dirichlet_boundary_conditions</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">is_linearised</span><span class="p">)</span>
+
+        <span class="n">spatial_component_old</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">forms</span><span class="o">.</span><span class="n">spatial_component</span><span class="p">(</span><span class="n">initial_state</span><span class="p">)</span>
+        <span class="n">boundary_component_old</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">forms</span><span class="o">.</span><span class="n">boundary_components</span><span class="p">(</span><span class="n">initial_state</span><span class="p">)</span>
+
+        <span class="n">form</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_inverse_dt</span> <span class="o">*</span> <span class="p">(</span><span class="n">temporal_component</span> <span class="o">-</span> <span class="n">temporal_component_old</span><span class="p">)</span>
+            <span class="o">+</span> <span class="n">dolf</span><span class="o">.</span><span class="n">Constant</span><span class="p">(</span><span class="n">theta</span><span class="p">)</span> <span class="o">*</span> <span class="p">(</span><span class="n">spatial_component</span> <span class="o">+</span> <span class="n">boundary_component</span><span class="p">)</span>
+            <span class="o">+</span> <span class="n">dolf</span><span class="o">.</span><span class="n">Constant</span><span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="n">theta</span><span class="p">)</span>
+            <span class="o">*</span> <span class="p">(</span><span class="n">spatial_component_old</span> <span class="o">+</span> <span class="n">boundary_component_old</span><span class="p">)</span>
+        <span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">form</span><span class="p">,</span> <span class="n">dirichlet_bcs</span>
+
+<div class="viewcode-block" id="UnsteadyTVAcousticSolver.solve"><a class="viewcode-back" href="../../solvers.html#solvers.unsteady_tv_acoustic_solver.UnsteadyTVAcousticSolver.solve">[docs]</a>    <span class="k">def</span> <span class="nf">solve</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">initial_state</span><span class="p">,</span> <span class="n">time_scheme</span><span class="o">=</span><span class="s2">&quot;crank_nicolson&quot;</span><span class="p">):</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">solving_scheme</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s2">&quot;_&quot;</span> <span class="o">+</span> <span class="n">time_scheme</span><span class="p">)</span>
+        <span class="k">except</span> <span class="ne">AttributeError</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span>
+                <span class="n">f</span><span class="s2">&quot;Time discretization scheme </span><span class="si">{time_scheme}</span><span class="s2"> is not yet implemented.&quot;</span>
+            <span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">initial_state</span> <span class="o">=</span> <span class="n">initial_state</span>
+        <span class="n">form</span><span class="p">,</span> <span class="n">bcs</span> <span class="o">=</span> <span class="n">solving_scheme</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">initial_state</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">LUSolver</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">initialize_solver</span><span class="p">(</span><span class="n">form</span><span class="p">,</span> <span class="n">bcs</span><span class="p">)</span>
+
+        <span class="n">linear_form</span> <span class="o">=</span> <span class="n">dolf</span><span class="o">.</span><span class="n">rhs</span><span class="p">(</span><span class="n">form</span><span class="p">)</span>
+        <span class="n">res</span> <span class="o">=</span> <span class="n">dolf</span><span class="o">.</span><span class="n">assemble</span><span class="p">(</span><span class="n">linear_form</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">bc</span> <span class="ow">in</span> <span class="n">bcs</span><span class="p">:</span>
+            <span class="n">bc</span><span class="o">.</span><span class="n">apply</span><span class="p">(</span><span class="n">res</span><span class="p">)</span>
+
+        <span class="n">w</span> <span class="o">=</span> <span class="n">dolf</span><span class="o">.</span><span class="n">Function</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">forms</span><span class="o">.</span><span class="n">function_space</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">LUSolver</span><span class="o">.</span><span class="n">solve</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">bilinear_form</span><span class="p">,</span> <span class="n">w</span><span class="o">.</span><span class="n">vector</span><span class="p">(),</span> <span class="n">res</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">w</span></div>
+
+<div class="viewcode-block" id="UnsteadyTVAcousticSolver.solve_direct"><a class="viewcode-back" href="../../solvers.html#solvers.unsteady_tv_acoustic_solver.UnsteadyTVAcousticSolver.solve_direct">[docs]</a>    <span class="k">def</span> <span class="nf">solve_direct</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">initial_state</span><span class="p">,</span> <span class="n">time_scheme</span><span class="o">=</span><span class="s2">&quot;crank_nicolson&quot;</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+        <span class="n">current_time</span> <span class="o">=</span> <span class="n">Decimal</span><span class="p">(</span><span class="s2">&quot;0&quot;</span><span class="p">)</span>
+        <span class="n">final_time</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">timer</span><span class="p">[</span><span class="s2">&quot;T&quot;</span><span class="p">]</span>
+        <span class="n">state</span> <span class="o">=</span> <span class="n">TimeSeries</span><span class="p">(</span><span class="n">initial_state</span><span class="p">,</span> <span class="n">current_time</span><span class="p">)</span>
+
+        <span class="k">while</span> <span class="n">current_time</span> <span class="o">&lt;</span> <span class="n">final_time</span> <span class="o">-</span> <span class="n">Decimal</span><span class="p">(</span><span class="mf">1.0e-8</span><span class="p">):</span>
+            <span class="n">w</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">solve</span><span class="p">(</span><span class="n">state</span><span class="o">.</span><span class="n">last</span><span class="p">,</span> <span class="n">time_scheme</span><span class="o">=</span><span class="n">time_scheme</span><span class="p">)</span>
+
+            <span class="n">current_state</span> <span class="o">=</span> <span class="n">w</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="kc">True</span><span class="p">)</span>
+            <span class="c1"># if int(current_time / self._dt) % 10 == 9:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">output_field</span><span class="p">(</span><span class="n">current_state</span><span class="p">)</span>
+
+            <span class="k">if</span> <span class="n">verbose</span><span class="p">:</span>
+                <span class="nb">print</span><span class="p">(</span>
+                    <span class="s2">&quot;Timestep: </span><span class="se">\t</span><span class="s2"> </span><span class="si">{0:.4f}</span><span class="s2">-&gt;</span><span class="si">{1:.4f}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+                        <span class="n">current_time</span><span class="p">,</span> <span class="n">current_time</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">timer</span><span class="p">[</span><span class="s2">&quot;dt&quot;</span><span class="p">]</span>
+                    <span class="p">)</span>
+                <span class="p">)</span>
+            <span class="n">current_time</span> <span class="o">+=</span> <span class="bp">self</span><span class="o">.</span><span class="n">timer</span><span class="p">[</span><span class="s2">&quot;dt&quot;</span><span class="p">]</span>
+            <span class="n">state</span><span class="p">[</span><span class="n">current_time</span><span class="p">]</span> <span class="o">=</span> <span class="n">current_state</span>
+
+        <span class="k">return</span> <span class="n">state</span></div>
+
+<div class="viewcode-block" id="UnsteadyTVAcousticSolver.solve_adjoint"><a class="viewcode-back" href="../../solvers.html#solvers.unsteady_tv_acoustic_solver.UnsteadyTVAcousticSolver.solve_adjoint">[docs]</a>    <span class="k">def</span> <span class="nf">solve_adjoint</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">initial_state</span><span class="p">,</span> <span class="n">time_scheme</span><span class="o">=</span><span class="s2">&quot;crank_nicolson&quot;</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Solving the adjoint problem backwards in time. We reuse the direct forms, therefore</span>
+<span class="sd">        the adjoint problem must be modified (see time symmetry in the unsteady control paper).</span>
+<span class="sd">        The first time step is of length dt/2 for Crank-Nicolson, and brings us to the adjoint initial condition.</span>
+
+<span class="sd">        :param initial_state: Direct state at the final time</span>
+<span class="sd">        :param time_scheme: time discretization name</span>
+<span class="sd">        :param verbose: verbosity level</span>
+<span class="sd">        :return: adjoint time stepping history</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">time_scheme</span> <span class="o">==</span> <span class="s2">&quot;crank_nicolson&quot;</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span>
+                <span class="s2">&quot;Only crank_nicolson time scheme is implemented for direct-adjoint looping.&quot;</span>
+            <span class="p">)</span>
+        <span class="n">current_time</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">timer</span><span class="p">[</span><span class="s2">&quot;T&quot;</span><span class="p">]</span>
+        <span class="n">final_time</span> <span class="o">=</span> <span class="n">Decimal</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_dt</span><span class="p">)</span>
+        <span class="n">current_state</span> <span class="o">=</span> <span class="n">initial_state</span>
+        <span class="c1"># I reset the factorization for the adjoint solver</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">LUSolver</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">is_linearised</span> <span class="o">=</span> <span class="kc">True</span>
+
+        <span class="n">state</span> <span class="o">=</span> <span class="n">TimeSeries</span><span class="p">()</span>
+
+        <span class="c1"># Half stepping first</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_dt</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_dt</span> <span class="o">/</span> <span class="mf">2.0</span>
+        <span class="n">form</span><span class="p">,</span> <span class="n">bcs</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_implicit_euler</span><span class="p">(</span><span class="n">current_state</span><span class="p">)</span>
+        <span class="n">linear_form</span> <span class="o">=</span> <span class="n">dolf</span><span class="o">.</span><span class="n">assemble</span><span class="p">(</span><span class="n">dolf</span><span class="o">.</span><span class="n">rhs</span><span class="p">(</span><span class="n">form</span><span class="p">))</span>
+        <span class="n">bilinear_form</span> <span class="o">=</span> <span class="n">dolf</span><span class="o">.</span><span class="n">assemble</span><span class="p">(</span><span class="n">dolf</span><span class="o">.</span><span class="n">lhs</span><span class="p">(</span><span class="n">form</span><span class="p">))</span>
+        <span class="k">for</span> <span class="n">bc</span> <span class="ow">in</span> <span class="n">bcs</span><span class="p">:</span>
+            <span class="n">bc</span><span class="o">.</span><span class="n">apply</span><span class="p">(</span><span class="n">bilinear_form</span><span class="p">)</span>
+            <span class="n">bc</span><span class="o">.</span><span class="n">apply</span><span class="p">(</span><span class="n">linear_form</span><span class="p">)</span>
+        <span class="n">w</span> <span class="o">=</span> <span class="n">dolf</span><span class="o">.</span><span class="n">Function</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">forms</span><span class="o">.</span><span class="n">function_space</span><span class="p">)</span>
+        <span class="n">dolf</span><span class="o">.</span><span class="n">solve</span><span class="p">(</span><span class="n">bilinear_form</span><span class="p">,</span> <span class="n">w</span><span class="o">.</span><span class="n">vector</span><span class="p">(),</span> <span class="n">linear_form</span><span class="p">)</span>
+        <span class="n">current_state</span> <span class="o">=</span> <span class="n">w</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="kc">True</span><span class="p">)</span>
+        <span class="n">current_time</span> <span class="o">-=</span> <span class="bp">self</span><span class="o">.</span><span class="n">timer</span><span class="p">[</span><span class="s2">&quot;dt&quot;</span><span class="p">]</span> <span class="o">/</span> <span class="n">Decimal</span><span class="p">(</span><span class="s2">&quot;2&quot;</span><span class="p">)</span>
+        <span class="n">state</span><span class="p">[</span><span class="n">current_time</span><span class="p">]</span> <span class="o">=</span> <span class="n">current_state</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_dt</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_dt</span> <span class="o">*</span> <span class="mf">2.0</span>
+
+        <span class="c1"># Regular time stepping</span>
+        <span class="k">while</span> <span class="n">current_time</span> <span class="o">&gt;</span> <span class="n">final_time</span> <span class="o">+</span> <span class="n">Decimal</span><span class="p">(</span><span class="mf">1.0e-8</span><span class="p">):</span>
+            <span class="n">w</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">solve</span><span class="p">(</span><span class="n">current_state</span><span class="p">,</span> <span class="n">time_scheme</span><span class="o">=</span><span class="n">time_scheme</span><span class="p">)</span>
+
+            <span class="n">current_state</span> <span class="o">=</span> <span class="n">w</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="kc">True</span><span class="p">)</span>
+            <span class="c1"># if int(current_time / self._dt) % 10 == 9:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">output_field</span><span class="p">(</span><span class="n">current_state</span><span class="p">)</span>
+
+            <span class="k">if</span> <span class="n">verbose</span><span class="p">:</span>
+                <span class="nb">print</span><span class="p">(</span>
+                    <span class="s2">&quot;Timestep: </span><span class="se">\t</span><span class="s2"> </span><span class="si">{0:.4f}</span><span class="s2">-&gt;</span><span class="si">{1:.4f}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+                        <span class="n">current_time</span><span class="p">,</span> <span class="n">current_time</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">timer</span><span class="p">[</span><span class="s2">&quot;dt&quot;</span><span class="p">]</span>
+                    <span class="p">)</span>
+                <span class="p">)</span>
+            <span class="n">current_time</span> <span class="o">-=</span> <span class="bp">self</span><span class="o">.</span><span class="n">timer</span><span class="p">[</span><span class="s2">&quot;dt&quot;</span><span class="p">]</span>
+            <span class="n">state</span><span class="p">[</span><span class="n">current_time</span><span class="p">]</span> <span class="o">=</span> <span class="n">current_state</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">is_linearised</span> <span class="o">=</span> <span class="kc">False</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">LUSolver</span> <span class="o">=</span> <span class="kc">None</span>
+
+        <span class="k">return</span> <span class="n">state</span></div>
+
+<div class="viewcode-block" id="UnsteadyTVAcousticSolver.initialize_solver"><a class="viewcode-back" href="../../solvers.html#solvers.unsteady_tv_acoustic_solver.UnsteadyTVAcousticSolver.initialize_solver">[docs]</a>    <span class="k">def</span> <span class="nf">initialize_solver</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">form</span><span class="p">,</span> <span class="n">bcs</span><span class="p">,</span> <span class="n">solver_type</span><span class="o">=</span><span class="s2">&quot;mumps&quot;</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Performs solver initialization and matrix factorization is stored.</span>
+<span class="sd">        As discussed at https://fenicsproject.org/docs/dolfin/dev/python/demos/elastodynamics/demo_elastodynamics.py.html:</span>
+<span class="sd">        &#39;Since the system matrix to solve is the same for each time step (constant time step), </span>
+<span class="sd">        it is not necessary to factorize the system at each increment. It can be done once and </span>
+<span class="sd">        for all and only perform assembly of the varying right-hand side and backsubstitution </span>
+<span class="sd">        to obtain the solution much more efficiently. </span>
+<span class="sd">        This is done by defining a LUSolver object while PETSc handles caching factorizations.&#39;</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">bilinear_form</span> <span class="o">=</span> <span class="n">dolf</span><span class="o">.</span><span class="n">assemble</span><span class="p">(</span><span class="n">dolf</span><span class="o">.</span><span class="n">lhs</span><span class="p">(</span><span class="n">form</span><span class="p">))</span>
+        <span class="k">for</span> <span class="n">bc</span> <span class="ow">in</span> <span class="n">bcs</span><span class="p">:</span>
+            <span class="n">bc</span><span class="o">.</span><span class="n">apply</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">bilinear_form</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">LUSolver</span> <span class="o">=</span> <span class="n">dolf</span><span class="o">.</span><span class="n">LUSolver</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">bilinear_form</span><span class="p">,</span> <span class="n">solver_type</span><span class="p">)</span></div>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">visualization_files</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_visualization_files</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_visualization_files</span> <span class="o">=</span> <span class="n">OrderedDict</span><span class="p">(</span>
+                <span class="p">{</span>
+                    <span class="s2">&quot;p&quot;</span><span class="p">:</span> <span class="n">dolf</span><span class="o">.</span><span class="n">File</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">vis_dir</span> <span class="o">+</span> <span class="s2">&quot;pressure.pvd&quot;</span><span class="p">),</span>
+                    <span class="s2">&quot;u&quot;</span><span class="p">:</span> <span class="n">dolf</span><span class="o">.</span><span class="n">File</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">vis_dir</span> <span class="o">+</span> <span class="s2">&quot;u.pvd&quot;</span><span class="p">),</span>
+                    <span class="s2">&quot;T&quot;</span><span class="p">:</span> <span class="n">dolf</span><span class="o">.</span><span class="n">File</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">vis_dir</span> <span class="o">+</span> <span class="s2">&quot;temperature.pvd&quot;</span><span class="p">),</span>
+                <span class="p">}</span>
+            <span class="p">)</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_visualization_files</span></div>
+</pre></div>
+
+          </div>
+            
+        </div>
+        <div class="clearfix"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../index.html">firecrest 0.1 documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="../index.html" >Module code</a> &#187;</li> 
+      </ul>
+    </div>
+<script type="text/javascript">
+  $("#mobile-toggle a").click(function () {
+    $("#left-column").toggle();
+  });
+</script>
+<script type="text/javascript" src="../../_static/js/bootstrap.js"></script>
+  <div class="footer">
+    &copy; Copyright 2019, Petr Kungurtsev. Created using <a href="http://sphinx.pocoo.org/">Sphinx</a>.
+  </div>
+  </body>
+</html>

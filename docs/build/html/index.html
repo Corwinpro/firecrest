@@ -1,0 +1,227 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml" lang="python3">
+  <head>
+    <meta charset="utf-8" />
+  
+  <!-- Licensed under the Apache 2.0 License -->
+  <link rel="stylesheet" type="text/css" href="_static/fonts/open-sans/stylesheet.css" />
+  <!-- Licensed under the SIL Open Font License -->
+  <link rel="stylesheet" type="text/css" href="_static/fonts/source-serif-pro/source-serif-pro.css" />
+  <link rel="stylesheet" type="text/css" href="_static/css/bootstrap.min.css" />
+  <link rel="stylesheet" type="text/css" href="_static/css/bootstrap-theme.min.css" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+    <title>Welcome to firecrest&#39;s documentation! &#8212; firecrest 0.1 documentation</title>
+    <link rel="stylesheet" href="_static/guzzle.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <script type="text/javascript" src="_static/language_data.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+  
+   
+
+  </head><body>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="#">firecrest 0.1 documentation</a> &#187;</li> 
+      </ul>
+    </div>
+    <div class="container-wrapper">
+
+      <div id="mobile-toggle">
+        <a href="#"><span class="glyphicon glyphicon-align-justify" aria-hidden="true"></span></a>
+      </div>
+  <div id="left-column">
+    <div class="sphinxsidebar">
+<div class="sidebar-block">
+  <div class="sidebar-wrapper">
+    <h2>Contents</h2>
+    <div class="sidebar-localtoc">
+      <ul>
+<li><a class="reference internal" href="#">Welcome to firecrest's documentation!</a><ul>
+<li><a class="reference internal" href="#installing-the-firecrest-package">Installing the <strong>firecrest</strong> package</a></li>
+<li><a class="reference internal" href="#setting-up-the-dolfin-environment">Setting up the <strong>dolfin</strong> environment</a></li>
+<li><a class="reference internal" href="#additional-packages">Additional packages</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#main-project-stages">Main project stages</a><ul>
+<li><a class="reference internal" href="#geometry-and-mesh-modules">Geometry and mesh modules</a><ul>
+<li><a class="reference internal" href="#major-tasks">Major tasks</a></li>
+<li><a class="reference internal" href="#minor-tasks">Minor tasks</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#fem-modules">FEM modules</a><ul>
+<li><a class="reference internal" href="#current-task">Current task</a></li>
+<li><a class="reference internal" href="#id2">Major tasks</a></li>
+<li><a class="reference internal" href="#id3">Minor tasks</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#optimization-modules">Optimization modules</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#indices-and-tables">Indices and tables</a></li>
+</ul>
+
+    </div>
+  </div>
+</div>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="_sources/index.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div class="sidebar-block">
+  <div class="sidebar-wrapper">
+    <div id="main-search">
+      <form class="form-inline" action="search.html" method="GET" role="form">
+        <div class="input-group">
+          <input name="q" type="text" class="form-control" placeholder="Search...">
+        </div>
+        <input type="hidden" name="check_keywords" value="yes" />
+        <input type="hidden" name="area" value="default" />
+      </form>
+    </div>
+  </div>
+</div>
+      
+    </div>
+  </div>
+        <div id="right-column">
+          
+          <div role="navigation" aria-label="breadcrumbs navigation">
+            <ol class="breadcrumb">
+              <li><a href="#">Docs</a></li>
+              
+              <li>Welcome to firecrest's documentation!</li>
+            </ol>
+          </div>
+          
+          <div class="document clearer body">
+            
+  <div class="section" id="welcome-to-firecrest-s-documentation">
+<h1>Welcome to firecrest's documentation!<a class="headerlink" href="#welcome-to-firecrest-s-documentation" title="Permalink to this headline">¶</a></h1>
+<div class="toctree-wrapper compound">
+</div>
+<img src="firecrest_emblem3002.png" width="60"><div class="section" id="installing-the-firecrest-package">
+<h2>Installing the <strong>firecrest</strong> package<a class="headerlink" href="#installing-the-firecrest-package" title="Permalink to this headline">¶</a></h2>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>git clone git@github.com:Corwinpro/firecrest.git
+<span class="nb">cd</span> firecrest
+pip install --user -e .
+</pre></div>
+</div>
+</div>
+<div class="section" id="setting-up-the-dolfin-environment">
+<h2>Setting up the <strong>dolfin</strong> environment<a class="headerlink" href="#setting-up-the-dolfin-environment" title="Permalink to this headline">¶</a></h2>
+<p>Install the dolfin and necessary packages and activate:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>conda create -n fenicsproject -c conda-forge fenics matplotlib meshio
+<span class="nb">source</span> activate fenicsproject
+</pre></div>
+</div>
+<p>Deactivate:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="nb">source</span> deactivate fenicsproject
+</pre></div>
+</div>
+</div>
+<div class="section" id="additional-packages">
+<h2>Additional packages<a class="headerlink" href="#additional-packages" title="Permalink to this headline">¶</a></h2>
+<p>Install <strong>pysplines</strong> <a class="reference external" href="https://github.com/Corwinpro/PySplines">from here</a>.</p>
+<p>Logo by <a class="reference external" href="https://www.artstation.com/quietvictories">Titov Fedor</a>.</p>
+</div>
+</div>
+<div class="section" id="main-project-stages">
+<h1>Main project stages<a class="headerlink" href="#main-project-stages" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="geometry-and-mesh-modules">
+<h2>Geometry and mesh modules<a class="headerlink" href="#geometry-and-mesh-modules" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="major-tasks">
+<h3>Major tasks<a class="headerlink" href="#major-tasks" title="Permalink to this headline">¶</a></h3>
+<p>1. Implement load and export geometry and mesh objects.
+It is much more efficient and convenient to reuse them, rather then build every time.</p>
+</div>
+<div class="section" id="minor-tasks">
+<h3>Minor tasks<a class="headerlink" href="#minor-tasks" title="Permalink to this headline">¶</a></h3>
+<ol class="arabic simple">
+<li><p>Geometry to JSON format: reusable geometry definition from templates.</p></li>
+<li><p>Implementing special boundary elements: arc, ellipse.</p></li>
+<li><p>3D compatibility.</p></li>
+</ol>
+</div>
+</div>
+<div class="section" id="fem-modules">
+<h2>FEM modules<a class="headerlink" href="#fem-modules" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="current-task">
+<h3>Current task<a class="headerlink" href="#current-task" title="Permalink to this headline">¶</a></h3>
+<ol class="arabic simple">
+<li><p>Eigensolver: implement the surface tension BC</p></li>
+<li><p>Should the Boundary conditions be in a separate class?</p></li>
+</ol>
+</div>
+<div class="section" id="id2">
+<h3>Major tasks<a class="headerlink" href="#id2" title="Permalink to this headline">¶</a></h3>
+<ol class="arabic simple">
+<li><p>Weak forms: write tests for <cite>real</cite> / <cite>complex</cite> usage</p></li>
+</ol>
+</div>
+<div class="section" id="id3">
+<h3>Minor tasks<a class="headerlink" href="#id3" title="Permalink to this headline">¶</a></h3>
+</div>
+</div>
+<div class="section" id="optimization-modules">
+<h2>Optimization modules<a class="headerlink" href="#optimization-modules" title="Permalink to this headline">¶</a></h2>
+<ol class="arabic simple">
+<li></li>
+</ol>
+</div>
+</div>
+<div class="section" id="indices-and-tables">
+<h1>Indices and tables<a class="headerlink" href="#indices-and-tables" title="Permalink to this headline">¶</a></h1>
+<ul class="simple">
+<li><p><a class="reference internal" href="genindex.html"><span class="std std-ref">Index</span></a></p></li>
+<li><p><a class="reference internal" href="py-modindex.html"><span class="std std-ref">Module Index</span></a></p></li>
+<li><p><a class="reference internal" href="search.html"><span class="std std-ref">Search Page</span></a></p></li>
+</ul>
+</div>
+
+
+          </div>
+            
+        </div>
+        <div class="clearfix"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="#">firecrest 0.1 documentation</a> &#187;</li> 
+      </ul>
+    </div>
+<script type="text/javascript">
+  $("#mobile-toggle a").click(function () {
+    $("#left-column").toggle();
+  });
+</script>
+<script type="text/javascript" src="_static/js/bootstrap.js"></script>
+  <div class="footer">
+    &copy; Copyright 2019, Petr Kungurtsev. Created using <a href="http://sphinx.pocoo.org/">Sphinx</a>.
+  </div>
+  </body>
+</html>

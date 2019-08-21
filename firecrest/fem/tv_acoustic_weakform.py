@@ -1,5 +1,6 @@
 import functools
 from abc import ABC, abstractmethod
+from firecrest.misc.complex_template import Complex
 from firecrest.fem.base_weakform import BaseWeakForm
 from firecrest.fem.tv_acoustic_fspace import (
     TVAcousticFunctionSpace,
@@ -16,7 +17,7 @@ def parse_trialtest(component):
     """
 
     @functools.wraps(component)
-    def inner(self, trial=None, test=None):
+    def inner(self, trial=None, test=None, *args, **kwargs):
         if trial is None and test is None:
             """
             With empty arguments we implement default trial/test complex component
@@ -32,23 +33,31 @@ def parse_trialtest(component):
 
         if len(trial) == 3 and len(test) == 3:
             """
-            If triplets trial and test are given, we contstruct real component
+            If triplets trial and test are given, we construct real component
             """
             return component(self, trial, test)
         elif len(trial) == 6 and len(test) == 6:
             """
-            If triplets*2 trial and test are given, we contstruct complex component
-            TODO:
-                Use complex_component method instead of explicit indexing
+            If triplets*2 trial and test are given, we construct complex component
             """
-            return component(self, trial[:3], test[:3]) + component(
-                self, trial[3:], test[3:]
+            _flag = self.complex_forms_flag
+            self.complex_forms_flag = "real"
+            forms = component(self, trial[:3], test[:3], *args, **kwargs) + component(
+                self, trial[3:], test[3:], *args, **kwargs
             )
+            self.complex_forms_flag = "imag"
+            forms += component(self, trial[:3], test[3:], *args, **kwargs) - component(
+                self, trial[3:], test[:3], *args, **kwargs
+            )
+            self.complex_forms_flag = _flag
+            return forms
         elif (trial in ["real", "imag"]) and (test in ["real", "imag"]):
             return component(
                 self,
                 self.complex_component(self.trial_functions, trial),
                 self.complex_component(self.test_functions, test),
+                *args,
+                **kwargs,
             )
         else:
             raise ValueError
@@ -56,7 +65,7 @@ def parse_trialtest(component):
     return inner
 
 
-class BaseTVAcousticWeakForm(BaseWeakForm, ABC):
+class BaseTVAcousticWeakForm(ABC, BaseWeakForm):
     """
     Base class for Thermoviscous acoustic weak forms generation.
     """
@@ -69,6 +78,7 @@ class BaseTVAcousticWeakForm(BaseWeakForm, ABC):
         "normal_force": "Neumann",
         "impedance": "Robin",
         "slip": "Neumann",
+        "normal_velocity": "Neumann",
     }
 
     allowed_temperature_bcs = {
@@ -79,14 +89,25 @@ class BaseTVAcousticWeakForm(BaseWeakForm, ABC):
         "thermal_accommodation": "Robin",
     }
 
-    def __init__(self, domain, **kwargs):
-        super().__init__(domain, **kwargs)
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
         self.dolf_constants = self.get_constants(kwargs)
+        self.trial_functions = dolf.TrialFunctions(self.function_space)
+        self.test_functions = dolf.TestFunctions(self.function_space)
 
     def get_constants(self, kwargs):
         self._gamma = kwargs.get("gamma", 1.4)
         self._Re = kwargs["Re"]
-        self._Pe = kwargs["Pe"]
+        try:
+            self._Pe = kwargs["Pe"]
+        except KeyError:
+            try:
+                _Pr = kwargs["Pr"]
+                self._Pe = self._Re * _Pr
+            except KeyError:
+                raise KeyError(
+                    "Peclet or Prandtl numbers required for Thermoviscous acoustic flow."
+                )
         return AcousticConstants(
             gamma=dolf.Constant(self._gamma),
             Re=dolf.Constant(self._Re),
@@ -129,12 +150,17 @@ class BaseTVAcousticWeakForm(BaseWeakForm, ABC):
         i, j = ufl.indices(2)
         shear_stress = (
             velocity[i].dx(j)
-            + dolf.Constant(1.0 / 3.0) * self.I[i, j] * dolf.div(velocity)
+            + dolf.Constant(1.0 / 3.0) * self.identity_tensor[i, j] * dolf.div(velocity)
         ) / self.dolf_constants.Re
+        # shear_stress = (
+        #     velocity[i].dx(j)
+        #     + velocity[j].dx(i)
+        #     - dolf.Constant(2.0 / 3.0) * self.I[i, j] * dolf.div(velocity)
+        # ) / self.dolf_constants.Re
         return dolf.as_tensor(shear_stress, (i, j))
 
     def stress(self, pressure, velocity):
-        return self.shear_stress(velocity) - pressure * self.I
+        return self.shear_stress(velocity) - pressure * self.identity_tensor
 
     def heat_flux(self, temperature):
         return (
@@ -143,7 +169,7 @@ class BaseTVAcousticWeakForm(BaseWeakForm, ABC):
             / dolf.Constant(self.dolf_constants.gamma - 1.0)
         )
 
-    def temporal_component(self, trial, test):
+    def temporal_component(self, trial, test, shift=None):
         """
         Generates temporal component of the TVAcoustic weak form equation.
         """
@@ -154,11 +180,16 @@ class BaseTVAcousticWeakForm(BaseWeakForm, ABC):
         momentum_component = dolf.inner(velocity, test_velocity)
         energy_component = self.entropy(pressure, temperature) * test_temperature
 
-        return (
-            continuity_component + momentum_component + energy_component
-        ) * self.domain.dx
+        if shift is None:
+            shift = 1.0
 
-    def spatial_component(self, trial, test):
+        return (
+            self._parse_dolf_expression(shift)
+            * (continuity_component + momentum_component + energy_component)
+            * self.domain.dx
+        )
+
+    def spatial_component(self, trial, test, shift=None):
         """
         Generates spatial component of the TVAcoustic weak form equation.
         """
@@ -176,9 +207,14 @@ class BaseTVAcousticWeakForm(BaseWeakForm, ABC):
             dolf.grad(test_temperature), self.heat_flux(temperature)
         )
 
+        if shift is None:
+            shift = 1.0
+
         return (
-            continuity_component + momentum_component + energy_component
-        ) * self.domain.dx
+            self._parse_dolf_expression(shift)
+            * (continuity_component + momentum_component + energy_component)
+            * self.domain.dx
+        )
 
     def boundary_components(self, trial, test):
         """
@@ -191,18 +227,16 @@ class BaseTVAcousticWeakForm(BaseWeakForm, ABC):
         _, velocity, temperature = trial
         _, test_velocity, test_temperature = test
 
-        stress_boundary_component = dolf.Constant(0.0) * self.domain.ds
-        temperature_boundary_component = dolf.Constant(0.0) * self.domain.ds
+        stress_boundary_component = dolf.Constant(0.0) * self.domain.ds()
+        temperature_boundary_component = dolf.Constant(0.0) * self.domain.ds()
 
         for boundary in self.domain.boundary_elements:
             # Step 1. Parse boundary condition data provided by boundary elements.
             # We only accept one boundary condition for stress/velocity and temperature/heat flux.
             temperature_bc = self._pop_boundary_condition(
-                boundary.bcond, TVAcousticWeakForm.allowed_temperature_bcs
+                boundary.bcond, self.allowed_temperature_bcs
             )
-            temperature_bc_type = TVAcousticWeakForm.allowed_temperature_bcs[
-                temperature_bc
-            ]
+            temperature_bc_type = self.allowed_temperature_bcs[temperature_bc]
 
             # Step 2. If the boundary condition is one of the Neumann or Robin,
             # we construct necessary boundary integrals in weak form.
@@ -230,9 +264,9 @@ class BaseTVAcousticWeakForm(BaseWeakForm, ABC):
 
             # Same for stress / velocity boundary conditions
             stress_bc = self._pop_boundary_condition(
-                boundary.bcond, TVAcousticWeakForm.allowed_stress_bcs
+                boundary.bcond, self.allowed_stress_bcs
             )
-            stress_bc_type = TVAcousticWeakForm.allowed_stress_bcs[stress_bc]
+            stress_bc_type = self.allowed_stress_bcs[stress_bc]
 
             if stress_bc_type == "Neumann" or stress_bc_type == "Robin":
                 if stress_bc == "free":
@@ -249,11 +283,16 @@ class BaseTVAcousticWeakForm(BaseWeakForm, ABC):
                         self._parse_dolf_expression(boundary.bcond[stress_bc])
                         * self.domain.n
                     )
-                elif stress_bc == "slip":
+                elif stress_bc == "slip" or stress_bc == "normal_velocity":
+                    normal_velocity = (
+                        dolf.Constant(0.0)
+                        if stress_bc == "slip"
+                        else self._parse_dolf_expression(boundary.bcond[stress_bc])
+                    )
                     stress = (
                         dolf.Constant(-1.0e2)
                         / dolf.CellDiameter(self.domain.mesh)
-                        * dolf.inner(velocity, self.domain.n)
+                        * (dolf.inner(velocity, self.domain.n) - normal_velocity)
                         * self.domain.n
                     )
                 else:
@@ -264,7 +303,7 @@ class BaseTVAcousticWeakForm(BaseWeakForm, ABC):
                     stress, test_velocity
                 ) * self.domain.ds((boundary.surface_index,))
 
-        return stress_boundary_component, temperature_boundary_component
+        return stress_boundary_component + temperature_boundary_component
 
     @staticmethod
     def _pop_boundary_condition(bcond, allowed_bconds):
@@ -280,7 +319,16 @@ class BaseTVAcousticWeakForm(BaseWeakForm, ABC):
             )
         return bc.pop()
 
-    def dirichlet_boundary_conditions(self):
+    @property
+    def bc_to_fs(self):
+        return {
+            "noslip": self.velocity_function_space,
+            "inflow": self.velocity_function_space,
+            "isothermal": self.temperature_function_space,
+            "temperature": self.temperature_function_space,
+        }
+
+    def dirichlet_boundary_conditions(self, is_linearised=False):
         """
         Generates DirichletBCs on all appropriate boundary elements.
         """
@@ -289,41 +337,72 @@ class BaseTVAcousticWeakForm(BaseWeakForm, ABC):
         for boundary in self.domain.boundary_elements:
             # We only accept one Dirichlet boundary condition for temperature.
             temperature_bc = self._pop_boundary_condition(
-                boundary.bcond, BaseTVAcousticWeakForm.allowed_temperature_bcs
+                boundary.bcond, self.allowed_temperature_bcs
             )
 
-            temperature_bc_type = BaseTVAcousticWeakForm.allowed_temperature_bcs[
-                temperature_bc
-            ]
+            temperature_bc_type = self.allowed_temperature_bcs[temperature_bc]
             if temperature_bc_type == "Dirichlet":
                 dirichlet_bcs.extend(
-                    self._generate_dirichlet_bc(boundary, temperature_bc)
+                    self._generate_dirichlet_bc(boundary, temperature_bc, is_linearised)
                 )
             # We only accept one Dirichlet boundary condition for velocity.
             velocity_bc = self._pop_boundary_condition(
-                boundary.bcond, BaseTVAcousticWeakForm.allowed_stress_bcs
+                boundary.bcond, self.allowed_stress_bcs
             )
 
-            velocity_bc_type = BaseTVAcousticWeakForm.allowed_stress_bcs[velocity_bc]
+            velocity_bc_type = self.allowed_stress_bcs[velocity_bc]
             if velocity_bc_type == "Dirichlet":
-                dirichlet_bcs.extend(self._generate_dirichlet_bc(boundary, velocity_bc))
+                dirichlet_bcs.extend(
+                    self._generate_dirichlet_bc(boundary, velocity_bc, is_linearised)
+                )
 
         return dirichlet_bcs
+
+    def _generate_dirichlet_bc(self, boundary, bc_type, is_linearised=False):
+        """
+        Given a boundary and a boundary condition type (one from the 'bc_to_fs' dict),
+        we generate a dolfin DirichletBC based on the boundary expression for this boundary condition.
+        """
+
+        if bc_type == "noslip" or (bc_type == "inflow" and is_linearised):
+            value = dolf.Constant((0.0,) * self.geometric_dimension)
+        elif bc_type == "isothermal" or (bc_type == "temperature" and is_linearised):
+            value = dolf.Constant(0.0)
+        elif bc_type == "inflow" or bc_type == "temperature":
+            value = self._parse_dolf_expression(boundary.bcond[bc_type])
+        else:
+            raise TypeError(f"Invalid boundary condition type for Dirichlet condition.")
+
+        function_space = self.bc_to_fs[bc_type]
+
+        return [
+            dolf.DirichletBC(
+                function_space,
+                value,
+                self.domain.boundary_parts,
+                boundary.surface_index,
+            )
+        ]
+
+    def _lhs_forms(self):
+        """
+        Constructs the LHS forms (spatial components), AA of the problem AA*x = (...)*BB*x.
+        """
+        return self.spatial_component() + self.boundary_components()
+
+    def _rhs_forms(self, shift=None):
+        """
+        Constructs the RHS forms (temporal components), BB of the problem AA*x = (...)*BB*x.
+        """
+        return self.temporal_component(shift=shift)
 
 
 class TVAcousticWeakForm(BaseTVAcousticWeakForm):
     function_space_factory = None
 
     def __init__(self, domain, **kwargs):
+        self.function_space_factory = TVAcousticFunctionSpace(domain)
         super().__init__(domain, **kwargs)
-        self.function_space_factory = TVAcousticFunctionSpace(self.domain)
-        self.trial_functions = dolf.TrialFunctions(self.function_space)
-        self.test_functions = dolf.TestFunctions(self.function_space)
-
-        self.pressure, self.velocity, self.temperature = self.trial_functions
-        self.test_pressure, self.test_velocity, self.test_temperature = (
-            self.test_functions
-        )
 
     @staticmethod
     def _unpack_functions(functions):
@@ -344,174 +423,10 @@ class TVAcousticWeakForm(BaseTVAcousticWeakForm):
 
     @parse_trialtest
     def boundary_components(self, trial=None, test=None):
-        """
-        Generates momentum (stress, velocity) and thermal (heat flux. temperature) boundary components
-        of the TVAcoustic weak form equation.
+        return super().boundary_components(trial, test)
 
-        I expect the usage should be something like:
-            bcond = {"noslip" : True, "heat_flux" : 1.}
-        """
-        _, velocity, temperature = trial
-        _, test_velocity, test_temperature = test
-
-        stress_boundary_component = dolf.Constant(0.0) * self.domain.ds
-        temperature_boundary_component = dolf.Constant(0.0) * self.domain.ds
-
-        for boundary in self.domain.boundary_elements:
-            # Step 1. Parse boundary condition data provided by boundary elements.
-            # We only accept one boundary condition for stress/velocity and temperature/heat flux.
-            temperature_bc = self._pop_boundary_condition(
-                boundary.bcond, TVAcousticWeakForm.allowed_temperature_bcs
-            )
-            temperature_bc_type = TVAcousticWeakForm.allowed_temperature_bcs[
-                temperature_bc
-            ]
-
-            # Step 2. If the boundary condition is one of the Neumann or Robin,
-            # we construct necessary boundary integrals in weak form.
-            if temperature_bc_type == "Neumann" or temperature_bc_type == "Robin":
-                if temperature_bc == "adiabatic":
-                    heat_flux = dolf.Constant(0.0)
-                elif temperature_bc == "heat_flux":
-                    heat_flux = self._parse_dolf_expression(
-                        boundary.bcond[temperature_bc]
-                    )
-                elif temperature_bc == "thermal_accommodation":
-                    heat_flux = (
-                        -self._parse_dolf_expression(boundary.bcond[temperature_bc])
-                        * temperature
-                    )
-                else:
-                    raise TypeError(
-                        f"Invalid temperature boundary condition type for {temperature_bc_type} condition."
-                    )
-                temperature_boundary_component += (
-                    -heat_flux
-                    * test_temperature
-                    * self.domain.ds((boundary.surface_index,))
-                )
-
-            # Same for stress / velocity boundary conditions
-            stress_bc = self._pop_boundary_condition(
-                boundary.bcond, TVAcousticWeakForm.allowed_stress_bcs
-            )
-            stress_bc_type = TVAcousticWeakForm.allowed_stress_bcs[stress_bc]
-
-            if stress_bc_type == "Neumann" or stress_bc_type == "Robin":
-                if stress_bc == "free":
-                    stress = dolf.Constant((0.0,) * self.geometric_dimension)
-                elif stress_bc == "force":
-                    stress = self._parse_dolf_expression(boundary.bcond[stress_bc])
-                elif stress_bc == "impedance":
-                    stress = (
-                        self._parse_dolf_expression(boundary.bcond[stress_bc])
-                        * velocity
-                    )
-                elif stress_bc == "normal_force":
-                    stress = (
-                        self._parse_dolf_expression(boundary.bcond[stress_bc])
-                        * self.domain.n
-                    )
-                elif stress_bc == "slip":
-                    stress = (
-                        dolf.Constant(-1.0e2)
-                        / dolf.CellDiameter(self.domain.mesh)
-                        * dolf.inner(velocity, self.domain.n)
-                        * self.domain.n
-                    )
-                else:
-                    raise TypeError(
-                        f"Invalid temperature boundary condition type for {stress_bc_type} condition."
-                    )
-                stress_boundary_component += -dolf.inner(
-                    stress, test_velocity
-                ) * self.domain.ds((boundary.surface_index,))
-
-        return stress_boundary_component, temperature_boundary_component
-
-    def _generate_dirichlet_bc(self, boundary, bc_type):
-        """
-        Given a boundary and a boundary condition type (one from the 'bc_to_fs' dict),
-        we generate a dolfin DirichletBC based on the boundary expression for this boundary condition.
-        """
-        bc_to_fs = {
-            "noslip": self.velocity_function_space,
-            "inflow": self.velocity_function_space,
-            "isothermal": self.temperature_function_space,
-            "temperature": self.temperature_function_space,
-        }
-
-        if bc_type == "noslip":
-            value = dolf.Constant((0.0,) * self.geometric_dimension)
-        elif bc_type == "isothermal":
-            value = dolf.Constant(0.0)
-        elif bc_type == "inflow" or bc_type == "temperature":
-            value = self._parse_dolf_expression(boundary.bcond[bc_type])
-        else:
-            raise TypeError(f"Invalid boundary condition type for Dirichlet condition.")
-
-        function_space = bc_to_fs[bc_type]
-
-        return [
-            dolf.DirichletBC(
-                function_space,
-                value,
-                self.domain.boundary_parts,
-                boundary.surface_index,
-            )
-        ]
-
-    def testing_dirichlet_boundary_conditions(self):
-        dirichlet_bcs = []
-
-        # Parse boundary condition data provided by boundary elements.
-        for boundary in self.domain.boundary_elements:
-            # We only accept one Dirichlet boundary condition for temperature.
-            temperature_bc = self._pop_boundary_condition(
-                boundary.bcond, TVAcousticWeakForm.allowed_temperature_bcs
-            )
-            # Problem is here: we need to check if it's a Dirichlet type boundary
-            temperature_bc_type = TVAcousticWeakForm.allowed_temperature_bcs[
-                temperature_bc
-            ]
-            if temperature_bc_type == "Dirichlet":
-                if temperature_bc == "isothermal":
-                    value = dolf.Constant(0.0)
-                elif temperature_bc == "temperature":
-                    value = self._parse_dolf_expression(boundary.bcond[temperature_bc])
-
-                    function_space = self.temperature_function_space
-                    dirichlet_bcs.append(
-                        dolf.DirichletBC(
-                            function_space,
-                            value,
-                            self.domain.boundary_parts,
-                            boundary.surface_index,
-                        )
-                    )
-
-            # We only accept one Dirichlet boundary condition for velocity.
-            velocity_bc = self._pop_boundary_condition(
-                boundary.bcond, TVAcousticWeakForm.allowed_stress_bcs
-            )
-            velocity_bc_type = TVAcousticWeakForm.allowed_stress_bcs[velocity_bc]
-            if velocity_bc_type == "Dirichlet":
-                if velocity_bc == "noslip":
-                    value = dolf.Constant((0.0,) * self.geometric_dimension)
-                elif velocity_bc == "inflow":
-                    value = self._parse_dolf_expression(boundary.bcond[velocity_bc])
-
-                    function_space = self.velocity_function_space
-                    dirichlet_bcs.append(
-                        dolf.DirichletBC(
-                            function_space,
-                            value,
-                            self.domain.boundary_parts,
-                            boundary.surface_index,
-                        )
-                    )
-
-        return dirichlet_bcs
+    def energy(self, state):
+        return dolf.assemble(self.temporal_component(state, state)) / 2.0
 
 
 class ComplexTVAcousticWeakForm(BaseTVAcousticWeakForm):
@@ -522,29 +437,9 @@ class ComplexTVAcousticWeakForm(BaseTVAcousticWeakForm):
     function_space_factory = None
 
     def __init__(self, domain, **kwargs):
+        self.function_space_factory = ComplexTVAcousticFunctionSpace(domain)
         super().__init__(domain, **kwargs)
-        self.function_space_factory = ComplexTVAcousticFunctionSpace(self.domain)
         self.real_function_space_factory = None
-
-        self.trial_functions = dolf.TrialFunctions(self.function_space)
-        self.test_functions = dolf.TestFunctions(self.function_space)
-
-        (
-            self.real_pressure,
-            self.real_velocity,
-            self.real_temperature,
-            self.imag_pressure,
-            self.imag_velocity,
-            self.imag_temperature,
-        ) = self.trial_functions
-        (
-            self.test_real_pressure,
-            self.test_real_velocity,
-            self.test_real_temperature,
-            self.test_imag_pressure,
-            self.test_imag_velocity,
-            self.test_imag_temperature,
-        ) = self.test_functions
 
     @staticmethod
     def complex_component(functions, complex_flag):
@@ -563,8 +458,8 @@ class ComplexTVAcousticWeakForm(BaseTVAcousticWeakForm):
         return self.real_function_space_factory.function_spaces
 
     @parse_trialtest
-    def temporal_component(self, trial=None, test=None):
-        return super().temporal_component(trial, test)
+    def temporal_component(self, trial=None, test=None, shift=None):
+        return super().temporal_component(trial, test, shift=shift)
 
     @parse_trialtest
     def spatial_component(self, trial=None, test=None):
@@ -572,41 +467,38 @@ class ComplexTVAcousticWeakForm(BaseTVAcousticWeakForm):
 
     @parse_trialtest
     def boundary_components(self, trial=None, test=None):
-        # raise NotImplementedError
         return super().boundary_components(trial, test)
 
-    def _generate_dirichlet_bc(self, boundary, bc_type):
+    @property
+    def velocity_function_space(self):
+        complex_fspace = super().velocity_function_space
+        if self.complex_forms_flag == "real":
+            return complex_fspace[0]
+        elif self.complex_forms_flag == "imag":
+            return complex_fspace[1]
+
+    @property
+    def temperature_function_space(self):
+        complex_fspace = super().temperature_function_space
+        if self.complex_forms_flag == "real":
+            return complex_fspace[0]
+        elif self.complex_forms_flag == "imag":
+            return complex_fspace[1]
+
+    def _generate_dirichlet_bc(self, boundary, bc_type, is_linearised=False):
         """
-        Given a boundary and a boundary condition type (one from the 'bc_to_fs' dict),
-        we generate a dolfin DirichletBC based on the boundary expression for this boundary condition.
-        
-        TODO:
-            - add complex parameters
+        Generates a complex boundary condition with the use of the `complex_forms_flag`.
         """
-        bc_to_fs = {
-            "noslip": self.velocity_function_space,
-            "inflow": self.velocity_function_space,
-            "isothermal": self.temperature_function_space,
-            "temperature": self.temperature_function_space,
-        }
+        _flag = self.complex_forms_flag
+        self.complex_forms_flag = "real"
+        bc = super()._generate_dirichlet_bc(
+            boundary, bc_type, is_linearised=is_linearised
+        )
 
-        if bc_type == "noslip":
-            value = dolf.Constant((0.0,) * self.geometric_dimension)
-        elif bc_type == "isothermal":
-            value = dolf.Constant(0.0)
-        elif bc_type == "inflow" or bc_type == "temperature":
-            value = self._parse_dolf_expression(boundary.bcond[bc_type])
-        else:
-            raise TypeError(f"Invalid boundary condition type for Dirichlet condition.")
+        self.complex_forms_flag = "imag"
+        bc += super()._generate_dirichlet_bc(
+            boundary, bc_type, is_linearised=is_linearised
+        )
 
-        function_spaces = bc_to_fs[bc_type]
-
-        return [
-            dolf.DirichletBC(
-                function_space,
-                value,
-                self.domain.boundary_parts,
-                boundary.surface_index,
-            )
-            for function_space in function_spaces
-        ]
+        self.complex_forms_flag = _flag
+        return bc

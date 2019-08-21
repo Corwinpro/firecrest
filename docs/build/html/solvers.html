@@ -1,0 +1,316 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml" lang="python3">
+  <head>
+    <meta charset="utf-8" />
+  
+  <!-- Licensed under the Apache 2.0 License -->
+  <link rel="stylesheet" type="text/css" href="_static/fonts/open-sans/stylesheet.css" />
+  <!-- Licensed under the SIL Open Font License -->
+  <link rel="stylesheet" type="text/css" href="_static/fonts/source-serif-pro/source-serif-pro.css" />
+  <link rel="stylesheet" type="text/css" href="_static/css/bootstrap.min.css" />
+  <link rel="stylesheet" type="text/css" href="_static/css/bootstrap-theme.min.css" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+    <title>solvers package &#8212; firecrest 0.1 documentation</title>
+    <link rel="stylesheet" href="_static/guzzle.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <script type="text/javascript" src="_static/language_data.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+  
+   
+
+  </head><body>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">firecrest 0.1 documentation</a> &#187;</li> 
+      </ul>
+    </div>
+    <div class="container-wrapper">
+
+      <div id="mobile-toggle">
+        <a href="#"><span class="glyphicon glyphicon-align-justify" aria-hidden="true"></span></a>
+      </div>
+  <div id="left-column">
+    <div class="sphinxsidebar">
+<div class="sidebar-block">
+  <div class="sidebar-wrapper">
+    <h2>Contents</h2>
+    <div class="sidebar-localtoc">
+      <ul>
+<li><a class="reference internal" href="#">solvers package</a><ul>
+<li><a class="reference internal" href="#submodules">Submodules</a></li>
+<li><a class="reference internal" href="#module-solvers.base_solver">solvers.base_solver module</a></li>
+<li><a class="reference internal" href="#module-solvers.eigenvalue_tv_acoustic_solver">solvers.eigenvalue_tv_acoustic_solver module</a></li>
+<li><a class="reference internal" href="#module-solvers.unsteady_tv_acoustic_solver">solvers.unsteady_tv_acoustic_solver module</a></li>
+<li><a class="reference internal" href="#module-solvers">Module contents</a></li>
+</ul>
+</li>
+</ul>
+
+    </div>
+  </div>
+</div>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="_sources/solvers.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div class="sidebar-block">
+  <div class="sidebar-wrapper">
+    <div id="main-search">
+      <form class="form-inline" action="search.html" method="GET" role="form">
+        <div class="input-group">
+          <input name="q" type="text" class="form-control" placeholder="Search...">
+        </div>
+        <input type="hidden" name="check_keywords" value="yes" />
+        <input type="hidden" name="area" value="default" />
+      </form>
+    </div>
+  </div>
+</div>
+      
+    </div>
+  </div>
+        <div id="right-column">
+          
+          <div role="navigation" aria-label="breadcrumbs navigation">
+            <ol class="breadcrumb">
+              <li><a href="index.html">Docs</a></li>
+              
+              <li>solvers package</li>
+            </ol>
+          </div>
+          
+          <div class="document clearer body">
+            
+  <div class="section" id="solvers-package">
+<h1>solvers package<a class="headerlink" href="#solvers-package" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="submodules">
+<h2>Submodules<a class="headerlink" href="#submodules" title="Permalink to this headline">¶</a></h2>
+</div>
+<div class="section" id="module-solvers.base_solver">
+<span id="solvers-base-solver-module"></span><h2>solvers.base_solver module<a class="headerlink" href="#module-solvers.base_solver" title="Permalink to this headline">¶</a></h2>
+<dl class="class">
+<dt id="solvers.base_solver.BaseSolver">
+<em class="property">class </em><code class="sig-prename descclassname">solvers.base_solver.</code><code class="sig-name descname">BaseSolver</code><span class="sig-paren">(</span><em class="sig-param">domain</em>, <em class="sig-param">**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/solvers/base_solver.html#BaseSolver"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#solvers.base_solver.BaseSolver" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">abc.ABC</span></code></p>
+<dl class="method">
+<dt id="solvers.base_solver.BaseSolver.output_field">
+<code class="sig-name descname">output_field</code><span class="sig-paren">(</span><em class="sig-param">fields</em>, <em class="sig-param">name=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/solvers/base_solver.html#BaseSolver.output_field"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#solvers.base_solver.BaseSolver.output_field" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="solvers.base_solver.BaseSolver.solve">
+<em class="property">abstract </em><code class="sig-name descname">solve</code><span class="sig-paren">(</span><em class="sig-param">*args</em>, <em class="sig-param">**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/solvers/base_solver.html#BaseSolver.solve"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#solvers.base_solver.BaseSolver.solve" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="solvers.base_solver.BaseSolver.visualization_files">
+<em class="property">property </em><code class="sig-name descname">visualization_files</code><a class="headerlink" href="#solvers.base_solver.BaseSolver.visualization_files" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="solvers.base_solver.EigenvalueSolver">
+<em class="property">class </em><code class="sig-prename descclassname">solvers.base_solver.</code><code class="sig-name descname">EigenvalueSolver</code><span class="sig-paren">(</span><em class="sig-param">domain</em>, <em class="sig-param">**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/solvers/base_solver.html#EigenvalueSolver"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#solvers.base_solver.EigenvalueSolver" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#solvers.base_solver.BaseSolver" title="solvers.base_solver.BaseSolver"><code class="xref py py-class docutils literal notranslate"><span class="pre">solvers.base_solver.BaseSolver</span></code></a></p>
+<p>Base class for eigenvalue solver. It sets up the SLEPc solver.</p>
+<dl class="method">
+<dt id="solvers.base_solver.EigenvalueSolver.configure_solver">
+<code class="sig-name descname">configure_solver</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/solvers/base_solver.html#EigenvalueSolver.configure_solver"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#solvers.base_solver.EigenvalueSolver.configure_solver" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="solvers.base_solver.EigenvalueSolver.retrieve_eigenpair">
+<code class="sig-name descname">retrieve_eigenpair</code><span class="sig-paren">(</span><em class="sig-param">index</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/solvers/base_solver.html#EigenvalueSolver.retrieve_eigenpair"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#solvers.base_solver.EigenvalueSolver.retrieve_eigenpair" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="solvers.base_solver.EigenvalueSolver.set_solver_operators">
+<code class="sig-name descname">set_solver_operators</code><span class="sig-paren">(</span><em class="sig-param">AA</em>, <em class="sig-param">BB</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/solvers/base_solver.html#EigenvalueSolver.set_solver_operators"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#solvers.base_solver.EigenvalueSolver.set_solver_operators" title="Permalink to this definition">¶</a></dt>
+<dd><p>Set up eigensolver matrices, such that AA*x = s*BB*x.
+The matrices AA, BB are PETSc type objects.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="solvers.base_solver.EigenvalueSolver.solve">
+<code class="sig-name descname">solve</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/solvers/base_solver.html#EigenvalueSolver.solve"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#solvers.base_solver.EigenvalueSolver.solve" title="Permalink to this definition">¶</a></dt>
+<dd><p>Solve the eigenvalue problem with configured solver and matrices</p>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="module-solvers.eigenvalue_tv_acoustic_solver">
+<span id="solvers-eigenvalue-tv-acoustic-solver-module"></span><h2>solvers.eigenvalue_tv_acoustic_solver module<a class="headerlink" href="#module-solvers.eigenvalue_tv_acoustic_solver" title="Permalink to this headline">¶</a></h2>
+<dl class="class">
+<dt id="solvers.eigenvalue_tv_acoustic_solver.EigenvalueTVAcousticSolver">
+<em class="property">class </em><code class="sig-prename descclassname">solvers.eigenvalue_tv_acoustic_solver.</code><code class="sig-name descname">EigenvalueTVAcousticSolver</code><span class="sig-paren">(</span><em class="sig-param">domain</em>, <em class="sig-param">complex_shift=0j</em>, <em class="sig-param">**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/solvers/eigenvalue_tv_acoustic_solver.html#EigenvalueTVAcousticSolver"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#solvers.eigenvalue_tv_acoustic_solver.EigenvalueTVAcousticSolver" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">firecrest.solvers.base_solver.EigenvalueSolver</span></code></p>
+<p>Eigenvalue solver for thermoviscous acoustic problem.
+The problem is a generalized linear eigenvalue problem AA*x = s*BB*x.</p>
+<dl class="method">
+<dt id="solvers.eigenvalue_tv_acoustic_solver.EigenvalueTVAcousticSolver.extract_solution">
+<code class="sig-name descname">extract_solution</code><span class="sig-paren">(</span><em class="sig-param">index</em>, <em class="sig-param">eigenvalue_tolerance=1e-08</em>, <em class="sig-param">verbose=True</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/solvers/eigenvalue_tv_acoustic_solver.html#EigenvalueTVAcousticSolver.extract_solution"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#solvers.eigenvalue_tv_acoustic_solver.EigenvalueTVAcousticSolver.extract_solution" title="Permalink to this definition">¶</a></dt>
+<dd><p>Instead of passing an actual index from range(1, nof_converged), we pass the pair index.
+Then, we calculate the norms of the each solution in this pair, compare them, and return the
+one with the highest norm.
+:param index: int, number of pair
+:param eigenvalue_tolerance: float, tolerance value for difference between the real parts
+of the true and ghost solutions
+:param verbose: bool
+:return: a tuple of (eigenvalue, real part of the eigenmode,imaginary part of the eigenmode)</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="solvers.eigenvalue_tv_acoustic_solver.EigenvalueTVAcousticSolver.lhs">
+<em class="property">property </em><code class="sig-name descname">lhs</code><a class="headerlink" href="#solvers.eigenvalue_tv_acoustic_solver.EigenvalueTVAcousticSolver.lhs" title="Permalink to this definition">¶</a></dt>
+<dd><p>Constructs the LHS matrix (spatial components), AA of the eigenvalue problem.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="solvers.eigenvalue_tv_acoustic_solver.EigenvalueTVAcousticSolver.reconstruct_eigenpair">
+<code class="sig-name descname">reconstruct_eigenpair</code><span class="sig-paren">(</span><em class="sig-param">rx</em>, <em class="sig-param">ix</em>, <em class="sig-param">verbose=True</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/solvers/eigenvalue_tv_acoustic_solver.html#EigenvalueTVAcousticSolver.reconstruct_eigenpair"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#solvers.eigenvalue_tv_acoustic_solver.EigenvalueTVAcousticSolver.reconstruct_eigenpair" title="Permalink to this definition">¶</a></dt>
+<dd><p>Recombine complex vector solution of the eigenvalue problem back to normal,
+which appeared after doubling the space of the problem.
+See appendix of my First Year Report.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>verbose</strong> -- output solution norm to verify it is non zero</p></li>
+<li><p><strong>rx</strong> -- real part vector of the solution</p></li>
+<li><p><strong>ix</strong> -- imaginary part vector of the solution</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>a tuple of (eigenvalue, real part of the eigenmode,imaginary part of the eigenmode)</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="solvers.eigenvalue_tv_acoustic_solver.EigenvalueTVAcousticSolver.rhs">
+<em class="property">property </em><code class="sig-name descname">rhs</code><a class="headerlink" href="#solvers.eigenvalue_tv_acoustic_solver.EigenvalueTVAcousticSolver.rhs" title="Permalink to this definition">¶</a></dt>
+<dd><p>Constructs the RHS matrix (temporal components), BB of the eigenvalue problem.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="solvers.eigenvalue_tv_acoustic_solver.EigenvalueTVAcousticSolver.visualization_files">
+<em class="property">property </em><code class="sig-name descname">visualization_files</code><a class="headerlink" href="#solvers.eigenvalue_tv_acoustic_solver.EigenvalueTVAcousticSolver.visualization_files" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="module-solvers.unsteady_tv_acoustic_solver">
+<span id="solvers-unsteady-tv-acoustic-solver-module"></span><h2>solvers.unsteady_tv_acoustic_solver module<a class="headerlink" href="#module-solvers.unsteady_tv_acoustic_solver" title="Permalink to this headline">¶</a></h2>
+<dl class="class">
+<dt id="solvers.unsteady_tv_acoustic_solver.UnsteadyTVAcousticSolver">
+<em class="property">class </em><code class="sig-prename descclassname">solvers.unsteady_tv_acoustic_solver.</code><code class="sig-name descname">UnsteadyTVAcousticSolver</code><span class="sig-paren">(</span><em class="sig-param">domain</em>, <em class="sig-param">**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/solvers/unsteady_tv_acoustic_solver.html#UnsteadyTVAcousticSolver"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#solvers.unsteady_tv_acoustic_solver.UnsteadyTVAcousticSolver" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">firecrest.solvers.base_solver.BaseSolver</span></code></p>
+<dl class="method">
+<dt id="solvers.unsteady_tv_acoustic_solver.UnsteadyTVAcousticSolver.initial_state">
+<em class="property">property </em><code class="sig-name descname">initial_state</code><a class="headerlink" href="#solvers.unsteady_tv_acoustic_solver.UnsteadyTVAcousticSolver.initial_state" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="solvers.unsteady_tv_acoustic_solver.UnsteadyTVAcousticSolver.initialize_solver">
+<code class="sig-name descname">initialize_solver</code><span class="sig-paren">(</span><em class="sig-param">form</em>, <em class="sig-param">bcs</em>, <em class="sig-param">solver_type='mumps'</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/solvers/unsteady_tv_acoustic_solver.html#UnsteadyTVAcousticSolver.initialize_solver"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#solvers.unsteady_tv_acoustic_solver.UnsteadyTVAcousticSolver.initialize_solver" title="Permalink to this definition">¶</a></dt>
+<dd><p>Performs solver initialization and matrix factorization is stored.
+As discussed at <a class="reference external" href="https://fenicsproject.org/docs/dolfin/dev/python/demos/elastodynamics/demo_elastodynamics.py.html">https://fenicsproject.org/docs/dolfin/dev/python/demos/elastodynamics/demo_elastodynamics.py.html</a>:
+'Since the system matrix to solve is the same for each time step (constant time step), 
+it is not necessary to factorize the system at each increment. It can be done once and 
+for all and only perform assembly of the varying right-hand side and backsubstitution 
+to obtain the solution much more efficiently. 
+This is done by defining a LUSolver object while PETSc handles caching factorizations.'</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="solvers.unsteady_tv_acoustic_solver.UnsteadyTVAcousticSolver.solve">
+<code class="sig-name descname">solve</code><span class="sig-paren">(</span><em class="sig-param">initial_state</em>, <em class="sig-param">time_scheme='crank_nicolson'</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/solvers/unsteady_tv_acoustic_solver.html#UnsteadyTVAcousticSolver.solve"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#solvers.unsteady_tv_acoustic_solver.UnsteadyTVAcousticSolver.solve" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="solvers.unsteady_tv_acoustic_solver.UnsteadyTVAcousticSolver.solve_adjoint">
+<code class="sig-name descname">solve_adjoint</code><span class="sig-paren">(</span><em class="sig-param">initial_state</em>, <em class="sig-param">time_scheme='crank_nicolson'</em>, <em class="sig-param">verbose=False</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/solvers/unsteady_tv_acoustic_solver.html#UnsteadyTVAcousticSolver.solve_adjoint"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#solvers.unsteady_tv_acoustic_solver.UnsteadyTVAcousticSolver.solve_adjoint" title="Permalink to this definition">¶</a></dt>
+<dd><p>Solving the adjoint problem backwards in time. We reuse the direct forms, therefore
+the adjoint problem must be modified (see time symmetry in the unsteady control paper).
+The first time step is of length dt/2 for Crank-Nicolson, and brings us to the adjoint initial condition.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>initial_state</strong> -- Direct state at the final time</p></li>
+<li><p><strong>time_scheme</strong> -- time discretization name</p></li>
+<li><p><strong>verbose</strong> -- verbosity level</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>adjoint time stepping history</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="solvers.unsteady_tv_acoustic_solver.UnsteadyTVAcousticSolver.solve_direct">
+<code class="sig-name descname">solve_direct</code><span class="sig-paren">(</span><em class="sig-param">initial_state</em>, <em class="sig-param">time_scheme='crank_nicolson'</em>, <em class="sig-param">verbose=False</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/solvers/unsteady_tv_acoustic_solver.html#UnsteadyTVAcousticSolver.solve_direct"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#solvers.unsteady_tv_acoustic_solver.UnsteadyTVAcousticSolver.solve_direct" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="solvers.unsteady_tv_acoustic_solver.UnsteadyTVAcousticSolver.visualization_files">
+<em class="property">property </em><code class="sig-name descname">visualization_files</code><a class="headerlink" href="#solvers.unsteady_tv_acoustic_solver.UnsteadyTVAcousticSolver.visualization_files" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="module-solvers">
+<span id="module-contents"></span><h2>Module contents<a class="headerlink" href="#module-solvers" title="Permalink to this headline">¶</a></h2>
+</div>
+</div>
+
+
+          </div>
+            
+        </div>
+        <div class="clearfix"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">firecrest 0.1 documentation</a> &#187;</li> 
+      </ul>
+    </div>
+<script type="text/javascript">
+  $("#mobile-toggle a").click(function () {
+    $("#left-column").toggle();
+  });
+</script>
+<script type="text/javascript" src="_static/js/bootstrap.js"></script>
+  <div class="footer">
+    &copy; Copyright 2019, Petr Kungurtsev. Created using <a href="http://sphinx.pocoo.org/">Sphinx</a>.
+  </div>
+  </body>
+</html>

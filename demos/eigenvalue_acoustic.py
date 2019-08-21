@@ -3,29 +3,87 @@ from firecrest.mesh.geometry import SimpleDomain
 from firecrest.solvers.eigenvalue_tv_acoustic_solver import EigenvalueTVAcousticSolver
 import dolfin as dolf
 
+z = 2.0 + 1.5j
 
 control_points_1 = [[0.0, 1.0], [0.0, 0.0], [1.0, 0.0]]
 control_points_2 = [[1.0, 0.0], [1.0, 1.0], [0.0, 1.0]]
 boundary1 = LineElement(
-    control_points_1, el_size=0.05, bcond={"noslip": True, "isothermal": True}
+<<<<<<< HEAD
+    control_points_1, el_size=0.03, bcond={"noslip": True, "isothermal": True}
 )
 boundary2 = LineElement(
-    control_points_2, el_size=0.05, bcond={"free": True, "adiabatic": True}
+    control_points_2, el_size=0.03, bcond={"impedance": 1.0, "adiabatic": True}
+=======
+    control_points_1, el_size=0.02, bcond={"noslip": True, "isothermal": True}
+)
+boundary2 = LineElement(
+    control_points_2, el_size=0.02, bcond={"impedance": z, "adiabatic": True}
+>>>>>>> complex_forms
 )
 domain_boundaries = (boundary1, boundary2)
 domain = SimpleDomain(domain_boundaries)
 
 
-solver = EigenvalueTVAcousticSolver(domain, complex_shift=0 + 2j, Re=100.0, Pe=1.0)
+<<<<<<< HEAD
+solver = EigenvalueTVAcousticSolver(domain, complex_shift=-0.3 + 3.0j, Re=500.0, Pr=1.0)
 solver.solve()
 
-ev, real_mode, imag_mode = solver.restore_eigenfunction(0)
+mode_imag = dolf.File("mode_imag.pvd")
+mode_real = dolf.File("mode_real.pvd")
 
-file = dolf.File("mode.pvd")
-file << real_mode[1], 0
-file << imag_mode[1], 1
 
-func = dolf.Function(solver.forms.function_space)
-# dolf.assign(func.sub(0), real_mode[0]) # This works
-dolf.assign(func, list(real_mode + imag_mode))
-file << func.sub(4), 2
+def impedance_check(mode):
+    return normal_velocity(mode) - dolf.assemble(
+        -dolf.dot(
+            dolf.dot(solver.forms.stress(mode[0], mode[1]), solver.domain.n),
+            solver.domain.n,
+        )
+        * solver.domain.ds(boundary2.surface_index)
+    )
+
+=======
+solver = EigenvalueTVAcousticSolver(domain, complex_shift=3.0j, Re=500.0, Pr=1.0)
+solver.solve()
+
+
+def stress(mode):
+    return dolf.assemble(
+        dolf.dot(
+            dolf.dot(solver.forms.stress(mode[0], mode[1]), solver.domain.n),
+            solver.domain.n,
+        )
+        * solver.domain.ds(boundary2.surface_index)
+    )
+
+>>>>>>> complex_forms
+
+def normal_velocity(mode):
+    return dolf.assemble(
+        (dolf.dot(mode[1], solver.domain.n)) * solver.domain.ds(boundary2.surface_index)
+    )
+
+
+for i in range(int(solver.nof_modes_converged / 2)):
+    ev, real_mode, imag_mode = solver.extract_solution(i)
+<<<<<<< HEAD
+    imag_mode[1].rename("uI", "uI")
+    real_mode[1].rename("uR", "uR")
+    mode_real << real_mode[1], i
+    mode_imag << imag_mode[1], i
+    print("Z*un - sigma_n_n real: ", impedance_check(real_mode))
+    print("Z*un - sigma_n_n imag: ", impedance_check(imag_mode))
+    print("un real:", normal_velocity(real_mode))
+    print("un imag:", normal_velocity(imag_mode))
+=======
+    solver.output_field(real_mode + imag_mode)
+
+    z_u_real = z.real * normal_velocity(real_mode) - z.imag * normal_velocity(imag_mode)
+    z_u_imag = z.real * normal_velocity(imag_mode) + z.imag * normal_velocity(real_mode)
+    print("Z*u real: ", z_u_real)
+    print("sigma_n_n real: ", stress(real_mode))
+    print("difference: ", z_u_real - stress(real_mode))
+
+    print("Z*u imag: ", z_u_imag)
+    print("sigma_n_n imag: ", stress(imag_mode))
+    print("difference: ", z_u_imag - stress(imag_mode))
+>>>>>>> complex_forms

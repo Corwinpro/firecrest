@@ -1,0 +1,509 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml" lang="python3">
+  <head>
+    <meta charset="utf-8" />
+  
+  <!-- Licensed under the Apache 2.0 License -->
+  <link rel="stylesheet" type="text/css" href="_static/fonts/open-sans/stylesheet.css" />
+  <!-- Licensed under the SIL Open Font License -->
+  <link rel="stylesheet" type="text/css" href="_static/fonts/source-serif-pro/source-serif-pro.css" />
+  <link rel="stylesheet" type="text/css" href="_static/css/bootstrap.min.css" />
+  <link rel="stylesheet" type="text/css" href="_static/css/bootstrap-theme.min.css" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+    <title>fem package &#8212; firecrest 0.1 documentation</title>
+    <link rel="stylesheet" href="_static/guzzle.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <script type="text/javascript" src="_static/language_data.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+  
+   
+
+  </head><body>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">firecrest 0.1 documentation</a> &#187;</li> 
+      </ul>
+    </div>
+    <div class="container-wrapper">
+
+      <div id="mobile-toggle">
+        <a href="#"><span class="glyphicon glyphicon-align-justify" aria-hidden="true"></span></a>
+      </div>
+  <div id="left-column">
+    <div class="sphinxsidebar">
+<div class="sidebar-block">
+  <div class="sidebar-wrapper">
+    <h2>Contents</h2>
+    <div class="sidebar-localtoc">
+      <ul>
+<li><a class="reference internal" href="#">fem package</a><ul>
+<li><a class="reference internal" href="#submodules">Submodules</a></li>
+<li><a class="reference internal" href="#module-fem.base_fspace">fem.base_fspace module</a></li>
+<li><a class="reference internal" href="#module-fem.base_weakform">fem.base_weakform module</a></li>
+<li><a class="reference internal" href="#module-fem.struct_templates">fem.struct_templates module</a></li>
+<li><a class="reference internal" href="#module-fem.tv_acoustic_fspace">fem.tv_acoustic_fspace module</a></li>
+<li><a class="reference internal" href="#module-fem.tv_acoustic_weakform">fem.tv_acoustic_weakform module</a></li>
+<li><a class="reference internal" href="#module-fem">Module contents</a></li>
+</ul>
+</li>
+</ul>
+
+    </div>
+  </div>
+</div>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="_sources/fem.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div class="sidebar-block">
+  <div class="sidebar-wrapper">
+    <div id="main-search">
+      <form class="form-inline" action="search.html" method="GET" role="form">
+        <div class="input-group">
+          <input name="q" type="text" class="form-control" placeholder="Search...">
+        </div>
+        <input type="hidden" name="check_keywords" value="yes" />
+        <input type="hidden" name="area" value="default" />
+      </form>
+    </div>
+  </div>
+</div>
+      
+    </div>
+  </div>
+        <div id="right-column">
+          
+          <div role="navigation" aria-label="breadcrumbs navigation">
+            <ol class="breadcrumb">
+              <li><a href="index.html">Docs</a></li>
+              
+              <li>fem package</li>
+            </ol>
+          </div>
+          
+          <div class="document clearer body">
+            
+  <div class="section" id="fem-package">
+<h1>fem package<a class="headerlink" href="#fem-package" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="submodules">
+<h2>Submodules<a class="headerlink" href="#submodules" title="Permalink to this headline">¶</a></h2>
+</div>
+<div class="section" id="module-fem.base_fspace">
+<span id="fem-base-fspace-module"></span><h2>fem.base_fspace module<a class="headerlink" href="#module-fem.base_fspace" title="Permalink to this headline">¶</a></h2>
+<dl class="class">
+<dt id="fem.base_fspace.BaseFunctionSpace">
+<em class="property">class </em><code class="sig-prename descclassname">fem.base_fspace.</code><code class="sig-name descname">BaseFunctionSpace</code><span class="sig-paren">(</span><em class="sig-param">domain</em>, <em class="sig-param">spaces</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/fem/base_fspace.html#BaseFunctionSpace"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#fem.base_fspace.BaseFunctionSpace" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>Base Function Space factory.
+params:
+- domain: geometrical domain with dolfin mesh
+- spaces: collection of Space objects with Finite Element type, polynomial order, space dimension</p>
+<dl class="method">
+<dt id="fem.base_fspace.BaseFunctionSpace.function_spaces">
+<em class="property">property </em><code class="sig-name descname">function_spaces</code><a class="headerlink" href="#fem.base_fspace.BaseFunctionSpace.function_spaces" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="module-fem.base_weakform">
+<span id="fem-base-weakform-module"></span><h2>fem.base_weakform module<a class="headerlink" href="#module-fem.base_weakform" title="Permalink to this headline">¶</a></h2>
+<dl class="class">
+<dt id="fem.base_weakform.BaseWeakForm">
+<em class="property">class </em><code class="sig-prename descclassname">fem.base_weakform.</code><code class="sig-name descname">BaseWeakForm</code><span class="sig-paren">(</span><em class="sig-param">domain</em>, <em class="sig-param">*args</em>, <em class="sig-param">**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/fem/base_weakform.html#BaseWeakForm"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#fem.base_weakform.BaseWeakForm" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p><cite>_complex_forms_flag</cite> implements a special flag for complex valued boundary conditions.
+This allows us to switch between the real and complex values, and use the same forms
+generator for both the real, and the imaginary components of boundary conditions.</p>
+<dl class="method">
+<dt id="fem.base_weakform.BaseWeakForm.complex_forms_flag">
+<em class="property">property </em><code class="sig-name descname">complex_forms_flag</code><a class="headerlink" href="#fem.base_weakform.BaseWeakForm.complex_forms_flag" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="fem.base_weakform.BaseWeakForm.domain">
+<em class="property">property </em><code class="sig-name descname">domain</code><a class="headerlink" href="#fem.base_weakform.BaseWeakForm.domain" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="module-fem.struct_templates">
+<span id="fem-struct-templates-module"></span><h2>fem.struct_templates module<a class="headerlink" href="#module-fem.struct_templates" title="Permalink to this headline">¶</a></h2>
+<dl class="class">
+<dt id="fem.struct_templates.AcousticConstants">
+<em class="property">class </em><code class="sig-prename descclassname">fem.struct_templates.</code><code class="sig-name descname">AcousticConstants</code><span class="sig-paren">(</span><em class="sig-param">gamma</em>, <em class="sig-param">Re</em>, <em class="sig-param">Pe</em><span class="sig-paren">)</span><a class="headerlink" href="#fem.struct_templates.AcousticConstants" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">tuple</span></code></p>
+<dl class="method">
+<dt id="fem.struct_templates.AcousticConstants.Pe">
+<em class="property">property </em><code class="sig-name descname">Pe</code><a class="headerlink" href="#fem.struct_templates.AcousticConstants.Pe" title="Permalink to this definition">¶</a></dt>
+<dd><p>Alias for field number 2</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="fem.struct_templates.AcousticConstants.Re">
+<em class="property">property </em><code class="sig-name descname">Re</code><a class="headerlink" href="#fem.struct_templates.AcousticConstants.Re" title="Permalink to this definition">¶</a></dt>
+<dd><p>Alias for field number 1</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="fem.struct_templates.AcousticConstants.gamma">
+<em class="property">property </em><code class="sig-name descname">gamma</code><a class="headerlink" href="#fem.struct_templates.AcousticConstants.gamma" title="Permalink to this definition">¶</a></dt>
+<dd><p>Alias for field number 0</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="fem.struct_templates.Space">
+<em class="property">class </em><code class="sig-prename descclassname">fem.struct_templates.</code><code class="sig-name descname">Space</code><span class="sig-paren">(</span><em class="sig-param">element_type</em>, <em class="sig-param">order</em>, <em class="sig-param">dimension</em><span class="sig-paren">)</span><a class="headerlink" href="#fem.struct_templates.Space" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">tuple</span></code></p>
+<p>AcousticConstants is a template tuple that defines necessary constants
+for acoustic problem with viscosity and heat conductivity:
+- gamma: heat capacity ratio, C_p / C_v. Default: 1.4
+- Re: Reynolds number
+- Pe: Pecklet number</p>
+<dl class="method">
+<dt id="fem.struct_templates.Space.dimension">
+<em class="property">property </em><code class="sig-name descname">dimension</code><a class="headerlink" href="#fem.struct_templates.Space.dimension" title="Permalink to this definition">¶</a></dt>
+<dd><p>Alias for field number 2</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="fem.struct_templates.Space.element_type">
+<em class="property">property </em><code class="sig-name descname">element_type</code><a class="headerlink" href="#fem.struct_templates.Space.element_type" title="Permalink to this definition">¶</a></dt>
+<dd><p>Alias for field number 0</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="fem.struct_templates.Space.order">
+<em class="property">property </em><code class="sig-name descname">order</code><a class="headerlink" href="#fem.struct_templates.Space.order" title="Permalink to this definition">¶</a></dt>
+<dd><p>Alias for field number 1</p>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="module-fem.tv_acoustic_fspace">
+<span id="fem-tv-acoustic-fspace-module"></span><h2>fem.tv_acoustic_fspace module<a class="headerlink" href="#module-fem.tv_acoustic_fspace" title="Permalink to this headline">¶</a></h2>
+<dl class="class">
+<dt id="fem.tv_acoustic_fspace.ComplexTVAcousticFunctionSpace">
+<em class="property">class </em><code class="sig-prename descclassname">fem.tv_acoustic_fspace.</code><code class="sig-name descname">ComplexTVAcousticFunctionSpace</code><span class="sig-paren">(</span><em class="sig-param">domain</em>, <em class="sig-param">order=2</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/fem/tv_acoustic_fspace.html#ComplexTVAcousticFunctionSpace"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#fem.tv_acoustic_fspace.ComplexTVAcousticFunctionSpace" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">firecrest.fem.base_fspace.BaseFunctionSpace</span></code></p>
+<p>Template function spaces for complex Thermoviscous Acoustic FEM problem.</p>
+<dl class="method">
+<dt id="fem.tv_acoustic_fspace.ComplexTVAcousticFunctionSpace.pressure_function_space">
+<em class="property">property </em><code class="sig-name descname">pressure_function_space</code><a class="headerlink" href="#fem.tv_acoustic_fspace.ComplexTVAcousticFunctionSpace.pressure_function_space" title="Permalink to this definition">¶</a></dt>
+<dd><p>Picks pressure function space from generated function_spaces.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="fem.tv_acoustic_fspace.ComplexTVAcousticFunctionSpace.temperature_function_space">
+<em class="property">property </em><code class="sig-name descname">temperature_function_space</code><a class="headerlink" href="#fem.tv_acoustic_fspace.ComplexTVAcousticFunctionSpace.temperature_function_space" title="Permalink to this definition">¶</a></dt>
+<dd><p>Picks temperature function space from generated function_spaces.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="fem.tv_acoustic_fspace.ComplexTVAcousticFunctionSpace.velocity_function_space">
+<em class="property">property </em><code class="sig-name descname">velocity_function_space</code><a class="headerlink" href="#fem.tv_acoustic_fspace.ComplexTVAcousticFunctionSpace.velocity_function_space" title="Permalink to this definition">¶</a></dt>
+<dd><p>Picks velocity function space from generated function_spaces.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="function">
+<dt id="fem.tv_acoustic_fspace.DEFAULT_TVACOUSTIC_SPACES">
+<code class="sig-prename descclassname">fem.tv_acoustic_fspace.</code><code class="sig-name descname">DEFAULT_TVACOUSTIC_SPACES</code><span class="sig-paren">(</span><em class="sig-param">order</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/fem/tv_acoustic_fspace.html#DEFAULT_TVACOUSTIC_SPACES"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#fem.tv_acoustic_fspace.DEFAULT_TVACOUSTIC_SPACES" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="class">
+<dt id="fem.tv_acoustic_fspace.TVAcousticFunctionSpace">
+<em class="property">class </em><code class="sig-prename descclassname">fem.tv_acoustic_fspace.</code><code class="sig-name descname">TVAcousticFunctionSpace</code><span class="sig-paren">(</span><em class="sig-param">domain</em>, <em class="sig-param">order=2</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/fem/tv_acoustic_fspace.html#TVAcousticFunctionSpace"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#fem.tv_acoustic_fspace.TVAcousticFunctionSpace" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">firecrest.fem.base_fspace.BaseFunctionSpace</span></code></p>
+<p>Template function spaces for real Thermoviscous Acoustic FEM problem.
+Chosen function spaces are:
+- Pressure(scalar, order = 2),
+- Velocity(vector, order = 2),
+- Temperature(scalar, order = 1).</p>
+<dl class="method">
+<dt id="fem.tv_acoustic_fspace.TVAcousticFunctionSpace.pressure_function_space">
+<em class="property">property </em><code class="sig-name descname">pressure_function_space</code><a class="headerlink" href="#fem.tv_acoustic_fspace.TVAcousticFunctionSpace.pressure_function_space" title="Permalink to this definition">¶</a></dt>
+<dd><p>Picks pressure function space from generated function_spaces.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="fem.tv_acoustic_fspace.TVAcousticFunctionSpace.temperature_function_space">
+<em class="property">property </em><code class="sig-name descname">temperature_function_space</code><a class="headerlink" href="#fem.tv_acoustic_fspace.TVAcousticFunctionSpace.temperature_function_space" title="Permalink to this definition">¶</a></dt>
+<dd><p>Picks temperature function space from generated function_spaces.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="fem.tv_acoustic_fspace.TVAcousticFunctionSpace.velocity_function_space">
+<em class="property">property </em><code class="sig-name descname">velocity_function_space</code><a class="headerlink" href="#fem.tv_acoustic_fspace.TVAcousticFunctionSpace.velocity_function_space" title="Permalink to this definition">¶</a></dt>
+<dd><p>Picks velocity function space from generated function_spaces.</p>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="module-fem.tv_acoustic_weakform">
+<span id="fem-tv-acoustic-weakform-module"></span><h2>fem.tv_acoustic_weakform module<a class="headerlink" href="#module-fem.tv_acoustic_weakform" title="Permalink to this headline">¶</a></h2>
+<dl class="class">
+<dt id="fem.tv_acoustic_weakform.BaseTVAcousticWeakForm">
+<em class="property">class </em><code class="sig-prename descclassname">fem.tv_acoustic_weakform.</code><code class="sig-name descname">BaseTVAcousticWeakForm</code><span class="sig-paren">(</span><em class="sig-param">*args</em>, <em class="sig-param">**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/fem/tv_acoustic_weakform.html#BaseTVAcousticWeakForm"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#fem.tv_acoustic_weakform.BaseTVAcousticWeakForm" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">abc.ABC</span></code>, <code class="xref py py-class docutils literal notranslate"><span class="pre">firecrest.fem.base_weakform.BaseWeakForm</span></code></p>
+<p>Base class for Thermoviscous acoustic weak forms generation.</p>
+<dl class="attribute">
+<dt id="fem.tv_acoustic_weakform.BaseTVAcousticWeakForm.allowed_stress_bcs">
+<code class="sig-name descname">allowed_stress_bcs</code><em class="property"> = {'force': 'Neumann', 'free': 'Neumann', 'impedance': 'Robin', 'inflow': 'Dirichlet', 'normal_force': 'Neumann', 'normal_velocity': 'Neumann', 'noslip': 'Dirichlet', 'slip': 'Neumann'}</em><a class="headerlink" href="#fem.tv_acoustic_weakform.BaseTVAcousticWeakForm.allowed_stress_bcs" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="fem.tv_acoustic_weakform.BaseTVAcousticWeakForm.allowed_temperature_bcs">
+<code class="sig-name descname">allowed_temperature_bcs</code><em class="property"> = {'adiabatic': 'Neumann', 'heat_flux': 'Neumann', 'isothermal': 'Dirichlet', 'temperature': 'Dirichlet', 'thermal_accommodation': 'Robin'}</em><a class="headerlink" href="#fem.tv_acoustic_weakform.BaseTVAcousticWeakForm.allowed_temperature_bcs" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="fem.tv_acoustic_weakform.BaseTVAcousticWeakForm.bc_to_fs">
+<em class="property">property </em><code class="sig-name descname">bc_to_fs</code><a class="headerlink" href="#fem.tv_acoustic_weakform.BaseTVAcousticWeakForm.bc_to_fs" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="fem.tv_acoustic_weakform.BaseTVAcousticWeakForm.boundary_components">
+<code class="sig-name descname">boundary_components</code><span class="sig-paren">(</span><em class="sig-param">trial</em>, <em class="sig-param">test</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/fem/tv_acoustic_weakform.html#BaseTVAcousticWeakForm.boundary_components"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#fem.tv_acoustic_weakform.BaseTVAcousticWeakForm.boundary_components" title="Permalink to this definition">¶</a></dt>
+<dd><p>Generates momentum (stress, velocity) and thermal (heat flux. temperature) boundary components
+of the TVAcoustic weak form equation.</p>
+<dl class="simple">
+<dt>I expect the usage should be something like:</dt><dd><p>bcond = {&quot;noslip&quot; : True, &quot;heat_flux&quot; : 1.}</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="fem.tv_acoustic_weakform.BaseTVAcousticWeakForm.density">
+<code class="sig-name descname">density</code><span class="sig-paren">(</span><em class="sig-param">pressure</em>, <em class="sig-param">temperature</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/fem/tv_acoustic_weakform.html#BaseTVAcousticWeakForm.density"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#fem.tv_acoustic_weakform.BaseTVAcousticWeakForm.density" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="fem.tv_acoustic_weakform.BaseTVAcousticWeakForm.dirichlet_boundary_conditions">
+<code class="sig-name descname">dirichlet_boundary_conditions</code><span class="sig-paren">(</span><em class="sig-param">is_linearised=False</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/fem/tv_acoustic_weakform.html#BaseTVAcousticWeakForm.dirichlet_boundary_conditions"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#fem.tv_acoustic_weakform.BaseTVAcousticWeakForm.dirichlet_boundary_conditions" title="Permalink to this definition">¶</a></dt>
+<dd><p>Generates DirichletBCs on all appropriate boundary elements.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="fem.tv_acoustic_weakform.BaseTVAcousticWeakForm.entropy">
+<code class="sig-name descname">entropy</code><span class="sig-paren">(</span><em class="sig-param">pressure</em>, <em class="sig-param">temperature</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/fem/tv_acoustic_weakform.html#BaseTVAcousticWeakForm.entropy"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#fem.tv_acoustic_weakform.BaseTVAcousticWeakForm.entropy" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="fem.tv_acoustic_weakform.BaseTVAcousticWeakForm.function_space">
+<em class="property">property </em><code class="sig-name descname">function_space</code><a class="headerlink" href="#fem.tv_acoustic_weakform.BaseTVAcousticWeakForm.function_space" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="fem.tv_acoustic_weakform.BaseTVAcousticWeakForm.function_space_factory">
+<em class="property">abstract property </em><code class="sig-name descname">function_space_factory</code><a class="headerlink" href="#fem.tv_acoustic_weakform.BaseTVAcousticWeakForm.function_space_factory" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="fem.tv_acoustic_weakform.BaseTVAcousticWeakForm.get_constants">
+<code class="sig-name descname">get_constants</code><span class="sig-paren">(</span><em class="sig-param">kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/fem/tv_acoustic_weakform.html#BaseTVAcousticWeakForm.get_constants"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#fem.tv_acoustic_weakform.BaseTVAcousticWeakForm.get_constants" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="fem.tv_acoustic_weakform.BaseTVAcousticWeakForm.heat_flux">
+<code class="sig-name descname">heat_flux</code><span class="sig-paren">(</span><em class="sig-param">temperature</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/fem/tv_acoustic_weakform.html#BaseTVAcousticWeakForm.heat_flux"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#fem.tv_acoustic_weakform.BaseTVAcousticWeakForm.heat_flux" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="fem.tv_acoustic_weakform.BaseTVAcousticWeakForm.pressure_function_space">
+<em class="property">property </em><code class="sig-name descname">pressure_function_space</code><a class="headerlink" href="#fem.tv_acoustic_weakform.BaseTVAcousticWeakForm.pressure_function_space" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="fem.tv_acoustic_weakform.BaseTVAcousticWeakForm.shear_stress">
+<code class="sig-name descname">shear_stress</code><span class="sig-paren">(</span><em class="sig-param">velocity</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/fem/tv_acoustic_weakform.html#BaseTVAcousticWeakForm.shear_stress"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#fem.tv_acoustic_weakform.BaseTVAcousticWeakForm.shear_stress" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="fem.tv_acoustic_weakform.BaseTVAcousticWeakForm.spatial_component">
+<code class="sig-name descname">spatial_component</code><span class="sig-paren">(</span><em class="sig-param">trial</em>, <em class="sig-param">test</em>, <em class="sig-param">shift=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/fem/tv_acoustic_weakform.html#BaseTVAcousticWeakForm.spatial_component"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#fem.tv_acoustic_weakform.BaseTVAcousticWeakForm.spatial_component" title="Permalink to this definition">¶</a></dt>
+<dd><p>Generates spatial component of the TVAcoustic weak form equation.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="fem.tv_acoustic_weakform.BaseTVAcousticWeakForm.stress">
+<code class="sig-name descname">stress</code><span class="sig-paren">(</span><em class="sig-param">pressure</em>, <em class="sig-param">velocity</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/fem/tv_acoustic_weakform.html#BaseTVAcousticWeakForm.stress"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#fem.tv_acoustic_weakform.BaseTVAcousticWeakForm.stress" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="fem.tv_acoustic_weakform.BaseTVAcousticWeakForm.temperature_function_space">
+<em class="property">property </em><code class="sig-name descname">temperature_function_space</code><a class="headerlink" href="#fem.tv_acoustic_weakform.BaseTVAcousticWeakForm.temperature_function_space" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="fem.tv_acoustic_weakform.BaseTVAcousticWeakForm.temporal_component">
+<code class="sig-name descname">temporal_component</code><span class="sig-paren">(</span><em class="sig-param">trial</em>, <em class="sig-param">test</em>, <em class="sig-param">shift=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/fem/tv_acoustic_weakform.html#BaseTVAcousticWeakForm.temporal_component"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#fem.tv_acoustic_weakform.BaseTVAcousticWeakForm.temporal_component" title="Permalink to this definition">¶</a></dt>
+<dd><p>Generates temporal component of the TVAcoustic weak form equation.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="fem.tv_acoustic_weakform.BaseTVAcousticWeakForm.velocity_function_space">
+<em class="property">property </em><code class="sig-name descname">velocity_function_space</code><a class="headerlink" href="#fem.tv_acoustic_weakform.BaseTVAcousticWeakForm.velocity_function_space" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="fem.tv_acoustic_weakform.ComplexTVAcousticWeakForm">
+<em class="property">class </em><code class="sig-prename descclassname">fem.tv_acoustic_weakform.</code><code class="sig-name descname">ComplexTVAcousticWeakForm</code><span class="sig-paren">(</span><em class="sig-param">domain</em>, <em class="sig-param">**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/fem/tv_acoustic_weakform.html#ComplexTVAcousticWeakForm"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#fem.tv_acoustic_weakform.ComplexTVAcousticWeakForm" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#fem.tv_acoustic_weakform.BaseTVAcousticWeakForm" title="fem.tv_acoustic_weakform.BaseTVAcousticWeakForm"><code class="xref py py-class docutils literal notranslate"><span class="pre">fem.tv_acoustic_weakform.BaseTVAcousticWeakForm</span></code></a></p>
+<p>Weak forms for complex TVAcoustic problem.</p>
+<dl class="method">
+<dt id="fem.tv_acoustic_weakform.ComplexTVAcousticWeakForm.boundary_components">
+<code class="sig-name descname">boundary_components</code><span class="sig-paren">(</span><em class="sig-param">trial=None</em>, <em class="sig-param">test=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/fem/tv_acoustic_weakform.html#ComplexTVAcousticWeakForm.boundary_components"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#fem.tv_acoustic_weakform.ComplexTVAcousticWeakForm.boundary_components" title="Permalink to this definition">¶</a></dt>
+<dd><p>Generates momentum (stress, velocity) and thermal (heat flux. temperature) boundary components
+of the TVAcoustic weak form equation.</p>
+<dl class="simple">
+<dt>I expect the usage should be something like:</dt><dd><p>bcond = {&quot;noslip&quot; : True, &quot;heat_flux&quot; : 1.}</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="fem.tv_acoustic_weakform.ComplexTVAcousticWeakForm.complex_component">
+<em class="property">static </em><code class="sig-name descname">complex_component</code><span class="sig-paren">(</span><em class="sig-param">functions</em>, <em class="sig-param">complex_flag</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/fem/tv_acoustic_weakform.html#ComplexTVAcousticWeakForm.complex_component"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#fem.tv_acoustic_weakform.ComplexTVAcousticWeakForm.complex_component" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="fem.tv_acoustic_weakform.ComplexTVAcousticWeakForm.function_space_factory">
+<code class="sig-name descname">function_space_factory</code><em class="property"> = None</em><a class="headerlink" href="#fem.tv_acoustic_weakform.ComplexTVAcousticWeakForm.function_space_factory" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="fem.tv_acoustic_weakform.ComplexTVAcousticWeakForm.real_function_space">
+<em class="property">property </em><code class="sig-name descname">real_function_space</code><a class="headerlink" href="#fem.tv_acoustic_weakform.ComplexTVAcousticWeakForm.real_function_space" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="fem.tv_acoustic_weakform.ComplexTVAcousticWeakForm.spatial_component">
+<code class="sig-name descname">spatial_component</code><span class="sig-paren">(</span><em class="sig-param">trial=None</em>, <em class="sig-param">test=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/fem/tv_acoustic_weakform.html#ComplexTVAcousticWeakForm.spatial_component"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#fem.tv_acoustic_weakform.ComplexTVAcousticWeakForm.spatial_component" title="Permalink to this definition">¶</a></dt>
+<dd><p>Generates spatial component of the TVAcoustic weak form equation.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="fem.tv_acoustic_weakform.ComplexTVAcousticWeakForm.temperature_function_space">
+<em class="property">property </em><code class="sig-name descname">temperature_function_space</code><a class="headerlink" href="#fem.tv_acoustic_weakform.ComplexTVAcousticWeakForm.temperature_function_space" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="fem.tv_acoustic_weakform.ComplexTVAcousticWeakForm.temporal_component">
+<code class="sig-name descname">temporal_component</code><span class="sig-paren">(</span><em class="sig-param">trial=None</em>, <em class="sig-param">test=None</em>, <em class="sig-param">shift=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/fem/tv_acoustic_weakform.html#ComplexTVAcousticWeakForm.temporal_component"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#fem.tv_acoustic_weakform.ComplexTVAcousticWeakForm.temporal_component" title="Permalink to this definition">¶</a></dt>
+<dd><p>Generates temporal component of the TVAcoustic weak form equation.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="fem.tv_acoustic_weakform.ComplexTVAcousticWeakForm.velocity_function_space">
+<em class="property">property </em><code class="sig-name descname">velocity_function_space</code><a class="headerlink" href="#fem.tv_acoustic_weakform.ComplexTVAcousticWeakForm.velocity_function_space" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="fem.tv_acoustic_weakform.TVAcousticWeakForm">
+<em class="property">class </em><code class="sig-prename descclassname">fem.tv_acoustic_weakform.</code><code class="sig-name descname">TVAcousticWeakForm</code><span class="sig-paren">(</span><em class="sig-param">domain</em>, <em class="sig-param">**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/fem/tv_acoustic_weakform.html#TVAcousticWeakForm"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#fem.tv_acoustic_weakform.TVAcousticWeakForm" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#fem.tv_acoustic_weakform.BaseTVAcousticWeakForm" title="fem.tv_acoustic_weakform.BaseTVAcousticWeakForm"><code class="xref py py-class docutils literal notranslate"><span class="pre">fem.tv_acoustic_weakform.BaseTVAcousticWeakForm</span></code></a></p>
+<dl class="method">
+<dt id="fem.tv_acoustic_weakform.TVAcousticWeakForm.boundary_components">
+<code class="sig-name descname">boundary_components</code><span class="sig-paren">(</span><em class="sig-param">trial=None</em>, <em class="sig-param">test=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/fem/tv_acoustic_weakform.html#TVAcousticWeakForm.boundary_components"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#fem.tv_acoustic_weakform.TVAcousticWeakForm.boundary_components" title="Permalink to this definition">¶</a></dt>
+<dd><p>Generates momentum (stress, velocity) and thermal (heat flux. temperature) boundary components
+of the TVAcoustic weak form equation.</p>
+<dl class="simple">
+<dt>I expect the usage should be something like:</dt><dd><p>bcond = {&quot;noslip&quot; : True, &quot;heat_flux&quot; : 1.}</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="fem.tv_acoustic_weakform.TVAcousticWeakForm.energy">
+<code class="sig-name descname">energy</code><span class="sig-paren">(</span><em class="sig-param">state</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/fem/tv_acoustic_weakform.html#TVAcousticWeakForm.energy"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#fem.tv_acoustic_weakform.TVAcousticWeakForm.energy" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="fem.tv_acoustic_weakform.TVAcousticWeakForm.function_space_factory">
+<code class="sig-name descname">function_space_factory</code><em class="property"> = None</em><a class="headerlink" href="#fem.tv_acoustic_weakform.TVAcousticWeakForm.function_space_factory" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="fem.tv_acoustic_weakform.TVAcousticWeakForm.spatial_component">
+<code class="sig-name descname">spatial_component</code><span class="sig-paren">(</span><em class="sig-param">trial=None</em>, <em class="sig-param">test=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/fem/tv_acoustic_weakform.html#TVAcousticWeakForm.spatial_component"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#fem.tv_acoustic_weakform.TVAcousticWeakForm.spatial_component" title="Permalink to this definition">¶</a></dt>
+<dd><p>Generates spatial component of the TVAcoustic weak form equation.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="fem.tv_acoustic_weakform.TVAcousticWeakForm.temporal_component">
+<code class="sig-name descname">temporal_component</code><span class="sig-paren">(</span><em class="sig-param">trial=None</em>, <em class="sig-param">test=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/fem/tv_acoustic_weakform.html#TVAcousticWeakForm.temporal_component"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#fem.tv_acoustic_weakform.TVAcousticWeakForm.temporal_component" title="Permalink to this definition">¶</a></dt>
+<dd><p>Generates temporal component of the TVAcoustic weak form equation.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="function">
+<dt id="fem.tv_acoustic_weakform.parse_trialtest">
+<code class="sig-prename descclassname">fem.tv_acoustic_weakform.</code><code class="sig-name descname">parse_trialtest</code><span class="sig-paren">(</span><em class="sig-param">component</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/fem/tv_acoustic_weakform.html#parse_trialtest"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#fem.tv_acoustic_weakform.parse_trialtest" title="Permalink to this definition">¶</a></dt>
+<dd><p>Parse Real / Complex case of trial and test functions arguments for weak forms.</p>
+</dd></dl>
+
+</div>
+<div class="section" id="module-fem">
+<span id="module-contents"></span><h2>Module contents<a class="headerlink" href="#module-fem" title="Permalink to this headline">¶</a></h2>
+</div>
+</div>
+
+
+          </div>
+            
+        </div>
+        <div class="clearfix"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">firecrest 0.1 documentation</a> &#187;</li> 
+      </ul>
+    </div>
+<script type="text/javascript">
+  $("#mobile-toggle a").click(function () {
+    $("#left-column").toggle();
+  });
+</script>
+<script type="text/javascript" src="_static/js/bootstrap.js"></script>
+  <div class="footer">
+    &copy; Copyright 2019, Petr Kungurtsev. Created using <a href="http://sphinx.pocoo.org/">Sphinx</a>.
+  </div>
+  </body>
+</html>

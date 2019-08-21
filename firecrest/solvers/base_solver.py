@@ -2,6 +2,7 @@ from abc import ABC, abstractmethod
 from slepc4py import SLEPc
 from petsc4py import PETSc
 import dolfin as dolf
+import os
 
 LOG_LEVEL = 30
 
@@ -11,8 +12,13 @@ class BaseSolver(ABC):
         dolf.set_log_level(LOG_LEVEL)
         self.domain = domain
 
+        self._visualization_files = None
+        self.vis_dir = "Visualization/"
+        if not os.path.exists(self.vis_dir):
+            os.makedirs(self.vis_dir)
+
     @abstractmethod
-    def solve(self):
+    def solve(self, *args, **kwargs):
         pass
 
     def _vec_to_func(self, vector, function_space):
@@ -26,6 +32,22 @@ class BaseSolver(ABC):
         dolf_function = dolf.Function(function_space)
         dolf_function.vector()[:] = vector
         return dolf_function
+
+    @property
+    def visualization_files(self):
+        return self._visualization_files
+
+    def output_field(self, fields, name=None):
+        if name:
+            fields.rename(name, name)
+            self.visualization_files[name] << fields
+        if len(fields) != len(self.visualization_files):
+            raise IndexError(
+                f"Expected {len(self.visualization_files)} fields, only {len(fields)} received."
+            )
+        for field, file_name in zip(fields, self.visualization_files):
+            field.rename(file_name, file_name)
+            self.visualization_files[file_name] << field
 
 
 class EigenvalueSolver(BaseSolver):
@@ -67,7 +89,7 @@ class EigenvalueSolver(BaseSolver):
     def __solution_vector_template(self):
         rx = PETSc.Vec().createSeq(self.AA.getSize()[0])
         ix = PETSc.Vec().createSeq(self.AA.getSize()[0])
-        return (rx, ix)
+        return rx, ix
 
     def retrieve_eigenpair(self, index):
         rx, ix = self.__solution_vector_template()

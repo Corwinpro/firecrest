@@ -1,6 +1,7 @@
 from firecrest.solvers.base_solver import EigenvalueSolver
 from firecrest.fem.tv_acoustic_weakform import ComplexTVAcousticWeakForm
 import dolfin as dolf
+from collections import OrderedDict
 
 
 class EigenvalueTVAcousticSolver(EigenvalueSolver):
@@ -20,25 +21,12 @@ class EigenvalueTVAcousticSolver(EigenvalueSolver):
         """
         Constructs the LHS matrix (spatial components), AA of the eigenvalue problem.
         """
-        spatial_component = -self.forms.spatial_component()
-        imag_shift_components = -dolf.Constant(self.complex_shift.imag) * (
-            self.forms.temporal_component("real", "imag")
-            - self.forms.temporal_component("imag", "real")
-        )
-        real_shift_components = (
-            -dolf.Constant(self.complex_shift.real) * self.forms.temporal_component()
-        )
-        boundary_components = dolf.lhs(-sum(self.forms.boundary_components()))
-
         AA = dolf.PETScMatrix()
-        AA = dolf.assemble(
-            spatial_component
-            + boundary_components
-            + imag_shift_components
-            + real_shift_components,
-            tensor=AA,
+        lhs_forms = -self.forms._lhs_forms() - self.forms._rhs_forms(
+            shift=self.complex_shift
         )
-        for bc in self.forms.dirichlet_boundary_conditions():
+        AA = dolf.assemble(dolf.lhs(lhs_forms), tensor=AA)
+        for bc in self.forms.dirichlet_boundary_conditions(is_linearised=True):
             bc.apply(AA)
 
         return AA.mat()
@@ -48,17 +36,16 @@ class EigenvalueTVAcousticSolver(EigenvalueSolver):
         """
         Constructs the RHS matrix (temporal components), BB of the eigenvalue problem.
         """
-        temporal_component = self.forms.temporal_component()
         BB = dolf.PETScMatrix()
-        BB = dolf.assemble(temporal_component, tensor=BB)
-        for bc in self.forms.dirichlet_boundary_conditions():
+        BB = dolf.assemble(self.forms._rhs_forms(), tensor=BB)
+        for bc in self.forms.dirichlet_boundary_conditions(is_linearised=True):
             bc.zero(BB)
 
         return BB.mat()
 
     def extract_solution(self, index, eigenvalue_tolerance=1.0e-8, verbose=True):
         """
-        Instead of passing an actual index from (1, nof_converged), we pass the pair index.
+        Instead of passing an actual index from range(1, nof_converged), we pass the pair index.
         Then, we calculate the norms of the each solution in this pair, compare them, and return the
         one with the highest norm.
         :param index: int, number of pair
@@ -92,6 +79,7 @@ class EigenvalueTVAcousticSolver(EigenvalueSolver):
         which appeared after doubling the space of the problem.
         See appendix of my First Year Report.
 
+        :param verbose: output solution norm to verify it is non zero
         :param rx: real part vector of the solution
         :param ix: imaginary part vector of the solution
         :return: a tuple of (eigenvalue, real part of the eigenmode,imaginary part of the eigenmode)
@@ -136,3 +124,18 @@ class EigenvalueTVAcousticSolver(EigenvalueSolver):
         empty_vector = dolf.Function(self.forms.function_space).vector()
         self.lhs.mult(vector.vec(), empty_vector.vec())
         return empty_vector.norm("linf")
+
+    @property
+    def visualization_files(self):
+        if self._visualization_files is None:
+            self._visualization_files = OrderedDict(
+                {
+                    "pR": dolf.File(self.vis_dir + "pressure_real.pvd"),
+                    "uR": dolf.File(self.vis_dir + "u_real.pvd"),
+                    "TR": dolf.File(self.vis_dir + "temperature_real.pvd"),
+                    "pI": dolf.File(self.vis_dir + "pressure_imag.pvd"),
+                    "uI": dolf.File(self.vis_dir + "u_imag.pvd"),
+                    "TI": dolf.File(self.vis_dir + "temperature_imag.pvd"),
+                }
+            )
+        return self._visualization_files
