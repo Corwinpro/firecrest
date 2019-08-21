@@ -35,7 +35,7 @@ domain_boundaries = (boundary1, boundary2, boundary3, boundary4, boundary5, boun
 domain = SimpleDomain(domain_boundaries)
 
 solver = EigenvalueTVAcousticSolver(
-    domain, complex_shift=-0.03 + 1.j, Re=1000.0, Pe=1.0, nmodes=30
+    domain, complex_shift=-0.03 + 1.0j, Re=1000.0, Pe=1.0, nmodes=30
 )
 solver.solve()
 
@@ -67,7 +67,9 @@ slip_spectrum = [
     (-0.033603306964518055 + 0.7822368882457811j),
 ]
 plt.plot([ev.real for ev in free_spectrum], [ev.imag for ev in free_spectrum], "x")
-plt.plot([ev.real for ev in slip_spectrum], [ev.imag for ev in slip_spectrum], "*", color='k')
+plt.plot(
+    [ev.real for ev in slip_spectrum], [ev.imag for ev in slip_spectrum], "*", color="k"
+)
 
 plt.show()
 # file << real_mode[1], 0
