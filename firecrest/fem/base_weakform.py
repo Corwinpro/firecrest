@@ -1,4 +1,3 @@
-from abc import ABC
 import warnings
 import dolfin as dolf
 from firecrest.misc.type_checker import (
@@ -8,19 +7,24 @@ from firecrest.misc.type_checker import (
 )
 
 
-class BaseWeakForm(ABC):
+class BaseWeakForm:
+    """
+    `_complex_forms_flag` implements a special flag for complex valued boundary conditions.
+    This allows us to switch between the real and complex values, and use the same forms
+    generator for both the real, and the imaginary components of boundary conditions.
+    """
+
     def __init__(self, domain, *args, **kwargs):
-        super().__init__(*args, **kwargs)
         self._domain = domain
         self.geometric_dimension = self.domain.mesh.ufl_cell().geometric_dimension()
         self.identity_tensor = dolf.Identity(self.geometric_dimension)
-        self.dirichlet_bcs = []
+        self._complex_forms_flag = "real"
 
     @property
     def domain(self):
         return self._domain
 
-    def _parse_dolf_expression(self, expression):
+    def _parse_real_dolf_expression(self, expression):
         """
         Parses an (int, float, dolf.Constant, dolf.Expression) expression to dolfin-compatible
         format. We use this for generating values for dolf.DirichletBC.
@@ -40,18 +44,6 @@ class BaseWeakForm(ABC):
                     f"It must be a compatible numerical value or dolfin value, or implement eval() method."
                 )
         return value
-
-
-class BaseComplexWeakForm(BaseWeakForm):
-    """
-    BaseComplexWeakForm implements a special flag for complex valued boundary conditions.
-    This allows us to switch between the real and complex values, and use the same forms
-    generator for both the real, and the imaginary components of boundary conditions.
-    """
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self._complex_forms_flag = "real"
 
     @property
     def complex_forms_flag(self):
@@ -75,12 +67,12 @@ class BaseComplexWeakForm(BaseWeakForm):
             except AttributeError:
                 try:
                     expression = tuple(el.real for el in expression)
-                except AttributeError:
+                except (AttributeError, TypeError):
                     pass
-        if self.complex_forms_flag == "imag":
+        elif self.complex_forms_flag == "imag":
             try:
                 expression = expression.imag
             except AttributeError:
                 expression = tuple(el.imag for el in expression)
 
-        return super()._parse_dolf_expression(expression)
+        return self._parse_real_dolf_expression(expression)

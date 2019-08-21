@@ -1,7 +1,7 @@
 import functools
 from abc import ABC, abstractmethod
 from firecrest.misc.complex_template import Complex
-from firecrest.fem.base_weakform import BaseWeakForm, BaseComplexWeakForm
+from firecrest.fem.base_weakform import BaseWeakForm
 from firecrest.fem.tv_acoustic_fspace import (
     TVAcousticFunctionSpace,
     ComplexTVAcousticFunctionSpace,
@@ -65,7 +65,7 @@ def parse_trialtest(component):
     return inner
 
 
-class BaseTVAcousticWeakForm(ABC):
+class BaseTVAcousticWeakForm(ABC, BaseWeakForm):
     """
     Base class for Thermoviscous acoustic weak forms generation.
     """
@@ -90,17 +90,10 @@ class BaseTVAcousticWeakForm(ABC):
     }
 
     def __init__(self, *args, **kwargs):
-        # super().__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
         self.dolf_constants = self.get_constants(kwargs)
-
-    @abstractmethod
-    def _parse_dolf_expression(self, expression):
-        pass
-
-    @property
-    @abstractmethod
-    def domain(self):
-        pass
+        self.trial_functions = dolf.TrialFunctions(self.function_space)
+        self.test_functions = dolf.TestFunctions(self.function_space)
 
     def get_constants(self, kwargs):
         self._gamma = kwargs.get("gamma", 1.4)
@@ -360,21 +353,25 @@ class BaseTVAcousticWeakForm(ABC):
     def _generate_dirichlet_bc(self, boundary, bc_type, is_linearised=False):
         pass
 
+    def _lhs_forms(self):
+        """
+        Constructs the LHS forms (spatial components), AA of the problem AA*x = (...)*BB*x.
+        """
+        return self.spatial_component() + self.boundary_components()
 
-class TVAcousticWeakForm(BaseWeakForm, BaseTVAcousticWeakForm):
+    def _rhs_forms(self, shift=None):
+        """
+        Constructs the RHS forms (temporal components), BB of the problem AA*x = (...)*BB*x.
+        """
+        return self.temporal_component(shift=shift)
+
+
+class TVAcousticWeakForm(BaseTVAcousticWeakForm):
     function_space_factory = None
-    complex_forms_flag = "real"
 
     def __init__(self, domain, **kwargs):
+        self.function_space_factory = TVAcousticFunctionSpace(domain)
         super().__init__(domain, **kwargs)
-        self.function_space_factory = TVAcousticFunctionSpace(self.domain)
-        self.trial_functions = dolf.TrialFunctions(self.function_space)
-        self.test_functions = dolf.TestFunctions(self.function_space)
-
-        self.pressure, self.velocity, self.temperature = self.trial_functions
-        self.test_pressure, self.test_velocity, self.test_temperature = (
-            self.test_functions
-        )
 
     @staticmethod
     def _unpack_functions(functions):
@@ -433,7 +430,7 @@ class TVAcousticWeakForm(BaseWeakForm, BaseTVAcousticWeakForm):
         return dolf.assemble(self.temporal_component(state, state)) / 2.0
 
 
-class ComplexTVAcousticWeakForm(BaseComplexWeakForm, BaseTVAcousticWeakForm):
+class ComplexTVAcousticWeakForm(BaseTVAcousticWeakForm):
     """
     Weak forms for complex TVAcoustic problem.
     """
@@ -441,29 +438,9 @@ class ComplexTVAcousticWeakForm(BaseComplexWeakForm, BaseTVAcousticWeakForm):
     function_space_factory = None
 
     def __init__(self, domain, **kwargs):
+        self.function_space_factory = ComplexTVAcousticFunctionSpace(domain)
         super().__init__(domain, **kwargs)
-        self.function_space_factory = ComplexTVAcousticFunctionSpace(self.domain)
         self.real_function_space_factory = None
-
-        self.trial_functions = dolf.TrialFunctions(self.function_space)
-        self.test_functions = dolf.TestFunctions(self.function_space)
-
-        (
-            self.real_pressure,
-            self.real_velocity,
-            self.real_temperature,
-            self.imag_pressure,
-            self.imag_velocity,
-            self.imag_temperature,
-        ) = self.trial_functions
-        (
-            self.test_real_pressure,
-            self.test_real_velocity,
-            self.test_real_temperature,
-            self.test_imag_pressure,
-            self.test_imag_velocity,
-            self.test_imag_temperature,
-        ) = self.test_functions
 
     @staticmethod
     def complex_component(functions, complex_flag):
@@ -497,11 +474,6 @@ class ComplexTVAcousticWeakForm(BaseComplexWeakForm, BaseTVAcousticWeakForm):
         """
         Given a boundary and a boundary condition type (one from the 'bc_to_fs' dict),
         we generate a dolfin DirichletBC based on the boundary expression for this boundary condition.
-        
-        TODO:
-            - add complex boundary conditions: now we set the same value to both real and imag components,
-            while it should be different (only for non-eingenvalue problems)
-            - Deal with is_linearised=False flag
         """
         bc_to_fs = {
             "noslip": self.velocity_function_space,
@@ -541,19 +513,3 @@ class ComplexTVAcousticWeakForm(BaseComplexWeakForm, BaseTVAcousticWeakForm):
                 boundary.surface_index,
             ),
         ]
-
-    def _lhs_forms(self):
-        """
-        Constructs the LHS forms (spatial components), AA of the problem AA*x = s*BB*x.
-        """
-        spatial_component = self.spatial_component()
-        boundary_components = self.boundary_components()
-
-        return spatial_component + boundary_components
-
-    def _rhs_forms(self, shift=None):
-        """
-        Constructs the RHS forms (temporal components), BB of the problem AA*x = s*BB*x.
-        """
-        temporal_component = self.temporal_component(shift=shift)
-        return temporal_component
