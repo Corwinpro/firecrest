@@ -22,12 +22,11 @@ It is much more efficient and convenient to reuse them, rather then build every 
 
 #### Major tasks
 
-1. Eigenvalue solver: implement complex-valued boundary conditions
+1. Weak forms: write tests for `real` / `complex` usage
 
 #### Minor tasks
 
 
 ### Optimization modules
 
-1. Implement templates for objective with (value, Jacobian) attributes.
-2. Implement adjoint unsteady solver.
+1.
