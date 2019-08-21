@@ -1,6 +1,7 @@
 from firecrest.solvers.base_solver import EigenvalueSolver
 from firecrest.fem.tv_acoustic_weakform import ComplexTVAcousticWeakForm
 import dolfin as dolf
+from collections import OrderedDict
 
 
 class EigenvalueTVAcousticSolver(EigenvalueSolver):
@@ -15,48 +16,20 @@ class EigenvalueTVAcousticSolver(EigenvalueSolver):
         self.forms = ComplexTVAcousticWeakForm(domain, **kwargs)
         self.set_solver_operators(self.lhs, self.rhs)
 
-    def _lhs_forms(self):
-        """
-        Constructs the LHS forms (spatial components), AA of the eigenvalue problem.
-        """
-        spatial_component = -self.forms.spatial_component()
-        imag_shift_components = -dolf.Constant(self.complex_shift.imag) * (
-            self.forms.temporal_component("real", "imag")
-            - self.forms.temporal_component("imag", "real")
-        )
-        real_shift_components = (
-            -dolf.Constant(self.complex_shift.real) * self.forms.temporal_component()
-        )
-        boundary_components = -sum(self.forms.boundary_components())
-        if len(boundary_components.arguments()) >= 2:
-            boundary_components = dolf.lhs(-sum(self.forms.boundary_components()))
-        else:
-            boundary_components = 0
-        return (
-            spatial_component
-            + boundary_components
-            + imag_shift_components
-            + real_shift_components
-        )
-
     @property
     def lhs(self):
         """
         Constructs the LHS matrix (spatial components), AA of the eigenvalue problem.
         """
         AA = dolf.PETScMatrix()
-        AA = dolf.assemble(self._lhs_forms(), tensor=AA)
-        for bc in self.forms.dirichlet_boundary_conditions():
+        lhs_forms = -self.forms._lhs_forms() - self.forms._rhs_forms(
+            shift=self.complex_shift
+        )
+        AA = dolf.assemble(dolf.lhs(lhs_forms), tensor=AA)
+        for bc in self.forms.dirichlet_boundary_conditions(is_linearised=True):
             bc.apply(AA)
 
         return AA.mat()
-
-    def _rhs_forms(self):
-        """
-        Constructs the RHS forms (temporal components), BB of the eigenvalue problem.
-        """
-        temporal_component = self.forms.temporal_component()
-        return temporal_component
 
     @property
     def rhs(self):
@@ -64,8 +37,8 @@ class EigenvalueTVAcousticSolver(EigenvalueSolver):
         Constructs the RHS matrix (temporal components), BB of the eigenvalue problem.
         """
         BB = dolf.PETScMatrix()
-        BB = dolf.assemble(self._rhs_forms(), tensor=BB)
-        for bc in self.forms.dirichlet_boundary_conditions():
+        BB = dolf.assemble(self.forms._rhs_forms(), tensor=BB)
+        for bc in self.forms.dirichlet_boundary_conditions(is_linearised=True):
             bc.zero(BB)
 
         return BB.mat()
@@ -151,3 +124,18 @@ class EigenvalueTVAcousticSolver(EigenvalueSolver):
         empty_vector = dolf.Function(self.forms.function_space).vector()
         self.lhs.mult(vector.vec(), empty_vector.vec())
         return empty_vector.norm("linf")
+
+    @property
+    def visualization_files(self):
+        if self._visualization_files is None:
+            self._visualization_files = OrderedDict(
+                {
+                    "pR": dolf.File(self.vis_dir + "pressure_real.pvd"),
+                    "uR": dolf.File(self.vis_dir + "u_real.pvd"),
+                    "TR": dolf.File(self.vis_dir + "temperature_real.pvd"),
+                    "pI": dolf.File(self.vis_dir + "pressure_imag.pvd"),
+                    "uI": dolf.File(self.vis_dir + "u_imag.pvd"),
+                    "TI": dolf.File(self.vis_dir + "temperature_imag.pvd"),
+                }
+            )
+        return self._visualization_files

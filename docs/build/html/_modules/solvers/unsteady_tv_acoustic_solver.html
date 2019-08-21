@@ -146,30 +146,17 @@
         <span class="n">temporal_component_old</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">forms</span><span class="o">.</span><span class="n">temporal_component</span><span class="p">(</span><span class="n">initial_state</span><span class="p">)</span>
 
         <span class="n">spatial_component</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">forms</span><span class="o">.</span><span class="n">spatial_component</span><span class="p">()</span>
-        <span class="n">stress_boundary_component</span><span class="p">,</span> <span class="n">temperature_boundary_component</span> <span class="o">=</span> <span class="p">(</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">forms</span><span class="o">.</span><span class="n">boundary_components</span><span class="p">()</span>
-        <span class="p">)</span>
+        <span class="n">boundary_component</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">forms</span><span class="o">.</span><span class="n">boundary_components</span><span class="p">()</span>
         <span class="n">dirichlet_bcs</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">forms</span><span class="o">.</span><span class="n">dirichlet_boundary_conditions</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">is_linearised</span><span class="p">)</span>
 
         <span class="n">spatial_component_old</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">forms</span><span class="o">.</span><span class="n">spatial_component</span><span class="p">(</span><span class="n">initial_state</span><span class="p">)</span>
-        <span class="n">stress_boundary_component_old</span><span class="p">,</span> <span class="n">temperature_boundary_component_old</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">forms</span><span class="o">.</span><span class="n">boundary_components</span><span class="p">(</span>
-            <span class="n">initial_state</span>
-        <span class="p">)</span>
+        <span class="n">boundary_component_old</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">forms</span><span class="o">.</span><span class="n">boundary_components</span><span class="p">(</span><span class="n">initial_state</span><span class="p">)</span>
 
         <span class="n">form</span> <span class="o">=</span> <span class="p">(</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_inverse_dt</span> <span class="o">*</span> <span class="p">(</span><span class="n">temporal_component</span> <span class="o">-</span> <span class="n">temporal_component_old</span><span class="p">)</span>
-            <span class="o">+</span> <span class="n">dolf</span><span class="o">.</span><span class="n">Constant</span><span class="p">(</span><span class="n">theta</span><span class="p">)</span>
-            <span class="o">*</span> <span class="p">(</span>
-                <span class="n">spatial_component</span>
-                <span class="o">+</span> <span class="n">stress_boundary_component</span>
-                <span class="o">+</span> <span class="n">temperature_boundary_component</span>
-            <span class="p">)</span>
+            <span class="o">+</span> <span class="n">dolf</span><span class="o">.</span><span class="n">Constant</span><span class="p">(</span><span class="n">theta</span><span class="p">)</span> <span class="o">*</span> <span class="p">(</span><span class="n">spatial_component</span> <span class="o">+</span> <span class="n">boundary_component</span><span class="p">)</span>
             <span class="o">+</span> <span class="n">dolf</span><span class="o">.</span><span class="n">Constant</span><span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="n">theta</span><span class="p">)</span>
-            <span class="o">*</span> <span class="p">(</span>
-                <span class="n">spatial_component_old</span>
-                <span class="o">+</span> <span class="n">stress_boundary_component_old</span>
-                <span class="o">+</span> <span class="n">temperature_boundary_component_old</span>
-            <span class="p">)</span>
+            <span class="o">*</span> <span class="p">(</span><span class="n">spatial_component_old</span> <span class="o">+</span> <span class="n">boundary_component_old</span><span class="p">)</span>
         <span class="p">)</span>
 
         <span class="k">return</span> <span class="n">form</span><span class="p">,</span> <span class="n">dirichlet_bcs</span>

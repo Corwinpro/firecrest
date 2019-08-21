@@ -81,6 +81,7 @@
 <span></span><span class="kn">from</span> <span class="nn">firecrest.solvers.base_solver</span> <span class="k">import</span> <span class="n">EigenvalueSolver</span>
 <span class="kn">from</span> <span class="nn">firecrest.fem.tv_acoustic_weakform</span> <span class="k">import</span> <span class="n">ComplexTVAcousticWeakForm</span>
 <span class="kn">import</span> <span class="nn">dolfin</span> <span class="k">as</span> <span class="nn">dolf</span>
+<span class="kn">from</span> <span class="nn">collections</span> <span class="k">import</span> <span class="n">OrderedDict</span>
 
 
 <div class="viewcode-block" id="EigenvalueTVAcousticSolver"><a class="viewcode-back" href="../../solvers.html#solvers.eigenvalue_tv_acoustic_solver.EigenvalueTVAcousticSolver">[docs]</a><span class="k">class</span> <span class="nc">EigenvalueTVAcousticSolver</span><span class="p">(</span><span class="n">EigenvalueSolver</span><span class="p">):</span>
@@ -95,48 +96,20 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">forms</span> <span class="o">=</span> <span class="n">ComplexTVAcousticWeakForm</span><span class="p">(</span><span class="n">domain</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">set_solver_operators</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">lhs</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">rhs</span><span class="p">)</span>
 
-    <span class="k">def</span> <span class="nf">_lhs_forms</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Constructs the LHS forms (spatial components), AA of the eigenvalue problem.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
-        <span class="n">spatial_component</span> <span class="o">=</span> <span class="o">-</span><span class="bp">self</span><span class="o">.</span><span class="n">forms</span><span class="o">.</span><span class="n">spatial_component</span><span class="p">()</span>
-        <span class="n">imag_shift_components</span> <span class="o">=</span> <span class="o">-</span><span class="n">dolf</span><span class="o">.</span><span class="n">Constant</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">complex_shift</span><span class="o">.</span><span class="n">imag</span><span class="p">)</span> <span class="o">*</span> <span class="p">(</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">forms</span><span class="o">.</span><span class="n">temporal_component</span><span class="p">(</span><span class="s2">&quot;real&quot;</span><span class="p">,</span> <span class="s2">&quot;imag&quot;</span><span class="p">)</span>
-            <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">forms</span><span class="o">.</span><span class="n">temporal_component</span><span class="p">(</span><span class="s2">&quot;imag&quot;</span><span class="p">,</span> <span class="s2">&quot;real&quot;</span><span class="p">)</span>
-        <span class="p">)</span>
-        <span class="n">real_shift_components</span> <span class="o">=</span> <span class="p">(</span>
-            <span class="o">-</span><span class="n">dolf</span><span class="o">.</span><span class="n">Constant</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">complex_shift</span><span class="o">.</span><span class="n">real</span><span class="p">)</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">forms</span><span class="o">.</span><span class="n">temporal_component</span><span class="p">()</span>
-        <span class="p">)</span>
-        <span class="n">boundary_components</span> <span class="o">=</span> <span class="o">-</span><span class="nb">sum</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">forms</span><span class="o">.</span><span class="n">boundary_components</span><span class="p">())</span>
-        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">boundary_components</span><span class="o">.</span><span class="n">arguments</span><span class="p">())</span> <span class="o">&gt;=</span> <span class="mi">2</span><span class="p">:</span>
-            <span class="n">boundary_components</span> <span class="o">=</span> <span class="n">dolf</span><span class="o">.</span><span class="n">lhs</span><span class="p">(</span><span class="o">-</span><span class="nb">sum</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">forms</span><span class="o">.</span><span class="n">boundary_components</span><span class="p">()))</span>
-        <span class="k">else</span><span class="p">:</span>
-            <span class="n">boundary_components</span> <span class="o">=</span> <span class="mi">0</span>
-        <span class="k">return</span> <span class="p">(</span>
-            <span class="n">spatial_component</span>
-            <span class="o">+</span> <span class="n">boundary_components</span>
-            <span class="o">+</span> <span class="n">imag_shift_components</span>
-            <span class="o">+</span> <span class="n">real_shift_components</span>
-        <span class="p">)</span>
-
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">lhs</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Constructs the LHS matrix (spatial components), AA of the eigenvalue problem.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">AA</span> <span class="o">=</span> <span class="n">dolf</span><span class="o">.</span><span class="n">PETScMatrix</span><span class="p">()</span>
-        <span class="n">AA</span> <span class="o">=</span> <span class="n">dolf</span><span class="o">.</span><span class="n">assemble</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_lhs_forms</span><span class="p">(),</span> <span class="n">tensor</span><span class="o">=</span><span class="n">AA</span><span class="p">)</span>
-        <span class="k">for</span> <span class="n">bc</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">forms</span><span class="o">.</span><span class="n">dirichlet_boundary_conditions</span><span class="p">():</span>
+        <span class="n">lhs_forms</span> <span class="o">=</span> <span class="o">-</span><span class="bp">self</span><span class="o">.</span><span class="n">forms</span><span class="o">.</span><span class="n">_lhs_forms</span><span class="p">()</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">forms</span><span class="o">.</span><span class="n">_rhs_forms</span><span class="p">(</span>
+            <span class="n">shift</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">complex_shift</span>
+        <span class="p">)</span>
+        <span class="n">AA</span> <span class="o">=</span> <span class="n">dolf</span><span class="o">.</span><span class="n">assemble</span><span class="p">(</span><span class="n">dolf</span><span class="o">.</span><span class="n">lhs</span><span class="p">(</span><span class="n">lhs_forms</span><span class="p">),</span> <span class="n">tensor</span><span class="o">=</span><span class="n">AA</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">bc</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">forms</span><span class="o">.</span><span class="n">dirichlet_boundary_conditions</span><span class="p">(</span><span class="n">is_linearised</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
             <span class="n">bc</span><span class="o">.</span><span class="n">apply</span><span class="p">(</span><span class="n">AA</span><span class="p">)</span>
 
         <span class="k">return</span> <span class="n">AA</span><span class="o">.</span><span class="n">mat</span><span class="p">()</span>
-
-    <span class="k">def</span> <span class="nf">_rhs_forms</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Constructs the RHS forms (temporal components), BB of the eigenvalue problem.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
-        <span class="n">temporal_component</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">forms</span><span class="o">.</span><span class="n">temporal_component</span><span class="p">()</span>
-        <span class="k">return</span> <span class="n">temporal_component</span>
 
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">rhs</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
@@ -144,8 +117,8 @@
 <span class="sd">        Constructs the RHS matrix (temporal components), BB of the eigenvalue problem.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">BB</span> <span class="o">=</span> <span class="n">dolf</span><span class="o">.</span><span class="n">PETScMatrix</span><span class="p">()</span>
-        <span class="n">BB</span> <span class="o">=</span> <span class="n">dolf</span><span class="o">.</span><span class="n">assemble</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_rhs_forms</span><span class="p">(),</span> <span class="n">tensor</span><span class="o">=</span><span class="n">BB</span><span class="p">)</span>
-        <span class="k">for</span> <span class="n">bc</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">forms</span><span class="o">.</span><span class="n">dirichlet_boundary_conditions</span><span class="p">():</span>
+        <span class="n">BB</span> <span class="o">=</span> <span class="n">dolf</span><span class="o">.</span><span class="n">assemble</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">forms</span><span class="o">.</span><span class="n">_rhs_forms</span><span class="p">(),</span> <span class="n">tensor</span><span class="o">=</span><span class="n">BB</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">bc</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">forms</span><span class="o">.</span><span class="n">dirichlet_boundary_conditions</span><span class="p">(</span><span class="n">is_linearised</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
             <span class="n">bc</span><span class="o">.</span><span class="n">zero</span><span class="p">(</span><span class="n">BB</span><span class="p">)</span>
 
         <span class="k">return</span> <span class="n">BB</span><span class="o">.</span><span class="n">mat</span><span class="p">()</span>
@@ -230,7 +203,22 @@
     <span class="k">def</span> <span class="nf">_solution_norm</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">vector</span><span class="p">):</span>
         <span class="n">empty_vector</span> <span class="o">=</span> <span class="n">dolf</span><span class="o">.</span><span class="n">Function</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">forms</span><span class="o">.</span><span class="n">function_space</span><span class="p">)</span><span class="o">.</span><span class="n">vector</span><span class="p">()</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">lhs</span><span class="o">.</span><span class="n">mult</span><span class="p">(</span><span class="n">vector</span><span class="o">.</span><span class="n">vec</span><span class="p">(),</span> <span class="n">empty_vector</span><span class="o">.</span><span class="n">vec</span><span class="p">())</span>
-        <span class="k">return</span> <span class="n">empty_vector</span><span class="o">.</span><span class="n">norm</span><span class="p">(</span><span class="s2">&quot;linf&quot;</span><span class="p">)</span></div>
+        <span class="k">return</span> <span class="n">empty_vector</span><span class="o">.</span><span class="n">norm</span><span class="p">(</span><span class="s2">&quot;linf&quot;</span><span class="p">)</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">visualization_files</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_visualization_files</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_visualization_files</span> <span class="o">=</span> <span class="n">OrderedDict</span><span class="p">(</span>
+                <span class="p">{</span>
+                    <span class="s2">&quot;pR&quot;</span><span class="p">:</span> <span class="n">dolf</span><span class="o">.</span><span class="n">File</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">vis_dir</span> <span class="o">+</span> <span class="s2">&quot;pressure_real.pvd&quot;</span><span class="p">),</span>
+                    <span class="s2">&quot;uR&quot;</span><span class="p">:</span> <span class="n">dolf</span><span class="o">.</span><span class="n">File</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">vis_dir</span> <span class="o">+</span> <span class="s2">&quot;u_real.pvd&quot;</span><span class="p">),</span>
+                    <span class="s2">&quot;TR&quot;</span><span class="p">:</span> <span class="n">dolf</span><span class="o">.</span><span class="n">File</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">vis_dir</span> <span class="o">+</span> <span class="s2">&quot;temperature_real.pvd&quot;</span><span class="p">),</span>
+                    <span class="s2">&quot;pI&quot;</span><span class="p">:</span> <span class="n">dolf</span><span class="o">.</span><span class="n">File</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">vis_dir</span> <span class="o">+</span> <span class="s2">&quot;pressure_imag.pvd&quot;</span><span class="p">),</span>
+                    <span class="s2">&quot;uI&quot;</span><span class="p">:</span> <span class="n">dolf</span><span class="o">.</span><span class="n">File</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">vis_dir</span> <span class="o">+</span> <span class="s2">&quot;u_imag.pvd&quot;</span><span class="p">),</span>
+                    <span class="s2">&quot;TI&quot;</span><span class="p">:</span> <span class="n">dolf</span><span class="o">.</span><span class="n">File</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">vis_dir</span> <span class="o">+</span> <span class="s2">&quot;temperature_imag.pvd&quot;</span><span class="p">),</span>
+                <span class="p">}</span>
+            <span class="p">)</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_visualization_files</span></div>
 </pre></div>
 
           </div>

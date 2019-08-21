@@ -10,7 +10,8 @@ Welcome to firecrest's documentation!
    :maxdepth: 2
    :caption: Contents:
 
-.. include:: ../../README.md
+.. include:: ../../README.rst
+.. include:: ../../Roadmap.rst
 
 Indices and tables
 ==================

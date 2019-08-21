@@ -51,7 +51,27 @@
     <h2>Contents</h2>
     <div class="sidebar-localtoc">
       <ul>
-<li><a class="reference internal" href="#">Welcome to firecrest's documentation!</a></li>
+<li><a class="reference internal" href="#">Welcome to firecrest's documentation!</a><ul>
+<li><a class="reference internal" href="#installing-the-firecrest-package">Installing the <strong>firecrest</strong> package</a></li>
+<li><a class="reference internal" href="#setting-up-the-dolfin-environment">Setting up the <strong>dolfin</strong> environment</a></li>
+<li><a class="reference internal" href="#additional-packages">Additional packages</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#main-project-stages">Main project stages</a><ul>
+<li><a class="reference internal" href="#geometry-and-mesh-modules">Geometry and mesh modules</a><ul>
+<li><a class="reference internal" href="#major-tasks">Major tasks</a></li>
+<li><a class="reference internal" href="#minor-tasks">Minor tasks</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#fem-modules">FEM modules</a><ul>
+<li><a class="reference internal" href="#current-task">Current task</a></li>
+<li><a class="reference internal" href="#id2">Major tasks</a></li>
+<li><a class="reference internal" href="#id3">Minor tasks</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#optimization-modules">Optimization modules</a></li>
+</ul>
+</li>
 <li><a class="reference internal" href="#indices-and-tables">Indices and tables</a></li>
 </ul>
 
@@ -97,26 +117,75 @@
 <h1>Welcome to firecrest's documentation!<a class="headerlink" href="#welcome-to-firecrest-s-documentation" title="Permalink to this headline">¶</a></h1>
 <div class="toctree-wrapper compound">
 </div>
-<p># &lt;img src=&quot;firecrest_emblem3002.png&quot; width=&quot;60&quot;&gt; firecrest</p>
-<p>### Installing the __firecrest__ package</p>
-<p><code class="docutils literal notranslate"><span class="pre">`</span>
-<span class="pre">git</span> <span class="pre">clone</span> <span class="pre">git&#64;github.com:Corwinpro/firecrest.git</span>
-<span class="pre">cd</span> <span class="pre">firecrest</span>
-<span class="pre">pip</span> <span class="pre">install</span> <span class="pre">--user</span> <span class="pre">-e</span> <span class="pre">.</span>
-<span class="pre">`</span></code></p>
-<p>### Setting up the __dolfin__ environment</p>
+<img src="firecrest_emblem3002.png" width="60"><div class="section" id="installing-the-firecrest-package">
+<h2>Installing the <strong>firecrest</strong> package<a class="headerlink" href="#installing-the-firecrest-package" title="Permalink to this headline">¶</a></h2>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>git clone git@github.com:Corwinpro/firecrest.git
+<span class="nb">cd</span> firecrest
+pip install --user -e .
+</pre></div>
+</div>
+</div>
+<div class="section" id="setting-up-the-dolfin-environment">
+<h2>Setting up the <strong>dolfin</strong> environment<a class="headerlink" href="#setting-up-the-dolfin-environment" title="Permalink to this headline">¶</a></h2>
 <p>Install the dolfin and necessary packages and activate:</p>
-<p><code class="docutils literal notranslate"><span class="pre">`</span>
-<span class="pre">conda</span> <span class="pre">create</span> <span class="pre">-n</span> <span class="pre">fenicsproject</span> <span class="pre">-c</span> <span class="pre">conda-forge</span> <span class="pre">fenics</span> <span class="pre">matplotlib</span> <span class="pre">meshio</span>
-<span class="pre">source</span> <span class="pre">activate</span> <span class="pre">fenicsproject</span>
-<span class="pre">`</span></code></p>
-<p>Deactivate:
-<code class="docutils literal notranslate"><span class="pre">`</span>
-<span class="pre">source</span> <span class="pre">deactivate</span> <span class="pre">fenicsproject</span>
-<span class="pre">`</span></code></p>
-<p>### Additional packages</p>
-<p>Install __pysplines__ [from here](<a class="reference external" href="https://github.com/Corwinpro/PySplines">https://github.com/Corwinpro/PySplines</a>).</p>
-<p>&lt;sup&gt;Logo by [Titov Fedor](<a class="reference external" href="https://www.artstation.com/quietvictories">https://www.artstation.com/quietvictories</a>)&lt;/sup&gt;</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>conda create -n fenicsproject -c conda-forge fenics matplotlib meshio
+<span class="nb">source</span> activate fenicsproject
+</pre></div>
+</div>
+<p>Deactivate:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="nb">source</span> deactivate fenicsproject
+</pre></div>
+</div>
+</div>
+<div class="section" id="additional-packages">
+<h2>Additional packages<a class="headerlink" href="#additional-packages" title="Permalink to this headline">¶</a></h2>
+<p>Install <strong>pysplines</strong> <a class="reference external" href="https://github.com/Corwinpro/PySplines">from here</a>.</p>
+<p>Logo by <a class="reference external" href="https://www.artstation.com/quietvictories">Titov Fedor</a>.</p>
+</div>
+</div>
+<div class="section" id="main-project-stages">
+<h1>Main project stages<a class="headerlink" href="#main-project-stages" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="geometry-and-mesh-modules">
+<h2>Geometry and mesh modules<a class="headerlink" href="#geometry-and-mesh-modules" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="major-tasks">
+<h3>Major tasks<a class="headerlink" href="#major-tasks" title="Permalink to this headline">¶</a></h3>
+<p>1. Implement load and export geometry and mesh objects.
+It is much more efficient and convenient to reuse them, rather then build every time.</p>
+</div>
+<div class="section" id="minor-tasks">
+<h3>Minor tasks<a class="headerlink" href="#minor-tasks" title="Permalink to this headline">¶</a></h3>
+<ol class="arabic simple">
+<li><p>Geometry to JSON format: reusable geometry definition from templates.</p></li>
+<li><p>Implementing special boundary elements: arc, ellipse.</p></li>
+<li><p>3D compatibility.</p></li>
+</ol>
+</div>
+</div>
+<div class="section" id="fem-modules">
+<h2>FEM modules<a class="headerlink" href="#fem-modules" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="current-task">
+<h3>Current task<a class="headerlink" href="#current-task" title="Permalink to this headline">¶</a></h3>
+<ol class="arabic simple">
+<li><p>Eigensolver: implement the surface tension BC</p></li>
+<li><p>Should the Boundary conditions be in a separate class?</p></li>
+</ol>
+</div>
+<div class="section" id="id2">
+<h3>Major tasks<a class="headerlink" href="#id2" title="Permalink to this headline">¶</a></h3>
+<ol class="arabic simple">
+<li><p>Weak forms: write tests for <cite>real</cite> / <cite>complex</cite> usage</p></li>
+</ol>
+</div>
+<div class="section" id="id3">
+<h3>Minor tasks<a class="headerlink" href="#id3" title="Permalink to this headline">¶</a></h3>
+</div>
+</div>
+<div class="section" id="optimization-modules">
+<h2>Optimization modules<a class="headerlink" href="#optimization-modules" title="Permalink to this headline">¶</a></h2>
+<ol class="arabic simple">
+<li></li>
+</ol>
+</div>
 </div>
 <div class="section" id="indices-and-tables">
 <h1>Indices and tables<a class="headerlink" href="#indices-and-tables" title="Permalink to this headline">¶</a></h1>

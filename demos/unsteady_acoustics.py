@@ -31,19 +31,18 @@ f = dolf.File("temp.pvd")
 # P.rename("P", "P")
 # P.interpolate(initial_state[0])
 # f << P
-U = dolf.Function(solver.forms.velocity_function_space.collapse())
-U.rename("u", "u")
-U.interpolate(initial_state[1])
-f << U
+# U = dolf.Function(solver.forms.velocity_function_space.collapse())
+# U.rename("u", "u")
+# U.interpolate(initial_state[1])
+# f << U
+# solver.output_field(initial_state)
 
 for i in range(100):
     old_state = initial_state
     w = solver.solve(initial_state)
-    # dolf.assign(P, w.sub(0))
-    # f << P
     initial_state = w.split(True)
-    initial_state[1].rename("u", "u")
-    f << initial_state[1]
+    solver.output_field(initial_state)
+
     print(
         dolf.assemble(solver.forms.temporal_component(initial_state, initial_state)),
         dolf.assemble(solver.forms.spatial_component(initial_state, initial_state))

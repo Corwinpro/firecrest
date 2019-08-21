@@ -45,7 +45,10 @@ def test_boundaries_marking(simple_domain):
 
 def test_individual_dolfin_measures(simple_domain):
     assert (
-        abs(dolf.assemble(dolf.Constant(1.0) * simple_domain.ds) ** 2.0 - 1.5631 ** 2.0)
+        abs(
+            dolf.assemble(dolf.Constant(1.0) * simple_domain.ds()) ** 2.0
+            - 1.5631 ** 2.0
+        )
         < 0.1 ** 2.0
     )
     assert (
@@ -109,4 +112,3 @@ def test_get_boundaries(simple_domain):
     ]
     with pytest.raises(KeyError):
         simple_domain._get_boundaries("type_three")
-
