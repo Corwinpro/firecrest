@@ -76,6 +76,7 @@ class BaseTVAcousticWeakForm(ABC, BaseWeakForm):
         "force": "Neumann",
         "normal_force": "Neumann",
         "impedance": "Robin",
+        "normal_impedance": "Robin",
         "slip": "Neumann",
         "normal_velocity": "Neumann",
     }
@@ -223,8 +224,8 @@ class BaseTVAcousticWeakForm(ABC, BaseWeakForm):
         I expect the usage should be something like:
             bcond = {"noslip" : True, "heat_flux" : 1.}
         """
-        _, velocity, temperature = trial
-        _, test_velocity, test_temperature = test
+        pressure, velocity, temperature = trial
+        test_pressure, test_velocity, test_temperature = test
 
         stress_boundary_component = dolf.Constant(0.0) * self.domain.ds()
         temperature_boundary_component = dolf.Constant(0.0) * self.domain.ds()
@@ -276,6 +277,12 @@ class BaseTVAcousticWeakForm(ABC, BaseWeakForm):
                     stress = (
                         self._parse_dolf_expression(boundary.bcond[stress_bc])
                         * velocity
+                    )
+                elif stress_bc == "normal_impedance":
+                    stress = (
+                        self._parse_dolf_expression(boundary.bcond[stress_bc])
+                        * dolf.inner(velocity, self.domain.n)
+                        * self.domain.n
                     )
                 elif stress_bc == "normal_force":
                     stress = (
