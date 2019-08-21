@@ -1,5 +1,6 @@
-.. image:: firecrest_emblem3002.png
-     :width: 60
+.. raw:: html
+
+    <img src="firecrest_emblem3002.png" width="60">
 
 Installing the **firecrest** package
 ------------------------------------
