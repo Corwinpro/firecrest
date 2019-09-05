@@ -2,6 +2,7 @@ from firecrest.fem.tv_acoustic_weakform import ComplexTVAcousticWeakForm
 from firecrest.solvers.base_solver import BaseSolver
 from collections import OrderedDict
 import dolfin as dolf
+from petsc4py import PETSc
 
 
 class SpectralTVAcousticSolver(BaseSolver):
@@ -40,3 +41,51 @@ class SpectralTVAcousticSolver(BaseSolver):
                 }
             )
         return self._visualization_files
+
+    def create_ksp_solver(self, bilinear_matrix):
+        """Creates KSP object with mumps as a preconditioner.
+        :param PETSc.Mat bilinear_matrix: the bilinear matrix form
+        :return: ksp object
+        :rtype: PETSc.KSP
+        """
+
+        ksp = PETSc.KSP().create()
+        ksp.setOperators(bilinear_matrix)
+        ksp.setType("preonly")
+        pc = ksp.getPC()
+        pc.setType("lu")
+        pc.setFactorSolverType("mumps")
+
+        return ksp
+
+    def solve_petsc(self):
+        """
+        Solves the linear problem using PETSc interface, and manipulates with PETSc matrices.
+
+        :return: list[state vectors]
+        """
+        form = self.forms._rhs_forms(shift=self.frequency) + self.forms._lhs_forms()
+        w = dolf.Function(self.forms.function_space)
+
+        lhs_matrix = dolf.PETScMatrix()
+        lhs_matrix = dolf.assemble(dolf.lhs(form), tensor=lhs_matrix)
+        for bc in self.forms.dirichlet_boundary_conditions():
+            bc.apply(lhs_matrix)
+        lhs_matrix = lhs_matrix.mat()
+
+        averaged_boundary_terms = self.forms.boundary_averaged_velocity()
+        if averaged_boundary_terms:
+            lhs_matrix.axpy(-1.0, averaged_boundary_terms)
+
+        solver = self.create_ksp_solver(lhs_matrix)
+
+        rhs_vector = dolf.assemble(dolf.rhs(form))
+        for bc in self.forms.dirichlet_boundary_conditions():
+            bc.apply(rhs_vector)
+
+        solver.solve(
+            dolf.as_backend_type(rhs_vector).vec(),
+            dolf.as_backend_type(w.vector()).vec(),
+        )
+        state = w.split(True)
+        return state
