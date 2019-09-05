@@ -19,6 +19,12 @@ def boundary_dofs(boundary_parts, boundary, space, boundary_condition):
     :param boundary_condition: placeholder boundary condition
     :return: list of dof indices
     """
+    # This might be another way to do it:
+    # d2v = dolf.dof_to_vertex_map(simple_space)
+    # vertices_on_boundary = d2v[simple_function.vector() == 1]
+    # for v in vertices_on_boundary:
+    #     print(solver.domain.mesh.coordinates()[v])
+
     bc = dolf.DirichletBC(
         space, boundary_condition, boundary_parts, boundary.surface_index
     )
@@ -35,23 +41,24 @@ def vector_to_ndarray(vec, dofs):
     vec = vec.get_local()
     array = []
     for i in dofs:
-        array.append([i, vec[i]])
+        if abs(vec[i]) > 1.0e-16:
+            array.append([i, vec[i]])
     return np.array(array)
 
 
 def outer_to_matrix(full_space, trial_vector, test_vector):
     matrix_dim = len(full_space.tabulate_dof_coordinates())
-    nnz = len(trial_vector) * len(test_vector)
+    block_dim = len(trial_vector) * len(test_vector)
 
-    row = np.zeros(nnz)
-    col = np.zeros(nnz)
-    val = np.zeros(nnz)
+    row = np.zeros(block_dim)
+    col = np.zeros(block_dim)
+    val = np.zeros(block_dim)
 
-    for i in range(len(trial_vector)):
-        for j in range(len(test_vector)):
-            col[i * len(test_vector) + j] = test_vector[j, 0]
-            row[i * len(test_vector) + j] = trial_vector[i, 0]
-            val[i * len(test_vector) + j] = trial_vector[i, 1] * test_vector[j, 1]
+    for i in range(len(test_vector)):
+        for j in range(len(trial_vector)):
+            col[i * len(trial_vector) + j] = trial_vector[j, 0]
+            row[i * len(trial_vector) + j] = test_vector[i, 0]
+            val[i * len(trial_vector) + j] = test_vector[i, 1] * trial_vector[j, 1]
 
     row = row.astype(dtype="int32")
     col = col.astype(dtype="int32")
