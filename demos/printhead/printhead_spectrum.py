@@ -40,21 +40,17 @@ domain_boundaries = (boundary1, boundary2, boundary3, boundary4, boundary5)
 domain = SimpleDomain(domain_boundaries)
 
 solver = EigenvalueTVAcousticSolver(
-    domain, complex_shift=-0.03 + 1.j, Re=1000.0, Pe=1.0, nmodes=20
+    domain, complex_shift=-0.03 + 1.0j, Re=1000.0, Pe=1.0, nmodes=20
 )
 solver.solve()
 
 spectrum = []
-mode_imag = dolf.File("mode_imag.pvd")
-mode_real = dolf.File("mode_real.pvd")
+
 
 for i in range(int(solver.nof_modes_converged / 2)):
     ev, real_mode, imag_mode = solver.extract_solution(i)
     spectrum.append(ev)
-    imag_mode[1].rename("uI", "uI")
-    real_mode[1].rename("uR", "uR")
-    mode_real << real_mode[1], i
-    mode_imag << imag_mode[1], i
+    solver.output_field(real_mode + imag_mode)
 
 
 plt.plot([ev.real for ev in spectrum], [ev.imag for ev in spectrum], "o")
@@ -69,5 +65,3 @@ plt.plot([ev.real for ev in short_spectrum], [ev.imag for ev in short_spectrum],
 
 plt.grid(True)
 plt.show()
-# file << real_mode[1], 0
-# file << imag_mode[1], 1
