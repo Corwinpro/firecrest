@@ -55,9 +55,9 @@ class BaseWeakForm:
             pass
         else:
             raise ValueError("Only `real` or `imag` flag values accepted.")
-        warnings.warn(
-            f"Changing the complex forms flag from {self.complex_forms_flag} to {value}"
-        )
+        # warnings.warn(
+        #     f"Changing the complex forms flag from {self.complex_forms_flag} to {value}"
+        # )
         self._complex_forms_flag = value
 
     def _parse_dolf_expression(self, expression):
