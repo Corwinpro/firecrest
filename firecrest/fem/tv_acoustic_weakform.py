@@ -496,6 +496,14 @@ class ComplexTVAcousticWeakForm(BaseTVAcousticWeakForm):
         elif self.complex_forms_flag == "imag":
             return complex_fspace[1]
 
+    @property
+    def pressure_function_space(self):
+        complex_fspace = super().pressure_function_space
+        if self.complex_forms_flag == "real":
+            return complex_fspace[0]
+        elif self.complex_forms_flag == "imag":
+            return complex_fspace[1]
+
     def _generate_dirichlet_bc(self, boundary, bc_type, is_linearised=False):
         """
         Generates a complex boundary condition with the use of the `complex_forms_flag`.
