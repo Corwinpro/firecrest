@@ -220,7 +220,8 @@ class OptimizationSolver(UnsteadyTVAcousticSolver):
         du[timer["T"]] = 0
 
         print("gradient norm: ", (adjoint_stress_averaged * du).integrate())
-        return [d * self._dt for d in du.values()[1:-1]]
+        # return [d * self._dt for d in du.values()[1:-1]]
+        return du.values()[1:-1]
 
 
 initial_state = (0.0, (0.0, 0.0), 0.0)
