@@ -20,7 +20,7 @@ class SurfaceModel:
             self.kappa_history = kappa_history
         else:
             if kappa_t0 is None:
-                self.kappa_t0 = 0.05  # Just a random non zero surface curvature
+                self.kappa_t0 = 0.05  # Just an arbitrary non zero surface curvature
             else:
                 self.kappa_t0 = kappa_t0
             self.kappa_history = [self.kappa_t0]
@@ -104,3 +104,35 @@ class SurfaceModel:
             / self.volume_derivative(self.kappa)
         )
         self.kappa_history.append(kappa_updated)
+
+
+class AdjointSurfaceModel:
+    """
+    The AdjointSurfaceModel is the adjoint counterpart of the direct surface model,
+    and uses the values of the direct curvature at each time step.
+    """
+
+    def __init__(self, direct_surface: SurfaceModel):
+        self.direct_surface = direct_surface
+        self.kappa_adj = self.direct_surface.kappa_history[-1]
+        self.kappa_adj_history = [self.kappa_adj]
+
+    @property
+    def adj_pressure(self):
+        """
+        Adjoint pressure created by the surface. We use it as the adjoint boundary condition.
+        """
+        return self.kappa_adj * self.direct_surface.gamma_tension
+
+    def update_curvature(self, adjoint_flow_rate, dt, counter):
+        """
+        Updates the adjoint curvature, which 'follows' the trajectory of the direct (real) curvature
+        """
+        direct_kappa = self.direct_surface.kappa_history[-1 - counter]
+        self.kappa_adj += (
+            self.direct_surface.constants.acoustic_mach
+            * dt
+            * adjoint_flow_rate
+            / self.direct_surface.volume_derivative(kappa=direct_kappa)
+        )
+        self.kappa_adj_history.append(self.kappa_adj)
