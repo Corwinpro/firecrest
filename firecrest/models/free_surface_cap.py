@@ -67,7 +67,7 @@ class SurfaceModel:
                 / 8
             )
 
-    def surface_energy(self, kappa):
+    def surface_energy(self, kappa=None):
         """
         Calculates the surface energy of the nozzle flow, minus the energy of the flat surface
         of the flat surface
@@ -117,6 +117,9 @@ class AdjointSurfaceModel:
         self.kappa_adj = self.direct_surface.kappa_history[-1]
         self.kappa_adj_history = [self.kappa_adj]
 
+    def eval(self):
+        return -self.adj_pressure
+
     @property
     def adj_pressure(self):
         """
@@ -124,11 +127,13 @@ class AdjointSurfaceModel:
         """
         return self.kappa_adj * self.direct_surface.gamma_tension
 
-    def update_curvature(self, adjoint_flow_rate, dt, counter):
+    def update_curvature(self, adjoint_flow_rate, dt):  # counter
         """
         Updates the adjoint curvature, which 'follows' the trajectory of the direct (real) curvature
         """
-        direct_kappa = self.direct_surface.kappa_history[-1 - counter]
+        direct_kappa = self.direct_surface.kappa_history[
+            -len(self.kappa_adj_history)
+        ]  # [-1 - counter]
         self.kappa_adj += (
             self.direct_surface.constants.acoustic_mach
             * dt
