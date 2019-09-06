@@ -1,13 +1,16 @@
 from firecrest.mesh.boundaryelement import LineElement
 from firecrest.mesh.geometry import SimpleDomain
 from firecrest.solvers.unsteady_tv_acoustic_solver import UnsteadyTVAcousticSolver
-from firecrest.models.free_surface_cap import SurfaceModel
+from firecrest.models.free_surface_cap import SurfaceModel, AdjointSurfaceModel
 import dolfin as dolf
 from collections import namedtuple
+from decimal import Decimal
+from firecrest.misc.time_storage import TimeSeries
 
-elsize = 0.08
+
+elsize = 0.04
 height = 0.7
-length = 10.0
+length = 5.0  # 10.0
 offset_top = 1.0
 nozzle_r = 0.1
 nozzle_l = 0.2
@@ -25,7 +28,7 @@ a1 = 4.0 / 3.0
 a2 = 8
 kappa_prime = epsilon / nozzle_r ** 4 * 0.25  # up to a constant
 
-# nondimensional
+# non dimensional
 alpha_1 = nozzle_l / (3.1415 * nozzle_r ** 2) * a1
 alpha_2 = nozzle_l / (3.1415 * nozzle_r ** 3) / Re * a2 / nozzle_r
 gamma_nd = 2 * gamma_st / (rho * c_s ** 2 * nozzle_r * epsilon)
@@ -66,9 +69,6 @@ nondim_constants = Constants(
     1.0,
 )
 current_time = 0.0
-
-
-surface_model = SurfaceModel(nondim_constants, kappa_t0=0.25)
 
 control_points_1 = [[offset_top, height], [1.0e-16, height]]
 control_points_free_left = [[1.0e-16, height], [0.0, 0.0 + 1.0e-16]]
@@ -116,7 +116,7 @@ boundary_refine_left = LineElement(
 boundary2 = LineElement(
     control_points_2,
     el_size=elsize / 4.0,
-    bcond={"normal_force": surface_model, "adiabatic": True},
+    bcond={"normal_force": None, "adiabatic": True},
 )
 boundary_refine_right = LineElement(
     control_points_refine_right,
@@ -133,7 +133,7 @@ boundary3 = LineElement(
     control_points_3, el_size=elsize, bcond={"noslip": True, "adiabatic": True}
 )
 boundary4 = LineElement(
-    control_points_4, el_size=elsize, bcond={"noslip": True, "adiabatic": True}
+    control_points_4, el_size=elsize, bcond={"inflow": (0.0, 0.0), "adiabatic": True}
 )
 domain_boundaries = (
     boundary1,
@@ -150,23 +150,126 @@ domain_boundaries = (
 domain = SimpleDomain(domain_boundaries)
 
 
-solver = UnsteadyTVAcousticSolver(domain, Re=5.0e3, Pr=10.0, dt=4.0e-3)
+class NormalInflow:
+    def __init__(self, series: TimeSeries):
+        self.counter = 1
+        self.series = list(series.values())
+
+    def eval(self):
+        if self.counter < len(self.series):
+            value = (0.0, -self.series[self.counter])
+            self.counter += 1
+            return value
+        return 0.0, 0.0
+
+
+class OptimizationSolver(UnsteadyTVAcousticSolver):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+    def _objective_state(self, control):
+        boundary4.bcond["inflow"] = NormalInflow(
+            TimeSeries.from_list([0.0] + list(control) + [0.0], default_grid)
+        )
+
+        surface_model = SurfaceModel(nondim_constants, kappa_t0=0.25)
+        boundary2.bcond["normal_force"] = surface_model
+        for state in self.solve_direct(initial_state, verbose=True, yield_state=True):
+            if isinstance(state, TimeSeries):
+                direct_history = state
+                break
+            flow_rate = dolf.assemble(
+                dolf.inner(state[1], domain.n) * domain.ds((boundary2.surface_index,))
+            )
+            surface_model.update_curvature(flow_rate, solver._dt)
+
+        return direct_history.last, surface_model
+
+    def _objective(self, state):
+        return self.forms.energy(state[0]) + state[1].surface_energy()
+
+    def _jacobian(self, state):
+        state, surface_model = state
+        state = (state[0], -state[1], state[2])
+
+        adjoint_surface = AdjointSurfaceModel(direct_surface=surface_model)
+        boundary2.bcond["normal_force"] = adjoint_surface
+
+        for adjoint_state in solver.solve_adjoint(
+            initial_state=state, verbose=True, yield_state=True
+        ):
+            if isinstance(adjoint_state, TimeSeries):
+                adjoint_history = adjoint_state
+                break
+            flow_rate = dolf.assemble(
+                dolf.inner(adjoint_state[1], domain.n)
+                * domain.ds((boundary2.surface_index,))
+            )
+            adjoint_surface.update_curvature(flow_rate, solver._dt)
+
+        adjoint_stress = adjoint_history.apply(lambda x: self.forms.stress(x[0], x[1]))
+        adjoint_stress_averaged = adjoint_stress.apply(
+            lambda x: dolf.assemble(
+                dolf.dot(dolf.dot(x, self.domain.n), self.domain.n)
+                * self.domain.ds((boundary4.surface_index,))
+            )
+        )
+
+        du = TimeSeries.interpolate_to_keys(adjoint_stress_averaged, small_grid)
+        du[Decimal("0")] = 0
+        du[timer["T"]] = 0
+
+        print("gradient norm: ", (adjoint_stress_averaged * du).integrate())
+        return [d * self._dt for d in du.values()[1:-1]]
+
+
 initial_state = (0.0, (0.0, 0.0), 0.0)
+timer = {"dt": Decimal("0.001"), "T": Decimal("1.2")}
+surface_model = SurfaceModel(nondim_constants, kappa_t0=0.25)
+default_grid = TimeSeries.from_dict(
+    {
+        Decimal(k) * Decimal(timer["dt"]): 0
+        for k in range(int(timer["T"] / Decimal(timer["dt"])) + 1)
+    }
+)
+small_grid = TimeSeries.from_dict(
+    {
+        Decimal(k) * Decimal(timer["dt"]): 0
+        for k in range(1, int(timer["T"] / Decimal(timer["dt"])))
+    }
+)
 
+solver = OptimizationSolver(domain, Re=5.0e3, Pr=10.0, timer=timer)
+x0 = [0.0 for _ in range(len(default_grid) - 2)]
+direct_last = solver._objective_state(x0)
+print(solver._objective(direct_last))
+control = solver._jacobian(direct_last)
+print(control)
 
-for i in range(10000):
-    old_state = initial_state
-    w = solver.solve(initial_state)
-
-    initial_state = w.split(True)
-    if i % 20 == 9:
-        solver.output_field(initial_state)
-
-    # Updating the curvature
-    flow_rate = dolf.assemble(
-        dolf.inner(initial_state[1], domain.n) * domain.ds((boundary2.surface_index,))
-    )
-    surface_model.update_curvature(flow_rate, solver._dt)
-
-    current_time += solver._dt
-    print(current_time, surface_model.kappa)
+direct_last = solver._objective_state(control)
+print(solver._objective(direct_last))
+# for state in solver.solve_direct(initial_state, verbose=True, yield_state=True):
+#     if isinstance(state, TimeSeries):
+#         direct_history = state
+#         break
+#     flow_rate = dolf.assemble(
+#         dolf.inner(state[1], domain.n) * domain.ds((boundary2.surface_index,))
+#     )
+#     surface_model.update_curvature(flow_rate, solver._dt)
+#
+#
+# last = direct_history.last
+# last = (last[0], -last[1], last[2])
+# adjoint_surface = AdjointSurfaceModel(direct_surface=surface_model)
+# boundary2.bcond["normal_force"] = adjoint_surface
+#
+# for adjoint_state in solver.solve_adjoint(
+#     initial_state=last, verbose=True, yield_state=True
+# ):
+#     if isinstance(adjoint_state, TimeSeries):
+#         adjoint_history = adjoint_state
+#         break
+#     flow_rate = dolf.assemble(
+#         dolf.inner(adjoint_state[1], domain.n) * domain.ds((boundary2.surface_index,))
+#     )
+#     adjoint_surface.update_curvature(flow_rate, solver._dt)
