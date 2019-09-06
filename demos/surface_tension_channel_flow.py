@@ -6,9 +6,10 @@ import dolfin as dolf
 from collections import namedtuple
 from decimal import Decimal
 from firecrest.misc.time_storage import TimeSeries
+from firecrest.misc.optimization_mixin import OptimizationMixin
 
 
-elsize = 0.1  # 04
+elsize = 0.05  # 04
 height = 0.7
 length = 5.0  # 10.0
 offset_top = 1.0
@@ -163,7 +164,7 @@ class NormalInflow:
         return 0.0, 0.0
 
 
-class OptimizationSolver(UnsteadyTVAcousticSolver):
+class OptimizationSolver(OptimizationMixin, UnsteadyTVAcousticSolver):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
@@ -174,7 +175,7 @@ class OptimizationSolver(UnsteadyTVAcousticSolver):
 
         surface_model = SurfaceModel(nondim_constants, kappa_t0=0.25)
         boundary2.bcond["normal_force"] = surface_model
-        for state in self.solve_direct(initial_state, verbose=True, yield_state=True):
+        for state in self.solve_direct(initial_state, verbose=False, yield_state=True):
             if isinstance(state, TimeSeries):
                 direct_history = state
                 break
@@ -196,7 +197,7 @@ class OptimizationSolver(UnsteadyTVAcousticSolver):
         boundary2.bcond["normal_force"] = adjoint_surface
 
         for adjoint_state in solver.solve_adjoint(
-            initial_state=state, verbose=True, yield_state=True
+            initial_state=state, verbose=False, yield_state=True
         ):
             if isinstance(adjoint_state, TimeSeries):
                 adjoint_history = adjoint_state
@@ -225,7 +226,7 @@ class OptimizationSolver(UnsteadyTVAcousticSolver):
 
 
 initial_state = (0.0, (0.0, 0.0), 0.0)
-timer = {"dt": Decimal("0.001"), "T": Decimal("1.2")}
+timer = {"dt": Decimal("0.0025"), "T": Decimal("1.2")}
 surface_model = SurfaceModel(nondim_constants, kappa_t0=0.25)
 default_grid = TimeSeries.from_dict(
     {
@@ -241,14 +242,20 @@ small_grid = TimeSeries.from_dict(
 )
 
 solver = OptimizationSolver(domain, Re=5.0e3, Pr=10.0, timer=timer)
+initial_state = (0.0, (0.0, 0.0), 0.0)
 x0 = [0.0 for _ in range(len(default_grid) - 2)]
-direct_last = solver._objective_state(x0)
-print(solver._objective(direct_last))
-control = solver._jacobian(direct_last)
-print(control)
+bnds = tuple((-1.0, 1.0) for i in range(len(x0)))
+res = solver.minimize(x0, bnds)
 
-direct_last = solver._objective_state(control)
-print(solver._objective(direct_last))
+# solver = OptimizationSolver(domain, Re=5.0e3, Pr=10.0, timer=timer)
+# x0 = [0.0 for _ in range(len(default_grid) - 2)]
+# direct_last = solver._objective_state(x0)
+# print(solver._objective(direct_last))
+# control = solver._jacobian(direct_last)
+# print(control)
+#
+# direct_last = solver._objective_state(control)
+# print(solver._objective(direct_last))
 # for state in solver.solve_direct(initial_state, verbose=True, yield_state=True):
 #     if isinstance(state, TimeSeries):
 #         direct_history = state
