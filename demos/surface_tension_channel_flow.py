@@ -8,7 +8,7 @@ from decimal import Decimal
 from firecrest.misc.time_storage import TimeSeries
 
 
-elsize = 0.04
+elsize = 0.1  # 04
 height = 0.7
 length = 5.0  # 10.0
 offset_top = 1.0
