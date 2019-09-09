@@ -5,7 +5,9 @@ import dolfin as dolf
 import matplotlib.pyplot as plt
 import numpy as np
 
-elsize = 0.05
+elsize = 0.08
+
+# Channel dimensions
 height = 0.7
 length = 10.0
 offset_top = 1.0
@@ -19,7 +21,7 @@ c_s = 1.0e3
 rho = 1.0e3
 epsilon = 1.0e-3
 gamma_st = 50.0e-3
-mu = 1.0e-2
+mu = 1.0e-3  # 2
 Re = rho * c_s * L / mu
 a1 = 4.0 / 3.0
 a2 = 8
@@ -55,7 +57,7 @@ if plot_impedance:
     plt.show()
     exit()
 
-omega = hz_to_npfreq(5.0e4)
+omega = hz_to_npfreq(1.0e5)
 alpha = bc_alpha(omega)
 print(alpha)
 
@@ -99,25 +101,28 @@ boundary_bot_left = LineElement(
 )
 boundary_refine_left = LineElement(
     control_points_refine_left,
-    el_size=elsize / 10.0,
+    el_size=elsize * 0.1,
     bcond={"noslip": True, "adiabatic": True},
 )
-fR = -0.04500091301407499
-fI = 0.135861301260533
+fR = 0.02947897387857517
+fI = 0.04766058826396886
 boundary2 = LineElement(
     control_points_2,
-    el_size=elsize / 10.0,
+    el_size=elsize * 0.1,
     bcond={
-        # "impedance": alpha * 2 * nozzle_r,
-        "avg_velocity": alpha,
+        "shape_impedance": alpha,
+        # "avg_velocity": alpha,
         # "free": True,
         # "normal_force": 0.5 * (fR + fI) - 0.5j * (fR - fI),
         "adiabatic": True,
     },
 )
+boundary2.velocity_shape = dolf.Expression(
+    "3./4./r/r/r*(x[0]-L+r)*(L+r-x[0])", r=nozzle_r, L=length / 2.0, degree=2
+)
 boundary_refine_right = LineElement(
     control_points_refine_right,
-    el_size=elsize / 10.0,
+    el_size=elsize * 0.1,
     bcond={"noslip": True, "adiabatic": True},
 )
 boundary_bot_right = LineElement(
@@ -165,50 +170,52 @@ def normal_velocity(mode, boundary=boundary2):
     )
 
 
-with open("uavg.txt", "w") as f:
-    for i in np.logspace(3, 5, 20):
-        omega = hz_to_npfreq(i)
-        alpha = bc_alpha(omega)
-        print("frequency. Hz:", i)
-        boundary2.bcond["avg_velocity"] = alpha
-
-        solver = SpectralTVAcousticSolver(domain, frequency=omega, Re=Re, Pr=1.0)
-        state = solver.solve_petsc()
-        real_mode = state[:3]
-        imag_mode = state[3:]
-        # uavg_real = alpha.real * normal_velocity(
-        #     real_mode
-        # ) - alpha.imag * normal_velocity(imag_mode)
-        # uavg_imag = alpha.real * normal_velocity(
-        #     imag_mode
-        # ) + alpha.imag * normal_velocity(real_mode)
-        x = i
-        plt.plot(x, normal_velocity(real_mode), "o", c="b")
-        plt.plot(x, normal_velocity(imag_mode), "*", c="r")
-        # plt.plot(x, (uavg_imag ** 2.0 + uavg_real ** 2.0) ** 0.5, "x", c="g")
-        # plt.plot(x, 10 * stress(real_mode), "o", c="g")
-        # plt.plot(x, 10 * stress(imag_mode), "*", c="c")
-        f.write(
-            str(
-                [
-                    i,
-                    normal_velocity(real_mode),
-                    normal_velocity(imag_mode),
-                    stress(real_mode),
-                    stress(imag_mode),
-                ]
-            )
-        )
-        f.write("\n")
-plt.show()
-exit()
+#
+# with open("uavg.txt", "w") as f:
+#     for i in np.logspace(3, 5, 20):
+#         omega = hz_to_npfreq(i)
+#         alpha = bc_alpha(omega)
+#         print("frequency. Hz:", i)
+#         boundary2.bcond["avg_velocity"] = alpha
+#
+#         solver = SpectralTVAcousticSolver(domain, frequency=omega, Re=Re, Pr=1.0)
+#         state = solver.solve_petsc()
+#         real_mode = state[:3]
+#         imag_mode = state[3:]
+#         # uavg_real = alpha.real * normal_velocity(
+#         #     real_mode
+#         # ) - alpha.imag * normal_velocity(imag_mode)
+#         # uavg_imag = alpha.real * normal_velocity(
+#         #     imag_mode
+#         # ) + alpha.imag * normal_velocity(real_mode)
+#         x = i
+#         plt.plot(x, normal_velocity(real_mode), "o", c="b")
+#         plt.plot(x, normal_velocity(imag_mode), "*", c="r")
+#         # plt.plot(x, (uavg_imag ** 2.0 + uavg_real ** 2.0) ** 0.5, "x", c="g")
+#         # plt.plot(x, 10 * stress(real_mode), "o", c="g")
+#         # plt.plot(x, 10 * stress(imag_mode), "*", c="c")
+#         f.write(
+#             str(
+#                 [
+#                     i,
+#                     normal_velocity(real_mode),
+#                     normal_velocity(imag_mode),
+#                     stress(real_mode),
+#                     stress(imag_mode),
+#                 ]
+#             )
+#         )
+#         f.write("\n")
+# plt.show()
+# exit()
 
 solver = SpectralTVAcousticSolver(domain, frequency=omega, Re=Re, Pr=1.0)
-state = solver.solve_petsc()
+state = solver.solve()
 solver.output_field(state)
 
 real_mode = state[:3]
 imag_mode = state[3:]
+
 uavg_real = alpha.real * normal_velocity(real_mode) - alpha.imag * normal_velocity(
     imag_mode
 )
@@ -236,8 +243,7 @@ st = dolf.project(
         ),
         dolf.as_vector((0.0, 1.0)),
     ),
-    dolf.FunctionSpace(solver.domain.mesh, "CG", 2)
-    # solver.forms.pressure_function_space.collapse(),
+    dolf.FunctionSpace(solver.domain.mesh, "CG", 2),
 )
 st.rename("sigma_n", "sigma_n")
 f << st
@@ -250,8 +256,7 @@ st = dolf.project(
         ),
         dolf.as_vector((1.0, 0.0)),
     ),
-    dolf.FunctionSpace(solver.domain.mesh, "CG", 2)
-    # solver.forms.pressure_function_space.collapse(),
+    dolf.FunctionSpace(solver.domain.mesh, "CG", 2),
 )
 st.rename("sigma_t", "sigma_t")
 f << st
