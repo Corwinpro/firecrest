@@ -82,6 +82,7 @@ class BaseTVAcousticWeakForm(ABC, BaseWeakForm):
         "normal_force": "Neumann",
         "impedance": "Robin",
         "normal_impedance": "Robin",
+        "shape_impedance": "Robin",
         "slip": "Neumann",
         "normal_velocity": "Neumann",
         "avg_velocity": None,
@@ -283,6 +284,19 @@ class BaseTVAcousticWeakForm(ABC, BaseWeakForm):
                     stress = (
                         self._parse_dolf_expression(boundary.bcond[stress_bc])
                         * velocity
+                    )
+                elif stress_bc == "shape_impedance":
+                    try:
+                        shape = boundary.velocity_shape
+                    except AttributeError:
+                        raise AttributeError(
+                            "`shape_impedance` boundary condition requires expected velocity shape. "
+                            + "Provide it as a dolfin Expression."
+                        )
+                    stress = (
+                        self._parse_dolf_expression(boundary.bcond[stress_bc])
+                        * velocity
+                        / shape
                     )
                 elif stress_bc == "normal_impedance":
                     stress = (
@@ -506,38 +520,6 @@ class ComplexTVAcousticWeakForm(BaseTVAcousticWeakForm):
         if target_boundary is None:
             return None
 
-        # penalty = (
-        #     dolf.Constant(-1.0e2)
-        #     / dolf.CellDiameter(self.domain.mesh)
-        #     * dolf.dot(
-        #         u_r - dolf.inner(u_r, self.domain.n) * self.domain.n,
-        #         v_r - dolf.inner(v_r, self.domain.n) * self.domain.n,
-        #     )
-        # )
-        # penalty += (
-        #     dolf.Constant(-1.0e2)
-        #     / dolf.CellDiameter(self.domain.mesh)
-        #     * dolf.dot(
-        #         u_i - dolf.inner(u_i, self.domain.n) * self.domain.n,
-        #         v_i - dolf.inner(v_i, self.domain.n) * self.domain.n,
-        #     )
-        # )
-        # penalty -= dolf.dot(
-        #     dolf.dot(self.stress(trial[0], trial[1]), self.domain.n),
-        #     v_r - dolf.dot(v_r, self.domain.n) * self.domain.n,
-        # )
-        # penalty -= dolf.dot(
-        #     dolf.dot(self.stress(trial[3], trial[4]), self.domain.n),
-        #     v_i - dolf.dot(v_i, self.domain.n) * self.domain.n,
-        # )
-        #
-        # penalty_matrix = dolf.PETScMatrix()
-        # penalty_matrix = dolf.assemble(
-        #     (penalty * self.domain.ds((target_boundary.surface_index,))),
-        #     tensor=penalty_matrix,
-        # )
-        # penalty_matrix = penalty_matrix.mat()
-
         _flag = self.complex_forms_flag
         self.complex_forms_flag = "real"
 
@@ -618,211 +600,6 @@ class ComplexTVAcousticWeakForm(BaseTVAcousticWeakForm):
         # from petsc4py import PETSc
         # myviewer = PETSc.Viewer().createASCII("test2.txt")
         # averaged_matrix.view(myviewer)
-        return averaged_matrix
-
-    def avg_boundary_penalty(self, trial=None, test=None):
-        if trial is None:
-            trial = self.trial_functions
-        if test is None:
-            test = self.test_functions
-        p_r, u_r, t_r, p_i, u_i, t_i = trial
-        q_r, v_r, tt_r, q_i, v_i, tt_i = test
-
-        target_boundary = None
-        for boundary in self.domain.boundary_elements:
-            stress_bc = self._pop_boundary_condition(
-                boundary.bcond, self.allowed_stress_bcs
-            )
-            if stress_bc == "avg_velocity":
-                target_boundary = boundary
-                break
-
-        if target_boundary is None:
-            return None
-
-        _flag = self.complex_forms_flag
-        self.complex_forms_flag = "real"
-
-        dofs_vr = boundary_dofs(
-            self.domain.boundary_parts,
-            target_boundary,
-            self.velocity_function_space,
-            (1, 1),
-        )
-        dofs_pr = boundary_dofs(
-            self.domain.boundary_parts, target_boundary, self.pressure_function_space, 1
-        )
-
-        alpha_r = self._parse_dolf_expression(target_boundary.bcond[stress_bc])
-
-        self.complex_forms_flag = "imag"
-
-        dofs_vi = boundary_dofs(
-            self.domain.boundary_parts,
-            target_boundary,
-            self.velocity_function_space,
-            (1, 1),
-        )
-        dofs_pi = boundary_dofs(
-            self.domain.boundary_parts, target_boundary, self.pressure_function_space, 1
-        )
-
-        alpha_i = self._parse_dolf_expression(target_boundary.bcond[stress_bc])
-
-        self.complex_forms_flag = _flag
-
-        sigma_r = dolf.assemble(
-            dolf.dot(dolf.dot(self.stress(p_r, u_r), self.domain.n), self.domain.n)
-            * self.domain.ds((target_boundary.surface_index))
-        )
-        sigma_r = vector_to_ndarray(sigma_r, dofs_vr + dofs_pr)
-        sigma_i = dolf.assemble(
-            dolf.dot(dolf.dot(self.stress(p_i, u_i), self.domain.n), self.domain.n)
-            * self.domain.ds((target_boundary.surface_index))
-        )
-        sigma_i = vector_to_ndarray(sigma_i, dofs_vi + dofs_pi)
-
-        sigmaT_r = dolf.assemble(
-            dolf.dot(dolf.dot(self.stress(q_r, v_r), self.domain.n), self.domain.n)
-            * self.domain.ds((target_boundary.surface_index))
-        )
-        sigmaT_r = vector_to_ndarray(sigmaT_r, dofs_vr + dofs_pr)
-        sigmaT_i = dolf.assemble(
-            dolf.dot(dolf.dot(self.stress(q_i, v_i), self.domain.n), self.domain.n)
-            * self.domain.ds((target_boundary.surface_index))
-        )
-        sigmaT_i = vector_to_ndarray(sigmaT_i, dofs_vi + dofs_pi)
-
-        velocity_r_r = dolf.assemble(
-            alpha_r
-            * dolf.inner(u_r, self.domain.n)
-            * self.domain.ds((target_boundary.surface_index))
-        )
-        velocity_r_r = vector_to_ndarray(velocity_r_r, dofs_vr)
-        velocity_r_i = dolf.assemble(
-            alpha_i
-            * dolf.inner(u_r, self.domain.n)
-            * self.domain.ds((target_boundary.surface_index))
-        )
-        velocity_r_i = vector_to_ndarray(velocity_r_i, dofs_vr)
-
-        velocity_i_r = dolf.assemble(
-            alpha_r
-            * dolf.inner(u_i, self.domain.n)
-            * self.domain.ds((target_boundary.surface_index))
-        )
-        velocity_i_r = vector_to_ndarray(velocity_i_r, dofs_vi)
-        velocity_i_i = dolf.assemble(
-            alpha_i
-            * dolf.inner(u_i, self.domain.n)
-            * self.domain.ds((target_boundary.surface_index))
-        )
-        velocity_i_i = vector_to_ndarray(velocity_i_i, dofs_vi)
-
-        test_velocity_r_r = dolf.assemble(
-            alpha_r
-            * dolf.inner(v_r, self.domain.n)
-            * self.domain.ds((target_boundary.surface_index))
-        )
-        test_velocity_r_r = vector_to_ndarray(test_velocity_r_r, dofs_vr)
-        test_velocity_r_i = dolf.assemble(
-            alpha_i
-            * dolf.inner(v_r, self.domain.n)
-            * self.domain.ds((target_boundary.surface_index))
-        )
-        test_velocity_r_i = vector_to_ndarray(test_velocity_r_i, dofs_vr)
-        test_velocity_i_r = dolf.assemble(
-            alpha_r
-            * dolf.inner(v_i, self.domain.n)
-            * self.domain.ds((target_boundary.surface_index))
-        )
-        test_velocity_i_r = vector_to_ndarray(test_velocity_i_r, dofs_vi)
-        test_velocity_i_i = dolf.assemble(
-            alpha_i
-            * dolf.inner(v_i, self.domain.n)
-            * self.domain.ds((target_boundary.surface_index))
-        )
-        test_velocity_i_i = vector_to_ndarray(test_velocity_i_i, dofs_vi)
-
-        averaged_matrix = dolf.PETScMatrix()
-        averaged_matrix = dolf.assemble(
-            dolf.dot(
-                dolf.dot(self.stress(p_r, u_r), self.domain.n),
-                dolf.dot(self.stress(q_r, v_r), self.domain.n),
-            )
-            * self.domain.ds((target_boundary.surface_index)),
-            tensor=averaged_matrix,
-        )
-        averaged_matrix = averaged_matrix.mat()
-        stress_matrix = dolf.PETScMatrix()
-        stress_matrix = dolf.assemble(
-            dolf.dot(
-                dolf.dot(self.stress(p_i, u_i), self.domain.n),
-                dolf.dot(self.stress(q_i, v_i), self.domain.n),
-            )
-            * self.domain.ds((target_boundary.surface_index)),
-            tensor=stress_matrix,
-        )
-        averaged_matrix.axpy(1.0, stress_matrix.mat())
-
-        averaged_matrix.axpy(
-            -1.0, outer_to_matrix(self.function_space, sigma_r, test_velocity_r_r)
-        )
-        averaged_matrix.axpy(
-            1.0, outer_to_matrix(self.function_space, sigma_r, test_velocity_i_i)
-        )
-        averaged_matrix.axpy(
-            1.0 * 0.1,
-            outer_to_matrix(self.function_space, velocity_r_r, test_velocity_r_r),
-        )
-        averaged_matrix.axpy(
-            -1.0, outer_to_matrix(self.function_space, velocity_r_r, sigmaT_r)
-        )
-        averaged_matrix.axpy(
-            -1.0 * 0.1,
-            outer_to_matrix(self.function_space, velocity_r_r, test_velocity_i_i),
-        )
-        averaged_matrix.axpy(
-            1.0 * 0.1,
-            outer_to_matrix(self.function_space, velocity_i_i, test_velocity_i_i),
-        )
-        averaged_matrix.axpy(
-            1.0, outer_to_matrix(self.function_space, velocity_i_i, sigmaT_r)
-        )
-        averaged_matrix.axpy(
-            -1.0 * 0.1,
-            outer_to_matrix(self.function_space, velocity_i_i, test_velocity_r_r),
-        )
-        # imag part
-        averaged_matrix.axpy(
-            -1.0, outer_to_matrix(self.function_space, sigma_i, test_velocity_r_i)
-        )
-        averaged_matrix.axpy(
-            -1.0, outer_to_matrix(self.function_space, sigma_i, test_velocity_i_r)
-        )
-        averaged_matrix.axpy(
-            -1.0, outer_to_matrix(self.function_space, velocity_r_i, sigmaT_i)
-        )
-        averaged_matrix.axpy(
-            1.0 * 0.1,
-            outer_to_matrix(self.function_space, velocity_r_i, test_velocity_r_i),
-        )
-        averaged_matrix.axpy(
-            1.0 * 0.1,
-            outer_to_matrix(self.function_space, velocity_r_i, test_velocity_i_r),
-        )
-        averaged_matrix.axpy(
-            -1.0, outer_to_matrix(self.function_space, velocity_i_r, sigmaT_i)
-        )
-        averaged_matrix.axpy(
-            1.0 * 0.1,
-            outer_to_matrix(self.function_space, velocity_i_r, test_velocity_r_i),
-        )
-        averaged_matrix.axpy(
-            1.0 * 0.1,
-            outer_to_matrix(self.function_space, velocity_i_r, test_velocity_i_r),
-        )
-
         return averaged_matrix
 
     @property
