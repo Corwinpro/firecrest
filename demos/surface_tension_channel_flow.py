@@ -184,6 +184,14 @@ class OptimizationSolver(OptimizationMixin, UnsteadyTVAcousticSolver):
             )
             surface_model.update_curvature(flow_rate, solver._dt)
 
+        with open("log.dat", "a") as file:
+            file.write(
+                str(self.objective((direct_history.last, surface_model)))
+                + ":\t"
+                + str(control)
+                + "\n"
+            )
+
         return direct_history.last, surface_model
 
     def _objective(self, state):
