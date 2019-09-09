@@ -69,7 +69,6 @@ nondim_constants = Constants(
     printhead_constants.Re,
     1.0,
 )
-current_time = 0.0
 
 control_points_1 = [[offset_top, height], [1.0e-16, height]]
 control_points_free_left = [[1.0e-16, height], [0.0, 0.0 + 1.0e-16]]
@@ -158,7 +157,7 @@ class NormalInflow:
 
     def eval(self):
         if self.counter < len(self.series):
-            value = (0.0, -self.series[self.counter])
+            value = (0.0, self.series[self.counter])
             self.counter += 1
             return value
         return 0.0, 0.0
@@ -175,6 +174,7 @@ class OptimizationSolver(OptimizationMixin, UnsteadyTVAcousticSolver):
 
         surface_model = SurfaceModel(nondim_constants, kappa_t0=0.25)
         boundary2.bcond["normal_force"] = surface_model
+
         for state in self.solve_direct(initial_state, verbose=False, yield_state=True):
             if isinstance(state, TimeSeries):
                 direct_history = state
@@ -187,6 +187,7 @@ class OptimizationSolver(OptimizationMixin, UnsteadyTVAcousticSolver):
         return direct_history.last, surface_model
 
     def _objective(self, state):
+        print("evaluated at: ", self.forms.energy(state[0]) + state[1].surface_energy())
         return self.forms.energy(state[0]) + state[1].surface_energy()
 
     def _jacobian(self, state):
