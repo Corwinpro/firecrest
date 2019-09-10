@@ -5,9 +5,9 @@ from firecrest.models.free_surface_cap import SurfaceModel, AdjointSurfaceModel
 import dolfin as dolf
 from collections import namedtuple
 from decimal import Decimal
-from firecrest.misc.time_storage import TimeSeries
+from firecrest.misc.time_storage import TimeSeries, PiecewiseLinearBasis
 from firecrest.misc.optimization_mixin import OptimizationMixin
-
+import numpy as np
 
 elsize = 0.05  # 04
 height = 0.7
@@ -166,10 +166,15 @@ class NormalInflow:
 class OptimizationSolver(OptimizationMixin, UnsteadyTVAcousticSolver):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self.linear_basis = PiecewiseLinearBasis(
+            np.array([float(key) for key in default_grid.keys()]),
+            width=kwargs.get("signal_window", 0.25),
+        )
 
     def _objective_state(self, control):
+        restored_control = self.linear_basis.extrapolate([0.0] + list(control) + [0.0])
         boundary4.bcond["inflow"] = NormalInflow(
-            TimeSeries.from_list([0.0] + list(control) + [0.0], default_grid)
+            TimeSeries.from_list(restored_control, default_grid)
         )
 
         surface_model = SurfaceModel(nondim_constants, kappa_t0=0.25)
@@ -182,20 +187,25 @@ class OptimizationSolver(OptimizationMixin, UnsteadyTVAcousticSolver):
             flow_rate = dolf.assemble(
                 dolf.inner(state[1], domain.n) * domain.ds((boundary2.surface_index,))
             )
-            surface_model.update_curvature(flow_rate, solver._dt)
+            surface_model.update_curvature(flow_rate, self._dt)
 
         with open("log.dat", "a") as file:
             file.write(
-                str(self.objective((direct_history.last, surface_model)))
-                + ":\t"
-                + str(control)
-                + "\n"
+                str(self._objective((direct_history.last, surface_model))) + ":\t"
             )
+            for c in control:
+                file.write(str(c) + " ")
+            file.write("\n")
 
         return direct_history.last, surface_model
 
     def _objective(self, state):
-        print("evaluated at: ", self.forms.energy(state[0]) + state[1].surface_energy())
+        print(
+            "evaluated at: ",
+            self.forms.energy(state[0]) + state[1].surface_energy(),
+            " curvature: ",
+            state[1].kappa,
+        )
         return self.forms.energy(state[0]) + state[1].surface_energy()
 
     def _jacobian(self, state):
@@ -215,7 +225,7 @@ class OptimizationSolver(OptimizationMixin, UnsteadyTVAcousticSolver):
                 dolf.inner(adjoint_state[1], domain.n)
                 * domain.ds((boundary2.surface_index,))
             )
-            adjoint_surface.update_curvature(flow_rate, solver._dt)
+            adjoint_surface.update_curvature(flow_rate, self._dt)
 
         adjoint_stress = adjoint_history.apply(lambda x: self.forms.stress(x[0], x[1]))
         adjoint_stress_averaged = adjoint_stress.apply(
@@ -230,13 +240,22 @@ class OptimizationSolver(OptimizationMixin, UnsteadyTVAcousticSolver):
         du[timer["T"]] = 0
 
         print("gradient norm: ", (adjoint_stress_averaged * du).integrate())
-        # return [d * self._dt for d in du.values()[1:-1]]
-        return du.values()[1:-1]
+
+        discrete_grad = self.linear_basis.discretize(du.values())
+        default_grid[0] = 0.0
+        discrete_grad[-1] = 0.0
+        print(
+            "discrete gradient norm: ",
+            self.linear_basis.mass_matrix.dot(np.array(discrete_grad)).dot(
+                discrete_grad
+            )
+            * self._dt,
+        )
+
+        return discrete_grad[1:-1]
 
 
-initial_state = (0.0, (0.0, 0.0), 0.0)
-timer = {"dt": Decimal("0.0025"), "T": Decimal("1.2")}
-surface_model = SurfaceModel(nondim_constants, kappa_t0=0.25)
+timer = {"dt": Decimal("0.01"), "T": Decimal("20.0")}
 default_grid = TimeSeries.from_dict(
     {
         Decimal(k) * Decimal(timer["dt"]): 0
@@ -250,10 +269,14 @@ small_grid = TimeSeries.from_dict(
     }
 )
 
+surface_model = SurfaceModel(nondim_constants, kappa_t0=0.25)
+
+
 solver = OptimizationSolver(domain, Re=5.0e3, Pr=10.0, timer=timer)
 initial_state = (0.0, (0.0, 0.0), 0.0)
-x0 = [0.0 for _ in range(len(default_grid) - 2)]
-bnds = tuple((-1.0, 1.0) for i in range(len(x0)))
+x0 = [0.0 for _ in range(len(default_grid))]
+x0 = solver.linear_basis.discretize(x0)[1:-1]
+bnds = tuple((-0.05, 0.05) for i in range(len(x0)))
 res = solver.minimize(x0, bnds)
 
 # solver = OptimizationSolver(domain, Re=5.0e3, Pr=10.0, timer=timer)
