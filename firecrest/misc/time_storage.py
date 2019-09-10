@@ -1,7 +1,7 @@
 import decimal
 from collections import OrderedDict
 import warnings
-from firecrest.misc.type_checker import is_numeric_argument
+import numpy as np
 
 
 class TimeGridError(Exception):
@@ -167,3 +167,86 @@ class TimeSeries(OrderedDict):
         if len(instance) == 1:
             instance._dt = series._dt or keys_series._dt
         return instance
+
+
+class PiecewiseLinearBasis:
+    def __init__(self, space, width):
+        self.space = space
+        self.width = width
+        self.basis = []
+        self._construct_basis()
+
+        self.mass_matrix = None
+        self.inv_mass_matrix = None
+        self._construct_mass_matrix()
+
+    def _basis_function(self, mid, width=None, space=None):
+        """
+        Given a mid point, an interval width, and a discrete space, we construct a piecewise linear
+        basis function on it.
+        :param mid:float mid point for basis function
+        :param width:float basis function width
+        :param space:np.array discrete space
+        :return:np.array basis function array
+        """
+        if width is None:
+            width = self.width
+        if space is None:
+            space = self.space
+        # Normalization constant for basis function
+        h = (3.0 / 2.0 / width) ** 0.5
+
+        # Placeholder for the basis function
+        y = space * 0
+
+        for i in range(len(space)):
+            if (space[i] >= mid - width) and (space[i] <= mid):
+                y[i] = (space[i] - mid + width) / width * h
+            elif (space[i] <= mid + width) and (space[i] >= mid):
+                y[i] = h - (space[i] - mid) / width * h
+        return y
+
+    def _construct_basis(self):
+        position = self.space[0]
+        while position < self.space[-1]:
+            self.basis.append(self._basis_function(position))
+            position += self.width
+        self.basis.append(self._basis_function(self.space[-1]))
+
+    def _construct_mass_matrix(self):
+        self.mass_matrix = np.array(
+            [[sum(b1 * b2) for b1 in self.basis] for b2 in self.basis]
+        )
+        self.inv_mass_matrix = np.linalg.inv(self.mass_matrix)
+
+    def project(self, y):
+        """
+        Projects the y-function onto the discrete piecewise linear space
+        :param y:np.array function to project
+        :return:np.array projected form of the y-function
+        """
+        coefficients = self.discretize(y)
+        return self.extrapolate(coefficients)
+
+    def discretize(self, y):
+        """
+        Calculates a discrete lower-order space representation of the y-funciton
+        :param y:np.array function to discretize
+        :return:list discrete coefficients
+        """
+        return self.inv_mass_matrix.dot(np.array([sum(y * b) for b in self.basis]))
+
+    def extrapolate(self, coefficients):
+        """
+        Restores the linear function on self.space from disrcete coefficients
+        :param coefficients:np.array discrete space coefficients
+        :return:np.array restored function
+        """
+        assert len(coefficients) == len(
+            self.basis
+        ), "Number of coefficients should equal the basis length"
+        res = self.space * 0
+        for i in range(len(self.basis)):
+            res += coefficients[i] * self.basis[i]
+
+        return res
