@@ -3,7 +3,7 @@ from firecrest.mesh.geometry import SimpleDomain
 from firecrest.solvers.eigenvalue_tv_acoustic_solver import EigenvalueTVAcousticSolver
 import dolfin as dolf
 
-z = 2.0 + 1.5j
+z = 1.0 + 0.0j
 
 control_points_1 = [[0.0, 1.0], [0.0, 0.0], [1.0, 0.0]]
 control_points_2 = [[1.0, 0.0], [1.0, 1.0], [0.0, 1.0]]
@@ -39,7 +39,6 @@ def normal_velocity(mode):
 
 for i in range(int(solver.nof_modes_converged / 2)):
     ev, real_mode, imag_mode = solver.extract_solution(i)
-
     solver.output_field(real_mode + imag_mode)
 
     z_u_real = z.real * normal_velocity(real_mode) - z.imag * normal_velocity(imag_mode)

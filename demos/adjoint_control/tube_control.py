@@ -84,7 +84,7 @@ class OptimizationSolver(OptimizationMixin, UnsteadyTVAcousticSolver):
             TimeSeries.from_list([0.0] + list(control) + [0.0], default_grid)
         )
         boundary2.bcond["inflow"] = NormalInflow(inflow)
-        return self.solve_direct(initial_state, verbose=True).last
+        return next(self.solve_direct(initial_state, verbose=True)).last
 
     def _objective(self, state):
         return self.forms.energy(state)
@@ -92,7 +92,7 @@ class OptimizationSolver(OptimizationMixin, UnsteadyTVAcousticSolver):
     def _jacobian(self, state):
         state = (state[0], -state[1], state[2])
 
-        adjoint_history = self.solve_adjoint(state, verbose=True)
+        adjoint_history = next(self.solve_adjoint(state, verbose=True))
         adjoint_stress = adjoint_history.apply(lambda x: self.forms.stress(x[0], x[1]))
         adjoint_stress_averaged = adjoint_stress.apply(
             lambda x: dolf.assemble(

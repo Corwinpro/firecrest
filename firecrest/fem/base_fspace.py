@@ -4,12 +4,13 @@ import dolfin as dolf
 class BaseFunctionSpace:
     """
     Base Function Space factory.
-    params:
-    - domain: geometrical domain with dolfin mesh
-    - spaces: collection of Space objects with Finite Element type, polynomial order, space dimension
     """
 
     def __init__(self, domain, spaces):
+        """
+        :param domain: geometrical domain with dolfin mesh
+        :param spaces: collection of Space objects with Finite Element type, polynomial order, space dimension
+        """
         self.domain = domain
         self.spaces = spaces
         self._function_spaces = None

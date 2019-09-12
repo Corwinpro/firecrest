@@ -21,27 +21,27 @@ class EigenvalueTVAcousticSolver(EigenvalueSolver):
         """
         Constructs the LHS matrix (spatial components), AA of the eigenvalue problem.
         """
-        AA = dolf.PETScMatrix()
+        lhs_matrix = dolf.PETScMatrix()
         lhs_forms = -self.forms._lhs_forms() - self.forms._rhs_forms(
             shift=self.complex_shift
         )
-        AA = dolf.assemble(dolf.lhs(lhs_forms), tensor=AA)
+        lhs_matrix = dolf.assemble(dolf.lhs(lhs_forms), tensor=lhs_matrix)
         for bc in self.forms.dirichlet_boundary_conditions(is_linearised=True):
-            bc.apply(AA)
+            bc.apply(lhs_matrix)
 
-        return AA.mat()
+        return lhs_matrix.mat()
 
     @property
     def rhs(self):
         """
         Constructs the RHS matrix (temporal components), BB of the eigenvalue problem.
         """
-        BB = dolf.PETScMatrix()
-        BB = dolf.assemble(self.forms._rhs_forms(), tensor=BB)
+        rhs_matrix = dolf.PETScMatrix()
+        rhs_matrix = dolf.assemble(self.forms._rhs_forms(), tensor=rhs_matrix)
         for bc in self.forms.dirichlet_boundary_conditions(is_linearised=True):
-            bc.zero(BB)
+            bc.zero(rhs_matrix)
 
-        return BB.mat()
+        return rhs_matrix.mat()
 
     def extract_solution(self, index, eigenvalue_tolerance=1.0e-8, verbose=True):
         """
