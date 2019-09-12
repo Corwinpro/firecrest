@@ -170,9 +170,20 @@ class TimeSeries(OrderedDict):
 
 
 class PiecewiseLinearBasis:
+    """
+    Creates a triangular Piecewise Linear Basis for the given `space`.
+    The width of the triangles is defined by the `width` parameter.
+    """
+
     def __init__(self, space, width):
         self.space = space
         self.width = width
+        assert (self.space[-1] - self.space[0]) % self.width < 1.0e-8 or (
+            self.space[-1] - self.space[0]
+        ) % self.width > self.width - 1.0e-8, (
+            f"Width {self.width} must be compatible"
+            + f"with the domain length ({self.space[-1] - self.space[0]})"
+        )
         self.basis = []
         self._construct_basis()
 
@@ -193,24 +204,24 @@ class PiecewiseLinearBasis:
             width = self.width
         if space is None:
             space = self.space
-        # Normalization constant for basis function
-        h = (3.0 / 2.0 / width) ** 0.5
+        # (Optional) Normalization constant for basis function
+        h = (3.0 / 2.0 / (width / 2.0)) ** 0.5
 
         # Placeholder for the basis function
         y = space * 0
 
         for i in range(len(space)):
-            if (space[i] >= mid - width) and (space[i] <= mid):
-                y[i] = (space[i] - mid + width) / width * h
-            elif (space[i] <= mid + width) and (space[i] >= mid):
-                y[i] = h - (space[i] - mid) / width * h
+            if (space[i] >= mid - (width / 2.0)) and (space[i] <= mid):
+                y[i] = (space[i] - mid + (width / 2.0)) / (width / 2.0) * h
+            elif (space[i] <= mid + (width / 2.0)) and (space[i] >= mid):
+                y[i] = h - (space[i] - mid) / (width / 2.0) * h
         return y
 
     def _construct_basis(self):
         position = self.space[0]
         while position < self.space[-1]:
             self.basis.append(self._basis_function(position))
-            position += self.width
+            position += self.width / 2.0
         self.basis.append(self._basis_function(self.space[-1]))
 
     def _construct_mass_matrix(self):
