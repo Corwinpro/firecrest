@@ -191,21 +191,26 @@ class OptimizationSolver(OptimizationMixin, UnsteadyTVAcousticSolver):
 
         with open("log.dat", "a") as file:
             file.write(
-                str(self._objective((direct_history.last, surface_model))) + ":\t"
+                str(
+                    self._objective((direct_history.last, surface_model), verbose=False)
+                )
+                + str(surface_model.kappa)
+                + ":\t"
             )
             for c in control:
-                file.write(str(c) + " ")
+                file.write(str(c) + ",")
             file.write("\n")
 
         return direct_history.last, surface_model
 
-    def _objective(self, state):
-        print(
-            "evaluated at: ",
-            self.forms.energy(state[0]) + state[1].surface_energy(),
-            " curvature: ",
-            state[1].kappa,
-        )
+    def _objective(self, state, verbose=True):
+        if verbose:
+            print(
+                "evaluated at: ",
+                self.forms.energy(state[0]) + state[1].surface_energy(),
+                " curvature: ",
+                state[1].kappa,
+            )
         return self.forms.energy(state[0]) + state[1].surface_energy()
 
     def _jacobian(self, state):
@@ -275,8 +280,9 @@ surface_model = SurfaceModel(nondim_constants, kappa_t0=0.25)
 solver = OptimizationSolver(domain, Re=5.0e3, Pr=10.0, timer=timer)
 initial_state = (0.0, (0.0, 0.0), 0.0)
 x0 = [0.0 for _ in range(len(default_grid))]
+bnds = tuple((-0.01, 0.01) for i in range(len(x0)))
 x0 = solver.linear_basis.discretize(x0)[1:-1]
-bnds = tuple((-0.05, 0.05) for i in range(len(x0)))
+
 res = solver.minimize(x0, bnds)
 
 # solver = OptimizationSolver(domain, Re=5.0e3, Pr=10.0, timer=timer)
