@@ -5,6 +5,11 @@ from firecrest.fem.tv_acoustic_fspace import (
     TVAcousticFunctionSpace,
     ComplexTVAcousticFunctionSpace,
 )
+from firecrest.misc.matrix_manipulations import (
+    vector_to_ndarray,
+    boundary_dofs,
+    outer_to_matrix,
+)
 from firecrest.fem.struct_templates import AcousticConstants
 import dolfin as dolf
 import ufl
@@ -77,8 +82,10 @@ class BaseTVAcousticWeakForm(ABC, BaseWeakForm):
         "normal_force": "Neumann",
         "impedance": "Robin",
         "normal_impedance": "Robin",
+        "shape_impedance": "Robin",
         "slip": "Neumann",
         "normal_velocity": "Neumann",
+        "avg_velocity": None,
     }
 
     allowed_temperature_bcs = {
@@ -155,7 +162,7 @@ class BaseTVAcousticWeakForm(ABC, BaseWeakForm):
         # shear_stress = (
         #     velocity[i].dx(j)
         #     + velocity[j].dx(i)
-        #     - dolf.Constant(2.0 / 3.0) * self.I[i, j] * dolf.div(velocity)
+        #     - dolf.Constant(2.0 / 3.0) * self.identity_tensor[i, j] * dolf.div(velocity)
         # ) / self.dolf_constants.Re
         return dolf.as_tensor(shear_stress, (i, j))
 
@@ -277,6 +284,19 @@ class BaseTVAcousticWeakForm(ABC, BaseWeakForm):
                     stress = (
                         self._parse_dolf_expression(boundary.bcond[stress_bc])
                         * velocity
+                    )
+                elif stress_bc == "shape_impedance":
+                    try:
+                        shape = boundary.velocity_shape
+                    except AttributeError:
+                        raise AttributeError(
+                            "`shape_impedance` boundary condition requires expected velocity shape. "
+                            + "Provide it as a dolfin Expression."
+                        )
+                    stress = (
+                        self._parse_dolf_expression(boundary.bcond[stress_bc])
+                        * velocity
+                        / shape
                     )
                 elif stress_bc == "normal_impedance":
                     stress = (
@@ -480,6 +500,108 @@ class ComplexTVAcousticWeakForm(BaseTVAcousticWeakForm):
     def boundary_components(self, trial=None, test=None):
         return super().boundary_components(trial, test)
 
+    def boundary_averaged_velocity(self, trial=None, test=None):
+        if trial is None:
+            trial = self.trial_functions
+        if test is None:
+            test = self.test_functions
+        u_r, u_i = trial[1], trial[4]
+        v_r, v_i = test[1], test[4]
+
+        target_boundary = None
+        for boundary in self.domain.boundary_elements:
+            stress_bc = self._pop_boundary_condition(
+                boundary.bcond, self.allowed_stress_bcs
+            )
+            if stress_bc == "avg_velocity":
+                target_boundary = boundary
+                break
+
+        if target_boundary is None:
+            return None
+
+        _flag = self.complex_forms_flag
+        self.complex_forms_flag = "real"
+
+        dofs_r = boundary_dofs(
+            self.domain.boundary_parts,
+            target_boundary,
+            self.velocity_function_space,
+            (1, 1),
+        )
+
+        alpha_r = self._parse_dolf_expression(target_boundary.bcond[stress_bc])
+
+        self.complex_forms_flag = "imag"
+
+        dofs_i = boundary_dofs(
+            self.domain.boundary_parts,
+            target_boundary,
+            self.velocity_function_space,
+            (1, 1),
+        )
+
+        alpha_i = self._parse_dolf_expression(target_boundary.bcond[stress_bc])
+
+        self.complex_forms_flag = _flag
+
+        averaged_velocity_r_r = dolf.assemble(
+            alpha_r
+            * dolf.inner(u_r, self.domain.n)
+            * self.domain.ds((target_boundary.surface_index))
+        )
+        averaged_velocity_r_i = dolf.assemble(
+            alpha_i
+            * dolf.inner(u_r, self.domain.n)
+            * self.domain.ds((target_boundary.surface_index))
+        )
+        averaged_velocity_i_r = dolf.assemble(
+            alpha_r
+            * dolf.inner(u_i, self.domain.n)
+            * self.domain.ds((target_boundary.surface_index))
+        )
+        averaged_velocity_i_i = dolf.assemble(
+            alpha_i
+            * dolf.inner(u_i, self.domain.n)
+            * self.domain.ds((target_boundary.surface_index))
+        )
+        averaged_test_velocity_r = dolf.assemble(
+            dolf.inner(v_r, self.domain.n)
+            * self.domain.ds((target_boundary.surface_index))
+        )
+        averaged_test_velocity_i = dolf.assemble(
+            dolf.inner(v_i, self.domain.n)
+            * self.domain.ds((target_boundary.surface_index))
+        )
+        averaged_u_r_r = vector_to_ndarray(averaged_velocity_r_r, dofs_r)
+        averaged_u_r_i = vector_to_ndarray(averaged_velocity_r_i, dofs_r)
+        averaged_u_i_r = vector_to_ndarray(averaged_velocity_i_r, dofs_i)
+        averaged_u_i_i = vector_to_ndarray(averaged_velocity_i_i, dofs_i)
+
+        averaged_v_r = vector_to_ndarray(averaged_test_velocity_r, dofs_r)
+        averaged_v_i = vector_to_ndarray(averaged_test_velocity_i, dofs_i)
+
+        averaged_matrix = outer_to_matrix(
+            self.function_space, averaged_u_r_r, averaged_v_r
+        )
+
+        averaged_matrix.axpy(
+            -1.0, outer_to_matrix(self.function_space, averaged_u_i_i, averaged_v_r)
+        )
+        averaged_matrix.axpy(
+            1.0, outer_to_matrix(self.function_space, averaged_u_r_i, averaged_v_i)
+        )
+        averaged_matrix.axpy(
+            1.0, outer_to_matrix(self.function_space, averaged_u_i_r, averaged_v_i)
+        )
+
+        # averaged_matrix.axpy(1.0, penalty_matrix)
+
+        # from petsc4py import PETSc
+        # myviewer = PETSc.Viewer().createASCII("test2.txt")
+        # averaged_matrix.view(myviewer)
+        return averaged_matrix
+
     @property
     def velocity_function_space(self):
         complex_fspace = super().velocity_function_space
@@ -491,6 +613,14 @@ class ComplexTVAcousticWeakForm(BaseTVAcousticWeakForm):
     @property
     def temperature_function_space(self):
         complex_fspace = super().temperature_function_space
+        if self.complex_forms_flag == "real":
+            return complex_fspace[0]
+        elif self.complex_forms_flag == "imag":
+            return complex_fspace[1]
+
+    @property
+    def pressure_function_space(self):
+        complex_fspace = super().pressure_function_space
         if self.complex_forms_flag == "real":
             return complex_fspace[0]
         elif self.complex_forms_flag == "imag":
