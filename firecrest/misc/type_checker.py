@@ -1,4 +1,5 @@
 import dolfin as dolf
+import ufl
 
 
 def is_numeric_argument(arg):
@@ -20,5 +21,6 @@ def is_dolfin_exp(arg):
             dolf.function.constant.Constant,
             dolf.function.expression.Expression,
             dolf.function.function.Function,
+            ufl.tensors.ComponentTensor,
         ),
     )

@@ -47,7 +47,8 @@ class UnsteadyTVAcousticSolver(BaseSolver):
                 state_list.append(component)
             else:
                 raise TypeError(
-                    "Numeric argument / iterable, or dolf.Constant / dolf.Expression expected"
+                    "Numeric argument / iterable, or dolf.Constant / dolf.Expression expected."
+                    + f" Got {type(component)} instead."
                 )
         self._initial_state = tuple(state_list)
 
@@ -103,30 +104,46 @@ class UnsteadyTVAcousticSolver(BaseSolver):
         self.LUSolver.solve(self.bilinear_form, w.vector(), res)
         return w
 
-    def solve_direct(self, initial_state, time_scheme="crank_nicolson", verbose=False):
+    def solve_direct(
+        self,
+        initial_state,
+        time_scheme="crank_nicolson",
+        verbose=False,
+        yield_state=False,
+        plot_every=10,
+    ):
         current_time = Decimal("0")
         final_time = self.timer["T"]
         state = TimeSeries(initial_state, current_time)
 
         while current_time < final_time - Decimal(1.0e-8):
             w = self.solve(state.last, time_scheme=time_scheme)
+            current_time += self.timer["dt"]
+            state[current_time] = w.split()  # True
 
-            current_state = w.split(True)
-            # if int(current_time / self._dt) % 10 == 9:
-            self.output_field(current_state)
+            if yield_state:
+                yield state[current_time]
+
+            if int(float(current_time) / self._dt) % plot_every == plot_every - 1:
+                self.output_field(state[current_time])
 
             if verbose:
                 print(
                     "Timestep: \t {0:.4f}->{1:.4f}".format(
-                        current_time, current_time + self.timer["dt"]
+                        current_time - self.timer["dt"], current_time
                     )
                 )
-            current_time += self.timer["dt"]
-            state[current_time] = current_state
 
-        return state
+        yield state
 
-    def solve_adjoint(self, initial_state, time_scheme="crank_nicolson", verbose=False):
+    def solve_adjoint(
+        self,
+        initial_state,
+        time_scheme="crank_nicolson",
+        verbose=False,
+        yield_state=False,
+        plot_every=10,
+    ):
         """
         Solving the adjoint problem backwards in time. We reuse the direct forms, therefore
         the adjoint problem must be modified (see time symmetry in the unsteady control paper).
@@ -152,14 +169,19 @@ class UnsteadyTVAcousticSolver(BaseSolver):
 
         # Half stepping first
         self._dt = self._dt / 2.0
-        form, bcs = self._implicit_euler(current_state)
-        linear_form = dolf.assemble(dolf.rhs(form))
-        bilinear_form = dolf.assemble(dolf.lhs(form))
-        for bc in bcs:
-            bc.apply(bilinear_form)
-            bc.apply(linear_form)
-        w = dolf.Function(self.forms.function_space)
-        dolf.solve(bilinear_form, w.vector(), linear_form)
+
+        # form, bcs = self._implicit_euler(current_state)
+        # linear_form = dolf.assemble(dolf.rhs(form))
+        # bilinear_form = dolf.assemble(dolf.lhs(form))
+        # for bc in bcs:
+        #     bc.apply(bilinear_form)
+        #     bc.apply(linear_form)
+        # w = dolf.Function(self.forms.function_space)
+        # dolf.solve(bilinear_form, w.vector(), linear_form)
+
+        w = self.solve(current_state, "implicit_euler")
+        self.LUSolver = None
+
         current_state = w.split(True)
         current_time -= self.timer["dt"] / Decimal("2")
         state[current_time] = current_state
@@ -169,9 +191,12 @@ class UnsteadyTVAcousticSolver(BaseSolver):
         while current_time > final_time + Decimal(1.0e-8):
             w = self.solve(current_state, time_scheme=time_scheme)
 
-            current_state = w.split(True)
-            # if int(current_time / self._dt) % 10 == 9:
-            self.output_field(current_state)
+            current_state = w.split()  # True
+            if yield_state:
+                yield current_state
+
+            if int(float(current_time) / self._dt) % plot_every == plot_every - 1:
+                self.output_field(current_state)
 
             if verbose:
                 print(
@@ -185,7 +210,7 @@ class UnsteadyTVAcousticSolver(BaseSolver):
         self.is_linearised = False
         self.LUSolver = None
 
-        return state
+        yield state
 
     def initialize_solver(self, form, bcs, solver_type="mumps"):
         """

@@ -33,7 +33,7 @@ def generate_inflow(amplitude):
 
 inflow = generate_inflow(1.0)
 
-length = 0.03
+length = 0.3
 width = 0.05
 offset = 0.005
 control_points_1 = [[offset, 0.0], [0.0, 0.0], [1.0e-16, length]]
@@ -63,7 +63,7 @@ domain = SimpleDomain(domain_boundaries)
 
 solver = UnsteadyTVAcousticSolver(domain, Re=5.0e3, Pr=10.0, timer=timer)
 initial_state = (0.0, (0.0, 0.0), 0.0)
-state = solver.solve_direct(initial_state, verbose=True)
+state = next(solver.solve_direct(initial_state, verbose=True))
 final_state = state.last
 
 
@@ -78,7 +78,7 @@ final_state = list(final_state)
 final_state[1] = -final_state[1]
 final_state = tuple(final_state)
 
-adjoint_history = solver.solve_adjoint(final_state, verbose=True)
+adjoint_history = next(solver.solve_adjoint(final_state, verbose=True))
 
 adjoint_stress = adjoint_history.apply(lambda x: solver.forms.stress(x[0], x[1]))
 adjoint_stress_averaged = adjoint_stress.apply(
@@ -95,7 +95,7 @@ print(delta_energy)
 
 for i in range(1, 11):
     boundary4.bcond["inflow"] = NormalInflow(generate_inflow(1.0 - i * dU))
-    state = solver.solve_direct(initial_state, verbose=False)
+    state = next(solver.solve_direct(initial_state, verbose=False))
     final_state = state.last
     print(
         "Final Energy: {}".format(
