@@ -241,7 +241,7 @@ class PiecewiseLinearBasis:
 
     def discretize(self, y):
         """
-        Calculates a discrete lower-order space representation of the y-funciton
+        Calculates a discrete lower-order space representation of the y-function
         :param y:np.array function to discretize
         :return:list discrete coefficients
         """
@@ -249,13 +249,14 @@ class PiecewiseLinearBasis:
 
     def extrapolate(self, coefficients):
         """
-        Restores the linear function on self.space from disrcete coefficients
+        Restores the linear function on self.space from discrete coefficients
         :param coefficients:np.array discrete space coefficients
         :return:np.array restored function
         """
-        assert len(coefficients) == len(
-            self.basis
-        ), "Number of coefficients should equal the basis length"
+        if len(coefficients) != len(self.basis):
+            raise ValueError(
+                f"Number of coefficients {len(coefficients)} should equal the basis length {len(self.basis)}"
+            )
         res = self.space * 0
         for i in range(len(self.basis)):
             res += coefficients[i] * self.basis[i]
