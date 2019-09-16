@@ -124,7 +124,8 @@ class UnsteadyTVAcousticSolver(BaseSolver):
             if yield_state:
                 yield state[current_time]
 
-            if int(float(current_time) / self._dt) % plot_every == plot_every - 1:
+            if int(current_time / self.timer["dt"]) % plot_every == plot_every - 1:
+                print(int(current_time / self.timer["dt"]))
                 self.output_field(state[current_time])
 
             if verbose:
