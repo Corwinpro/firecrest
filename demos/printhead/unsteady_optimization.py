@@ -269,7 +269,12 @@ surface_model = SurfaceModel(nondim_constants, kappa_t0=0.25)
 solver = OptimizationSolver(domain, Re=5.0e3, Pr=10.0, timer=timer)
 initial_state = (0.0, (0.0, 0.0), 0.0)
 x0 = [0.0 for _ in range(len(default_grid))]
-bnds = tuple((-0.015, 0.015) for i in range(len(x0)))
+top_bound = [0.015 for i in range(len(x0))]
+low_bound = [-0.015 for i in range(len(x0))]
+# bnds = tuple((-0.015, 0.015) for i in range(len(x0)))
 # The first and last elements of the control are zero by default
 x0 = solver.linear_basis.discretize(x0)[1:-1]
+top_bound = solver.linear_basis.discretize(top_bound)[1:-1]
+low_bound = solver.linear_basis.discretize(low_bound)[1:-1]
+bnds = list(zip(low_bound, top_bound))
 res = solver.minimize(x0, bnds)
