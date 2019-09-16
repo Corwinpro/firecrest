@@ -200,7 +200,7 @@ class OptimizationSolver(OptimizationMixin, UnsteadyTVAcousticSolver):
                 " curvature: ",
                 state[1].kappa,
             )
-        return self.forms.energy(state[0]) + state[1].surface_energy()
+        return self.forms.energy(state[0]) + state[1].surface_energy() / 2.0
 
     def _jacobian(self, state):
         state, surface_model = state
