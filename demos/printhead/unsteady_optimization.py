@@ -51,9 +51,7 @@ Constants = namedtuple(
         "sound_speed",
     ],
 )
-printhead_constants = Constants(
-    1.0e3, 1.0e-3, 100.0e-6, 10.0e-6, 10.0e-6, 50.0e-3, 5.0e3, 1.0e3
-)
+printhead_constants = Constants(rho, epsilon, L, 10.0e-6, 10.0e-6, gamma_st, Re, c_s)
 
 nondim_constants = Constants(
     1.0,
@@ -159,6 +157,12 @@ class OptimizationSolver(OptimizationMixin, UnsteadyTVAcousticSolver):
             width=kwargs.get("signal_window", 2.0),
         )
 
+    def flow_rate(self, state):
+        return 2.0 * dolf.assemble(
+            dolf.inner(state[1], self.domain.n)
+            * self.domain.ds((boundary2.surface_index,))
+        )
+
     def _objective_state(self, control):
         restored_control = self.linear_basis.extrapolate([0.0] + list(control) + [0.0])
         boundary4.bcond["inflow"] = NormalInflow(
@@ -172,10 +176,7 @@ class OptimizationSolver(OptimizationMixin, UnsteadyTVAcousticSolver):
             if isinstance(state, TimeSeries):
                 direct_history = state
                 break
-            flow_rate = dolf.assemble(
-                dolf.inner(state[1], domain.n) * domain.ds((boundary2.surface_index,))
-            )
-            surface_model.update_curvature(flow_rate * 2.0, self._dt)
+            surface_model.update_curvature(self.flow_rate(state), self._dt)
 
         with open("log.dat", "a") as file:
             file.write(
@@ -196,7 +197,7 @@ class OptimizationSolver(OptimizationMixin, UnsteadyTVAcousticSolver):
         if verbose:
             print(
                 "evaluated at: ",
-                self.forms.energy(state[0]) + state[1].surface_energy(),
+                self.forms.energy(state[0]) + state[1].surface_energy() / 2.0,
                 " curvature: ",
                 state[1].kappa,
             )
@@ -215,11 +216,7 @@ class OptimizationSolver(OptimizationMixin, UnsteadyTVAcousticSolver):
             if isinstance(adjoint_state, TimeSeries):
                 adjoint_history = adjoint_state
                 break
-            flow_rate = dolf.assemble(
-                dolf.inner(adjoint_state[1], domain.n)
-                * domain.ds((boundary2.surface_index,))
-            )
-            adjoint_surface.update_curvature(flow_rate * 2.0, self._dt)
+            adjoint_surface.update_curvature(self.flow_rate(adjoint_state), self._dt)
 
         adjoint_stress = adjoint_history.apply(lambda x: self.forms.stress(x[0], x[1]))
         adjoint_stress_averaged = adjoint_stress.apply(
@@ -230,20 +227,25 @@ class OptimizationSolver(OptimizationMixin, UnsteadyTVAcousticSolver):
         )
 
         du = TimeSeries.interpolate_to_keys(adjoint_stress_averaged, small_grid)
-        du[Decimal("0")] = 0
-        du[timer["T"]] = 0
+        du[Decimal("0")] = 0.0
+        du[timer["T"]] = 0.0
+        # (
+        #     2.0 * du[timer["T"] - timer["dt"]] - du[timer["T"] - 2 * timer["dt"]]
+        # )
+        discrete_grad = self.linear_basis.discretize(du.values())
+        discrete_grad[0] = 0.0
+        discrete_grad[-1] = 0.0
 
         print("gradient norm: ", (adjoint_stress_averaged * du).integrate())
 
-        discrete_grad = self.linear_basis.discretize(du.values())
-        default_grid[0] = 0.0
-        discrete_grad[-1] = 0.0
         print(
             "discrete gradient norm: ",
-            self.linear_basis.mass_matrix.dot(np.array(discrete_grad)).dot(
-                discrete_grad
-            )
-            * self._dt,
+            (
+                adjoint_stress_averaged
+                * TimeSeries.from_list(
+                    self.linear_basis.extrapolate(discrete_grad), default_grid
+                )
+            ).integrate(),
         )
 
         return discrete_grad[1:-1]
@@ -264,16 +266,28 @@ small_grid = TimeSeries.from_dict(
 )
 
 surface_model = SurfaceModel(nondim_constants, kappa_t0=0.25)
-
-
-solver = OptimizationSolver(domain, Re=5.0e3, Pr=10.0, timer=timer)
+solver = OptimizationSolver(domain, Re=5.0e3, Pr=10.0, timer=timer, signal_window=0.5)
 initial_state = (0.0, (0.0, 0.0), 0.0)
 x0 = [0.0 for _ in range(len(default_grid))]
+x0 = solver.linear_basis.discretize(x0)[1:-1]
+
+run_taylor_test = True
+if run_taylor_test:
+    energy = []
+    state = solver._objective_state(x0)
+    energy.append(solver._objective(state))
+    print(energy[-1])
+    grad = solver._jacobian(state)
+
+    for i in range(1, 11):
+        new_state = solver._objective_state(grad * 1.0e-3 * i)
+        energy.append(solver._objective(new_state))
+
+    exit()
+
 top_bound = [0.015 for i in range(len(x0))]
 low_bound = [-0.015 for i in range(len(x0))]
-# bnds = tuple((-0.015, 0.015) for i in range(len(x0)))
 # The first and last elements of the control are zero by default
-x0 = solver.linear_basis.discretize(x0)[1:-1]
 top_bound = solver.linear_basis.discretize(top_bound)[1:-1]
 low_bound = solver.linear_basis.discretize(low_bound)[1:-1]
 bnds = list(zip(low_bound, top_bound))
