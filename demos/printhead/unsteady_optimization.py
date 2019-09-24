@@ -172,11 +172,16 @@ class OptimizationSolver(OptimizationMixin, UnsteadyTVAcousticSolver):
         surface_model = SurfaceModel(nondim_constants, kappa_t0=0.25)
         boundary2.bcond["normal_force"] = surface_model
 
+        _old_flow_rate = 0
         for state in self.solve_direct(initial_state, verbose=False, yield_state=True):
             if isinstance(state, TimeSeries):
                 direct_history = state
                 break
-            surface_model.update_curvature(self.flow_rate(state), self._dt)
+            _new_flow_rate = self.flow_rate(state)
+            surface_model.update_curvature(
+                0.5 * (_new_flow_rate + _old_flow_rate), self._dt
+            )
+            _old_flow_rate = _new_flow_rate
 
         with open("log.dat", "a") as file:
             file.write(
@@ -197,11 +202,14 @@ class OptimizationSolver(OptimizationMixin, UnsteadyTVAcousticSolver):
         if verbose:
             print(
                 "evaluated at: ",
-                self.forms.energy(state[0]) + state[1].surface_energy() / 2.0,
+                self.forms.energy(state[0])
+                + state[1].surface_energy(state[1].kappa) / 2.0,
                 " curvature: ",
                 state[1].kappa,
             )
-        return self.forms.energy(state[0]) + state[1].surface_energy() / 2.0
+        return (
+            self.forms.energy(state[0]) + state[1].surface_energy(state[1].kappa) / 2.0
+        )
 
     def _jacobian(self, state):
         state, surface_model = state
@@ -210,13 +218,22 @@ class OptimizationSolver(OptimizationMixin, UnsteadyTVAcousticSolver):
         adjoint_surface = AdjointSurfaceModel(direct_surface=surface_model)
         boundary2.bcond["normal_force"] = adjoint_surface
 
+        _old_flow_rate = 0
+        _new_flow_rate = 0
+        adjoint_surface.update_curvature(
+            0.5 * (_new_flow_rate + _old_flow_rate), self._dt
+        )
         for adjoint_state in solver.solve_adjoint(
             initial_state=state, verbose=False, yield_state=True
         ):
             if isinstance(adjoint_state, TimeSeries):
                 adjoint_history = adjoint_state
                 break
-            adjoint_surface.update_curvature(self.flow_rate(adjoint_state), self._dt)
+            _old_flow_rate = _new_flow_rate
+            _new_flow_rate = self.flow_rate(adjoint_state)
+            adjoint_surface.update_curvature(
+                0.5 * (_new_flow_rate + _old_flow_rate), self._dt
+            )
 
         adjoint_stress = adjoint_history.apply(lambda x: self.forms.stress(x[0], x[1]))
         adjoint_stress_averaged = adjoint_stress.apply(
@@ -229,9 +246,7 @@ class OptimizationSolver(OptimizationMixin, UnsteadyTVAcousticSolver):
         du = TimeSeries.interpolate_to_keys(adjoint_stress_averaged, small_grid)
         du[Decimal("0")] = 0.0
         du[timer["T"]] = 0.0
-        # (
-        #     2.0 * du[timer["T"] - timer["dt"]] - du[timer["T"] - 2 * timer["dt"]]
-        # )
+
         discrete_grad = self.linear_basis.discretize(du.values())
         discrete_grad[0] = 0.0
         discrete_grad[-1] = 0.0
