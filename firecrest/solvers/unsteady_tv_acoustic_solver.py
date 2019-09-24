@@ -115,6 +115,7 @@ class UnsteadyTVAcousticSolver(BaseSolver):
         current_time = Decimal("0")
         final_time = self.timer["T"]
         state = TimeSeries(initial_state, current_time)
+        self.LUSolver = None
 
         while current_time < final_time - Decimal(1.0e-8):
             w = self.solve(state.last, time_scheme=time_scheme)
@@ -183,9 +184,13 @@ class UnsteadyTVAcousticSolver(BaseSolver):
         self.LUSolver = None
 
         current_state = w.split(True)
+        # if yield_state:
+        #     yield current_state
         current_time -= self.timer["dt"] / Decimal("2")
         state[current_time] = current_state
         self._dt = self._dt * 2.0
+        if yield_state:
+            yield current_state
 
         # Regular time stepping
         while current_time > final_time + Decimal(1.0e-8):
