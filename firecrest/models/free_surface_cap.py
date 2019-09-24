@@ -29,6 +29,13 @@ class SurfaceModel:
         return -self.pressure
 
     @property
+    def prev_kappa(self):
+        try:
+            return self.kappa_history[-2]
+        except IndexError:
+            return self.kappa
+
+    @property
     def kappa(self):
         """
         Current (latest) curvature of the free surface, kappa(t = t_now)
@@ -40,7 +47,7 @@ class SurfaceModel:
         """
         Value of the physical pressure created by the surface
         """
-        return self.kappa * self.gamma_tension
+        return 0.5 * (self.kappa + self.prev_kappa) * self.gamma_tension
 
     @staticmethod
     def _cos_theta(kappa):
@@ -54,8 +61,19 @@ class SurfaceModel:
         if kappa is None:
             kappa = self.kappa
 
-        if kappa < 1.0e-6:
-            return 2.0 * math.pi * self.r ** 3.0 / 8
+        if abs(kappa) < 1.0e-3:
+            return (
+                2.0
+                * math.pi
+                * self.r ** 3.0
+                / 8
+                * (
+                    1.0
+                    + kappa ** 2.0
+                    + 15.0 / 16.0 * kappa ** 4
+                    + 7.0 / 8.0 * kappa ** 6.0
+                )
+            )
         else:
             return (
                 8.0
@@ -73,18 +91,22 @@ class SurfaceModel:
         of the flat surface
         """
         if kappa is None:
-            kappa = self.kappa
+            kappa = 0.5 * (self.kappa + self.prev_kappa)
+
+        if abs(kappa) < 1.0e-3:
+            _kappa_function = (
+                0.5
+                + kappa ** 2.0 / 8.0
+                + kappa ** 4.0 / 16.0
+                + kappa ** 6.0 * 5.0 / 128.0
+            )
+        else:
+            _kappa_function = (1.0 - self._cos_theta(kappa)) / kappa ** 2.0
 
         energy = (
             self.r ** 3.0
             / (8.0 * self.epsilon)
-            * (
-                self.gamma_tension
-                * 8.0
-                * math.pi
-                / kappa ** 2.0
-                * (1.0 - self._cos_theta(kappa))
-            )
+            * (self.gamma_tension * 8.0 * math.pi * _kappa_function)
         )
         static_energy = (
             self.r ** 3.0 / (8.0 * self.epsilon) * self.gamma_tension * 4.0 * math.pi
@@ -115,7 +137,7 @@ class AdjointSurfaceModel:
     def __init__(self, direct_surface: SurfaceModel):
         self.direct_surface = direct_surface
         self.kappa_adj = self.direct_surface.kappa_history[-1]
-        self.kappa_adj_history = [self.kappa_adj]
+        self.kappa_adj_history = []
 
     def eval(self):
         return -self.adj_pressure
@@ -125,19 +147,32 @@ class AdjointSurfaceModel:
         """
         Adjoint pressure created by the surface. We use it as the adjoint boundary condition.
         """
-        return self.kappa_adj * self.direct_surface.gamma_tension
+        if len(self.kappa_adj_history) < 2:
+            return self.kappa_adj * self.direct_surface.gamma_tension
+        return (
+            0.5
+            * (self.kappa_adj + self.kappa_adj_history[-2])
+            * self.direct_surface.gamma_tension
+        )
 
-    def update_curvature(self, adjoint_flow_rate, dt):  # counter
+    def update_curvature(self, adjoint_flow_rate, dt):
         """
         Updates the adjoint curvature, which 'follows' the trajectory of the direct (real) curvature
         """
-        direct_kappa = self.direct_surface.kappa_history[
-            -len(self.kappa_adj_history)
-        ]  # [-1 - counter]
-        self.kappa_adj += (
+        kappa_n = self.direct_surface.kappa_history[-len(self.kappa_adj_history) - 1]
+        try:
+            kappa_prev = self.direct_surface.kappa_history[
+                -len(self.kappa_adj_history) - 2
+            ]
+        except IndexError:
+            return
+
+        self.kappa_adj = self.kappa_adj * self.direct_surface.volume_derivative(
+            kappa=kappa_n
+        ) / self.direct_surface.volume_derivative(kappa=kappa_prev) + (
             self.direct_surface.constants.acoustic_mach
             * dt
             * adjoint_flow_rate
-            / self.direct_surface.volume_derivative(kappa=direct_kappa)
+            / self.direct_surface.volume_derivative(kappa=kappa_prev)
         )
         self.kappa_adj_history.append(self.kappa_adj)
