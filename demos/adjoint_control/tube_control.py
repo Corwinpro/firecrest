@@ -43,12 +43,7 @@ width = 0.025
 offset = 0.005
 control_points_1 = [[0.0, 0.0], [1.0e-16, length]]
 control_points_2 = [[1.0e-16, length], [width, length - 1.0e-16]]
-control_points_3 = [
-    [width, length - 1.0e-16],
-    # [width, length],
-    [width, 1.0e-16],
-    # [width - offset, 1.0e-16],
-]
+control_points_3 = [[width, length - 1.0e-16], [width, 1.0e-16]]
 control_points_4 = [[width, 1.0e-16], [0.0, 0.0]]
 
 el_size = 0.002
@@ -127,7 +122,7 @@ class OptimizationSolverFreeSurface(OptimizationMixin, UnsteadyTVAcousticSolver)
             TimeSeries.from_list([0.0] + list(control) + [0.0], default_grid)
         )
 
-        surface_model = SurfaceModel(nondim_constants, kappa_t0=0.25)  # 25
+        surface_model = SurfaceModel(nondim_constants, kappa_t0=0.25)
         boundary4.bcond["normal_force"] = surface_model
 
         _old_flow_rate = 0
