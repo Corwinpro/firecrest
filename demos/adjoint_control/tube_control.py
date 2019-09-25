@@ -8,7 +8,7 @@ import dolfin as dolf
 from decimal import Decimal
 import numpy as np
 
-timer = {"dt": Decimal("0.002"), "T": Decimal("1.0")}
+timer = {"dt": Decimal("0.001"), "T": Decimal("0.002")}
 
 
 class NormalInflow:
@@ -38,7 +38,7 @@ small_grid = TimeSeries.from_dict(
     }
 )
 
-length = 0.1
+length = 0.01
 width = 0.025
 offset = 0.005
 control_points_1 = [[0.0, 0.0], [1.0e-16, length]]
@@ -46,7 +46,7 @@ control_points_2 = [[1.0e-16, length], [width, length - 1.0e-16]]
 control_points_3 = [[width, length - 1.0e-16], [width, 1.0e-16]]
 control_points_4 = [[width, 1.0e-16], [0.0, 0.0]]
 
-el_size = 0.002
+el_size = 0.0001
 
 boundary1 = LineElement(
     control_points_1, el_size=el_size, bcond={"slip": True, "adiabatic": True}
@@ -209,12 +209,12 @@ class OptimizationSolverFreeSurface(OptimizationMixin, UnsteadyTVAcousticSolver)
         return du.values()[1:-1]
 
 
-# solver = OptimizationSolver(domain, Re=5.0e3, Pr=10.0, timer=timer, verbose=False)
+solver = OptimizationSolver(domain, Re=5.0e3, Pr=10.0, timer=timer, verbose=False)
 # initial_state = (dolf.Expression("x[1]*(0.1-x[1])*500", degree=2), (0.0, 0.0), 0.0)
 
-solver = OptimizationSolverFreeSurface(
-    domain, Re=5.0e3, Pr=10.0, timer=timer, verbose=False
-)
+# solver = OptimizationSolverFreeSurface(
+#     domain, Re=5.0e3, Pr=10.0, timer=timer, verbose=False
+# )
 initial_state = (0.0, (0.0, 0.0), 0.0)
 # initial_state = (
 #     dolf.Expression(
@@ -228,7 +228,7 @@ initial_state = (0.0, (0.0, 0.0), 0.0)
 # )
 # initial_state = (dolf.Expression("x[1]*(0.2-x[1])*50", degree=2), (0.0, 0.0), 0.0)
 
-x0 = [0.0 for _ in range(len(default_grid) - 2)]
+x0 = [0.01 for _ in range(len(default_grid) - 2)]
 # bnds = tuple((-1.1, 1.1) for i in range(len(x0)))
 # res = solver.minimize(x0, bnds)
 
