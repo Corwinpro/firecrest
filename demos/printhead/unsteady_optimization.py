@@ -9,7 +9,7 @@ from firecrest.misc.time_storage import TimeSeries, PiecewiseLinearBasis
 from firecrest.misc.optimization_mixin import OptimizationMixin
 import numpy as np
 
-elsize = 0.08  # 04
+elsize = 0.05
 height = 0.7
 length = 9.2
 actuator_length = 4.0
@@ -121,7 +121,7 @@ boundary3 = LineElement(
 )
 boundary4 = LineElement(
     control_points_4,
-    el_size=elsize / 2.0,
+    el_size=elsize / 10.0,
     bcond={"inflow": (0.0, 0.0), "adiabatic": True},
 )
 domain_boundaries = (
@@ -283,7 +283,34 @@ small_grid = TimeSeries.from_dict(
 surface_model = SurfaceModel(nondim_constants, kappa_t0=0.25)
 solver = OptimizationSolver(domain, Re=5.0e3, Pr=10.0, timer=timer, signal_window=0.5)
 initial_state = (0.0, (0.0, 0.0), 0.0)
-x0 = [0.0 for _ in range(len(default_grid))]
+
+coarse_space_control = [
+    0.0031218434670749083,
+    0.00039993341910226596,
+    -0.0008878779110163696,
+    -0.0008273270413055289,
+    0.0006028534180741699,
+    0.0030869918808126085,
+    0.0021383126783835207,
+    0.0003107608476460111,
+    0.0004944440592362955,
+    0.00022870287117476664,
+    0.0005532036274521335,
+    7.096444090708459e-05,
+    0.002310475217827071,
+    0.0028336197709607387,
+    0.00028401286298087127,
+    -0.0009931305927794536,
+    -0.0005059536985463389,
+    0.0005782996337251334,
+    0.0029616268344061186,
+]
+coarse_basis = PiecewiseLinearBasis(
+    np.array([float(key) for key in default_grid.keys()]), width=2.0
+)
+x0 = coarse_basis.extrapolate([0.0] + list(coarse_space_control) + [0.0])
+
+# x0 = [0.0 for _ in range(len(default_grid))]
 top_bound = [0.015 for i in range(len(x0))]
 low_bound = [-0.015 for i in range(len(x0))]
 # The first and last elements of the control are zero by default
@@ -292,7 +319,7 @@ low_bound = solver.linear_basis.discretize(low_bound)[1:-1]
 bnds = list(zip(low_bound, top_bound))
 x0 = solver.linear_basis.discretize(x0)[1:-1]
 
-run_taylor_test = True
+run_taylor_test = False
 if run_taylor_test:
     energy = []
     state = solver._objective_state(x0)
