@@ -173,9 +173,11 @@ class PiecewiseLinearBasis:
     """
     Creates a triangular Piecewise Linear Basis for the given `space`.
     The width of the triangles is defined by the `width` parameter.
+
+    :kw param reduced_basis: sets the basis space to zero at corners (H_0)
     """
 
-    def __init__(self, space, width):
+    def __init__(self, space, width, **kwargs):
         self.space = space
         self.width = width
         assert (self.space[-1] - self.space[0]) % self.width < 1.0e-8 or (
@@ -185,6 +187,7 @@ class PiecewiseLinearBasis:
             + f"with the domain length ({self.space[-1] - self.space[0]})"
         )
         self.basis = []
+        self._is_reduced_basis = kwargs.get("reduced_basis", False)
         self._construct_basis()
 
         self.mass_matrix = None
@@ -218,11 +221,16 @@ class PiecewiseLinearBasis:
         return y
 
     def _construct_basis(self):
-        position = self.space[0]
+        if self._is_reduced_basis:
+            position_offsets = self.width / 2.0
+        else:
+            position_offsets = 0.0
+        position = self.space[0] + position_offsets
         while position < self.space[-1]:
             self.basis.append(self._basis_function(position))
             position += self.width / 2.0
-        self.basis.append(self._basis_function(self.space[-1]))
+        if not self._is_reduced_basis:
+            self.basis.append(self._basis_function(self.space[-1]))
 
     def _construct_mass_matrix(self):
         self.mass_matrix = np.array(
