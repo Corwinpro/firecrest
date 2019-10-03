@@ -233,8 +233,9 @@ class PiecewiseLinearBasis:
             self.basis.append(self._basis_function(self.space[-1]))
 
     def _construct_mass_matrix(self):
+        step_size = abs(self.space[1] - self.space[0])
         self.mass_matrix = np.array(
-            [[sum(b1 * b2) for b1 in self.basis] for b2 in self.basis]
+            [[sum(b1 * b2) * step_size for b1 in self.basis] for b2 in self.basis]
         )
         self.inv_mass_matrix = np.linalg.inv(self.mass_matrix)
 
