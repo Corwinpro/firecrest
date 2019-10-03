@@ -9,7 +9,7 @@ from firecrest.misc.time_storage import TimeSeries, PiecewiseLinearBasis
 from firecrest.misc.optimization_mixin import OptimizationMixin
 import numpy as np
 
-elsize = 0.05
+elsize = 0.08
 height = 0.7
 length = 9.2
 actuator_length = 4.0
@@ -108,12 +108,12 @@ boundary_bot_left = LineElement(
 )
 boundary_refine_left = LineElement(
     control_points_refine_left,
-    el_size=elsize / 4.0,
+    el_size=elsize / 8.0,
     bcond={"noslip": True, "adiabatic": True},
 )
 boundary2 = LineElement(
     control_points_2,
-    el_size=elsize / 4.0,
+    el_size=elsize / 8.0,
     bcond={"normal_force": None, "adiabatic": True},
 )
 boundary3 = LineElement(
@@ -121,7 +121,7 @@ boundary3 = LineElement(
 )
 boundary4 = LineElement(
     control_points_4,
-    el_size=elsize / 10.0,
+    el_size=elsize / 20.0,
     bcond={"inflow": (0.0, 0.0), "adiabatic": True},
 )
 domain_boundaries = (
@@ -281,7 +281,7 @@ small_grid = TimeSeries.from_dict(
 )
 
 surface_model = SurfaceModel(nondim_constants, kappa_t0=0.25)
-solver = OptimizationSolver(domain, Re=5.0e3, Pr=10.0, timer=timer, signal_window=0.5)
+solver = OptimizationSolver(domain, Re=5.0e3, Pr=10.0, timer=timer, signal_window=2.0)
 initial_state = (0.0, (0.0, 0.0), 0.0)
 
 coarse_space_control = [
@@ -386,20 +386,20 @@ fine_space_control = [
     0.003857146725632634,
     0.0032568677076993194,
 ]
-coarse_basis = PiecewiseLinearBasis(
-    np.array([float(key) for key in default_grid.keys()]), width=2.0
-)
-x0 = coarse_basis.extrapolate([0.0] + list(coarse_space_control) + [0.0])
+# coarse_basis = PiecewiseLinearBasis(
+#     np.array([float(key) for key in default_grid.keys()]), width=2.0
+# )
+# x0 = coarse_basis.extrapolate([0.0] + list(coarse_space_control) + [0.0])
 
-# x0 = [0.0 for _ in range(len(default_grid))]
+x0 = [0.0 for _ in range(len(default_grid))]
 top_bound = [0.015 for i in range(len(x0))]
 low_bound = [-0.015 for i in range(len(x0))]
 # The first and last elements of the control are zero by default
 top_bound = solver.linear_basis.discretize(top_bound)[1:-1]
 low_bound = solver.linear_basis.discretize(low_bound)[1:-1]
 bnds = list(zip(low_bound, top_bound))
-# x0 = solver.linear_basis.discretize(x0)[1:-1]
-x0 = fine_space_control
+x0 = solver.linear_basis.discretize(x0)[1:-1]
+# x0 = fine_space_control
 
 run_taylor_test = False
 if run_taylor_test:
