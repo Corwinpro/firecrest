@@ -179,6 +179,8 @@ class PiecewiseLinearBasis:
 
     def __init__(self, space, width, **kwargs):
         self.space = space
+        self.space_step_size = abs(self.space[1] - self.space[0])
+
         self.width = width
         assert (self.space[-1] - self.space[0]) % self.width < 1.0e-8 or (
             self.space[-1] - self.space[0]
@@ -233,9 +235,11 @@ class PiecewiseLinearBasis:
             self.basis.append(self._basis_function(self.space[-1]))
 
     def _construct_mass_matrix(self):
-        step_size = abs(self.space[1] - self.space[0])
         self.mass_matrix = np.array(
-            [[sum(b1 * b2) * step_size for b1 in self.basis] for b2 in self.basis]
+            [
+                [sum(b1 * b2) * self.space_step_size for b1 in self.basis]
+                for b2 in self.basis
+            ]
         )
         self.inv_mass_matrix = np.linalg.inv(self.mass_matrix)
 
@@ -254,7 +258,9 @@ class PiecewiseLinearBasis:
         :param y:np.array function to discretize
         :return:list discrete coefficients
         """
-        return self.inv_mass_matrix.dot(np.array([sum(y * b) for b in self.basis]))
+        return self.inv_mass_matrix.dot(
+            np.array([sum(y * b) * self.space_step_size for b in self.basis])
+        )
 
     def extrapolate(self, coefficients):
         """
