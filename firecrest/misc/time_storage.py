@@ -146,6 +146,13 @@ class TimeSeries(OrderedDict):
 
     @classmethod
     def interpolate_to_keys(cls, series, keys_series):
+        """
+        Given the `series` TimeSeries object, we interpolate the `series` values
+        onto the `keys_series` TimeSeries keys.
+        :param series:TimeSeries with values
+        :param keys_series:TimeSeries with keys
+        :return:TimeSeries
+        """
         if len(series) - 1 != len(keys_series):
             raise TimeGridError(
                 "The interpolated series must be of length of keys plus 1"

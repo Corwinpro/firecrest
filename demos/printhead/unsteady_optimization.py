@@ -281,7 +281,7 @@ small_grid = TimeSeries.from_dict(
 )
 
 surface_model = SurfaceModel(nondim_constants, kappa_t0=0.25)
-solver = OptimizationSolver(domain, Re=5.0e3, Pr=10.0, timer=timer, signal_window=2.0)
+solver = OptimizationSolver(domain, Re=5.0e3, Pr=10.0, timer=timer, signal_window=1.0)
 initial_state = (0.0, (0.0, 0.0), 0.0)
 
 coarse_space_control = [
@@ -386,6 +386,47 @@ fine_space_control = [
     0.003857146725632634,
     0.0032568677076993194,
 ]
+one_space_control = [
+    0.005324010468649279,
+    0.003343322647967684,
+    0.00016064736472172868,
+    -0.002609956815594884,
+    0.00016017495056383385,
+    -0.0017920392639235205,
+    -0.0011684353053945725,
+    -0.0011640435333961354,
+    -0.0003478163580602155,
+    0.002680230469332851,
+    0.0035283592996153594,
+    0.0012350678474811394,
+    0.0020440647579950525,
+    0.0030601016469968645,
+    -0.001300349273811132,
+    -0.0013562631408648453,
+    0.002429822124366182,
+    0.0011903783250840553,
+    -0.0004978743810532501,
+    0.00012618190506874136,
+    -0.0007177418693306068,
+    0.0008351849958615962,
+    0.0023076761486244936,
+    -0.0008946019301380705,
+    -0.0006792350052757791,
+    0.0031896064520691297,
+    0.0019994318287890004,
+    0.0011238524318151117,
+    0.0026527315266341666,
+    0.0017623738953415598,
+    -0.0011358134563953682,
+    -0.0010213713405194979,
+    -0.000925244092293188,
+    -0.0008996721045075374,
+    0.00044937109726455893,
+    -0.0014161497395480105,
+    0.00023472697596130617,
+    0.0030337916492754143,
+    0.0039864338178979535,
+]
 # coarse_basis = PiecewiseLinearBasis(
 #     np.array([float(key) for key in default_grid.keys()]), width=2.0
 # )
@@ -399,7 +440,7 @@ top_bound = solver.linear_basis.discretize(top_bound)[1:-1]
 low_bound = solver.linear_basis.discretize(low_bound)[1:-1]
 bnds = list(zip(low_bound, top_bound))
 x0 = solver.linear_basis.discretize(x0)[1:-1]
-# x0 = fine_space_control
+x0 = one_space_control
 
 run_taylor_test = False
 if run_taylor_test:
