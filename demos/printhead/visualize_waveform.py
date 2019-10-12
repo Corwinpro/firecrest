@@ -11,6 +11,15 @@ default_grid = TimeSeries.from_dict(
         for k in range(int(timer["T"] / Decimal(timer["dt"])) + 1)
     }
 )
+five_control = [
+    0.0012682707839538011,
+    0.0011420536132507367,
+    0.0011953767253928369,
+    0.0013219451301906874,
+    0.0011990719615676555,
+    0.0008732554807402981,
+    0.0013210959159414273,
+]
 one_space_control = [
     0.005324010468649279,
     0.003343322647967684,
@@ -158,9 +167,9 @@ fine_space_control = [
 
 final_energies = [4.7449879358677454e-05, 3.718615040954647e-05, 3.1202885561657123e-05]
 
-controls = [coarse_space_control, one_space_control, fine_space_control]
-windows = (2.0, 1.0, 0.5)
-colors = ["black", "gray", "silver"]
+controls = [five_control, coarse_space_control, one_space_control, fine_space_control]
+windows = (5.0, 2.0, 1.0, 0.5)
+colors = ["blue", "black", "gray", "silver"]
 
 for i in range(len(controls)):
     linear_basis = PiecewiseLinearBasis(
