@@ -278,6 +278,18 @@ class BaseTVAcousticWeakForm(ABC, BaseWeakForm):
             if stress_bc_type == "Neumann" or stress_bc_type == "Robin":
                 if stress_bc == "free":
                     stress = dolf.Constant((0.0,) * self.geometric_dimension)
+
+                    # stress_boundary_component += (
+                    #     dolf.Constant(-1.0e2)
+                    #     / dolf.CellDiameter(self.domain.mesh)
+                    #     * dolf.inner(
+                    #         dolf.dot(self.stress(pressure, velocity), self.domain.n),
+                    #         dolf.dot(
+                    #             self.stress(test_pressure, test_velocity), self.domain.n
+                    #         ),
+                    #     )
+                    #     * self.domain.ds((boundary.surface_index,))
+                    # )
                 elif stress_bc == "force":
                     stress = self._parse_dolf_expression(boundary.bcond[stress_bc])
                 elif stress_bc == "impedance":
