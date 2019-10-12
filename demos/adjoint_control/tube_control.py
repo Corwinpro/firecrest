@@ -46,13 +46,15 @@ control_points_2 = [[1.0e-16, length], [width, length - 1.0e-16]]
 control_points_3 = [[width, length - 1.0e-16], [width, 1.0e-16]]
 control_points_4 = [[width, 1.0e-16], [0.0, 0.0]]
 
-el_size = 0.0001
+el_size = 0.002
 
 boundary1 = LineElement(
     control_points_1, el_size=el_size, bcond={"slip": True, "adiabatic": True}
 )
 boundary2 = LineElement(
-    control_points_2, el_size=el_size, bcond={"inflow": (0.0, 0.0), "adiabatic": True}
+    control_points_2,
+    el_size=el_size / 50.0,
+    bcond={"inflow": (0.0, 0.0), "adiabatic": True},
 )
 boundary3 = LineElement(
     control_points_3, el_size=el_size, bcond={"slip": True, "adiabatic": True}
@@ -72,7 +74,7 @@ class OptimizationSolver(OptimizationMixin, UnsteadyTVAcousticSolver):
         boundary2.bcond["inflow"] = NormalInflow(
             TimeSeries.from_list([0.0] + list(control) + [0.0], default_grid)
         )
-        return next(self.solve_direct(initial_state, verbose=False)).last
+        return next(self.solve_direct(initial_state, verbose=False, plot_every=1)).last
 
     def _objective(self, state):
         return self.forms.energy(state)
@@ -80,7 +82,7 @@ class OptimizationSolver(OptimizationMixin, UnsteadyTVAcousticSolver):
     def _jacobian(self, state):
         state = (state[0], -state[1], state[2])
 
-        adjoint_history = next(self.solve_adjoint(state, verbose=False))
+        adjoint_history = next(self.solve_adjoint(state, verbose=False, plot_every=1))
         adjoint_stress = adjoint_history.apply(lambda x: self.forms.stress(x[0], x[1]))
         adjoint_stress_averaged = adjoint_stress.apply(
             lambda x: dolf.assemble(
