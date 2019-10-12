@@ -6,3 +6,4 @@ Mesh/
 *.pyc
 *.pvd
 *.vtu
+log.dat
