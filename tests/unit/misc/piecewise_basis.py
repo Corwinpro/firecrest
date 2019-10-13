@@ -4,7 +4,7 @@ import numpy as np
 from decimal import Decimal
 
 
-timer = {"dt": Decimal("0.01"), "T": Decimal("1.2")}
+timer = {"dt": Decimal("0.001"), "T": Decimal("2.0")}
 func = TimeSeries.from_dict(
     {
         Decimal(k) * Decimal(timer["dt"]): 10
@@ -19,7 +19,7 @@ func = TimeSeries.from_dict(
 x = np.array([float(key) for key in func.keys()])
 y = np.array([val for val in func.values()])
 
-basis = PiecewiseLinearBasis(x, 0.4)
+basis = PiecewiseLinearBasis(x, 0.05)
 plt.plot(x, y, "k")
 plt.plot(x, basis.project(y), "--", color="k")
 for b in basis.basis:

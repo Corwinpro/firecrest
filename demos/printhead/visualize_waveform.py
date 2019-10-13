@@ -1,10 +1,15 @@
 from firecrest.misc.time_storage import PiecewiseLinearBasis, TimeSeries
 import matplotlib.pyplot as plt
-from matplotlib import colors as mcolors
+from matplotlib import rc, gridspec
 import numpy as np
 from decimal import Decimal
 
-timer = {"dt": Decimal("0.01"), "T": Decimal("20.0")}
+rc("text", usetex=True)
+rc("font", size=16)
+fig = plt.figure()
+gs = gridspec.GridSpec(1, 2, width_ratios=[3, 1])
+
+timer = {"dt": Decimal("0.001"), "T": Decimal("2.0")}
 default_grid = TimeSeries.from_dict(
     {
         Decimal(k) * Decimal(timer["dt"]): 0
@@ -12,13 +17,13 @@ default_grid = TimeSeries.from_dict(
     }
 )
 five_control = [
-    0.0012682707839538011,
-    0.0011420536132507367,
-    0.0011953767253928369,
-    0.0013219451301906874,
-    0.0011990719615676555,
-    0.0008732554807402981,
-    0.0013210959159414273,
+    0.0011123052547144668,
+    0.001315189925303956,
+    0.0012544573603725047,
+    0.0009488639603679077,
+    0.0019277728046172226,
+    0.0001962439379964585,
+    0.0017446571664308007,
 ]
 one_space_control = [
     0.005324010468649279,
@@ -165,11 +170,20 @@ fine_space_control = [
 ]
 
 
-final_energies = [4.7449879358677454e-05, 3.718615040954647e-05, 3.1202885561657123e-05]
+zero_control_energy = 0.00011639014803052554
+final_energies = [
+    5.894198989254249e-05,
+    4.7449879358677454e-05,
+    3.718615040954647e-05,
+    3.1202885561657123e-05,
+]
 
 controls = [five_control, coarse_space_control, one_space_control, fine_space_control]
-windows = (5.0, 2.0, 1.0, 0.5)
+windows = (5.0e-1, 2.0e-1, 1.0e-1, 0.5e-1)
 colors = ["blue", "black", "gray", "silver"]
+
+ax_left = fig.add_subplot(gs[0])
+ax_left.grid(True)
 
 for i in range(len(controls)):
     linear_basis = PiecewiseLinearBasis(
@@ -178,6 +192,18 @@ for i in range(len(controls)):
     control = [0.0] + controls[i] + [0.0]
     y = linear_basis.extrapolate(control)
     x = linear_basis.space
-    plt.plot(x, y, "-", color=colors[i])
+    ax_left.plot(x, y, "-", color=colors[i])
+
+ax_right = fig.add_subplot(gs[1])
+ax_right.semilogx(windows, final_energies, "o-", color="k")
+ax_right.set_ylim(0.0, 15.0e-5)
+ax_right.set_xlim(0.25, max(windows) + 1)
+ax_right.ticklabel_format(style="sci", axis="y", scilimits=(0, 0))
+ax_right.yaxis.tick_right()
+ax_right.hlines(
+    zero_control_energy, xmin=-1, xmax=10, colors=["k"], linestyles="dashed"
+)
+ax_right.set_xticks(windows)
+ax_right.set_xticklabels(windows)
 
 plt.show()
