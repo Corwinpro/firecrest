@@ -7,7 +7,8 @@ from decimal import Decimal
 rc("text", usetex=True)
 rc("font", size=16)
 fig = plt.figure()
-gs = gridspec.GridSpec(1, 2, width_ratios=[3, 1])
+
+gs = gridspec.GridSpec(1, 2, width_ratios=[3, 2])
 
 timer = {"dt": Decimal("0.001"), "T": Decimal("2.0")}
 default_grid = TimeSeries.from_dict(
@@ -180,12 +181,10 @@ final_energies = [
 
 controls = [five_control, coarse_space_control, one_space_control, fine_space_control]
 windows = (5.0e-1, 2.0e-1, 1.0e-1, 0.5e-1)
-colors = ["blue", "black", "gray", "silver"]
-
+colors = ["k", "#707070", "#9F9F9F", "#B8B8B8"]
 ax_left = fig.add_subplot(gs[0])
-ax_left.grid(True)
 
-for i in range(len(controls)):
+for i in reversed(range(len(controls))):
     linear_basis = PiecewiseLinearBasis(
         np.array([float(key) for key in default_grid.keys()]), width=windows[i]
     )
@@ -194,10 +193,16 @@ for i in range(len(controls)):
     x = linear_basis.space
     ax_left.plot(x, y, "-", color=colors[i])
 
+ax_left.grid(True)
+
+
 ax_right = fig.add_subplot(gs[1])
-ax_right.semilogx(windows, final_energies, "o-", color="k")
+ax_right.semilogx(windows, final_energies, "-", color="k")
+for i in range(len(windows)):
+    ax_right.semilogx(windows[i], final_energies[i], "o", color=colors[i])
+
 ax_right.set_ylim(0.0, 15.0e-5)
-ax_right.set_xlim(0.25, max(windows) + 1)
+ax_right.set_xlim(0.04, max(windows) + 0.1)
 ax_right.ticklabel_format(style="sci", axis="y", scilimits=(0, 0))
 ax_right.yaxis.tick_right()
 ax_right.hlines(
