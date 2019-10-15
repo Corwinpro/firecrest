@@ -6,6 +6,8 @@ from decimal import Decimal
 
 rc("text", usetex=True)
 rc("font", size=16)
+# rc("text.latex", preamble=r"\usepackage{cmbright}")
+
 fig = plt.figure()
 
 gs = gridspec.GridSpec(1, 2, width_ratios=[3, 2])
@@ -209,6 +211,6 @@ ax_right.hlines(
     zero_control_energy, xmin=-1, xmax=10, colors=["k"], linestyles="dashed"
 )
 ax_right.set_xticks(windows)
-ax_right.set_xticklabels(windows)
+ax_right.set_xticklabels(["$%.2f$" % f for f in windows])
 
 plt.show()
