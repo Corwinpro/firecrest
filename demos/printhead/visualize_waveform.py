@@ -6,7 +6,6 @@ from decimal import Decimal
 
 rc("text", usetex=True)
 rc("font", size=16)
-# rc("text.latex", preamble=r"\usepackage{cmbright}")
 
 fig = plt.figure()
 
@@ -193,15 +192,19 @@ for i in reversed(range(len(controls))):
     control = [0.0] + controls[i] + [0.0]
     y = linear_basis.extrapolate(control)
     x = linear_basis.space
-    ax_left.plot(x, y, "-", color=colors[i])
+    ax_left.plot(x, y, "-", color=colors[i], label=f"$w = {windows[i]}$")
 
 ax_left.grid(True)
-
+plt.xlabel(r"time, $\mu$s")
+plt.ylabel(r"$\mathcal{U}(t)$")
+plt.legend()
 
 ax_right = fig.add_subplot(gs[1])
 ax_right.semilogx(windows, final_energies, "-", color="k")
 for i in range(len(windows)):
-    ax_right.semilogx(windows[i], final_energies[i], "o", color=colors[i])
+    ax_right.semilogx(
+        windows[i], final_energies[i], "o", color=colors[i], label=f"$w = {windows[i]}$"
+    )
 
 ax_right.set_ylim(0.0, 15.0e-5)
 ax_right.set_xlim(0.04, max(windows) + 0.1)
@@ -212,5 +215,9 @@ ax_right.hlines(
 )
 ax_right.set_xticks(windows)
 ax_right.set_xticklabels(["$%.2f$" % f for f in windows])
+ax_right.yaxis.set_label_position("right")
+plt.xlabel(r"basis width, $\mu$s")
+plt.ylabel("Final energy, $\mathcal{E}(T)$")
+plt.legend()
 
 plt.show()
