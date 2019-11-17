@@ -40,6 +40,8 @@ class BaseFunctionSpace:
             return dolf.FiniteElement(element_type, cell, space.order)
         elif space.dimension == "vector":
             dimension = cell.geometric_dimension()
+            if dimension == 1:
+                return dolf.FiniteElement(element_type, cell, space.order)
             return dolf.VectorElement(element_type, cell, space.order, dimension)
         elif space.dimension >= 2:
             return dolf.VectorElement(element_type, cell, space.order, space.dimension)

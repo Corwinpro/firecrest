@@ -154,6 +154,9 @@ class BaseTVAcousticWeakForm(ABC, BaseWeakForm):
         return temperature / dolf.Constant(self.dolf_constants.gamma - 1.0) - pressure
 
     def shear_stress(self, velocity):
+        if self.geometric_dimension == 1:
+            return dolf.Constant(4.0 / 3.0) * velocity.dx(0) / self.dolf_constants.Re
+
         i, j = ufl.indices(2)
         shear_stress = (
             velocity[i].dx(j)
@@ -167,6 +170,8 @@ class BaseTVAcousticWeakForm(ABC, BaseWeakForm):
         return dolf.as_tensor(shear_stress, (i, j))
 
     def stress(self, pressure, velocity):
+        if self.geometric_dimension == 1:
+            return self.shear_stress(velocity) - pressure
         return self.shear_stress(velocity) - pressure * self.identity_tensor
 
     def heat_flux(self, temperature):
@@ -205,11 +210,15 @@ class BaseTVAcousticWeakForm(ABC, BaseWeakForm):
 
         i, j = ufl.indices(2)
 
-        continuity_component = test_pressure * dolf.div(velocity)
-        momentum_component = dolf.inner(
-            dolf.as_tensor(test_velocity[i].dx(j), (i, j)),
-            self.stress(pressure, velocity),
-        )
+        if self.geometric_dimension == 1:
+            continuity_component = test_pressure * velocity.dx(0)
+            momentum_component = test_velocity.dx(0) * self.stress(pressure, velocity)
+        else:
+            continuity_component = test_pressure * dolf.div(velocity)
+            momentum_component = dolf.inner(
+                dolf.as_tensor(test_velocity[i].dx(j), (i, j)),
+                self.stress(pressure, velocity),
+            )
         energy_component = dolf.inner(
             dolf.grad(test_temperature), self.heat_flux(temperature)
         )
@@ -278,18 +287,6 @@ class BaseTVAcousticWeakForm(ABC, BaseWeakForm):
             if stress_bc_type == "Neumann" or stress_bc_type == "Robin":
                 if stress_bc == "free":
                     stress = dolf.Constant((0.0,) * self.geometric_dimension)
-
-                    # stress_boundary_component += (
-                    #     dolf.Constant(-1.0e2)
-                    #     / dolf.CellDiameter(self.domain.mesh)
-                    #     * dolf.inner(
-                    #         dolf.dot(self.stress(pressure, velocity), self.domain.n),
-                    #         dolf.dot(
-                    #             self.stress(test_pressure, test_velocity), self.domain.n
-                    #         ),
-                    #     )
-                    #     * self.domain.ds((boundary.surface_index,))
-                    # )
                 elif stress_bc == "force":
                     stress = self._parse_dolf_expression(boundary.bcond[stress_bc])
                 elif stress_bc == "impedance":
@@ -408,7 +405,10 @@ class BaseTVAcousticWeakForm(ABC, BaseWeakForm):
         """
 
         if bc_type == "noslip" or (bc_type == "inflow" and is_linearised):
-            value = dolf.Constant((0.0,) * self.geometric_dimension)
+            if self.geometric_dimension == 1:
+                value = dolf.Constant(0.0)
+            else:
+                value = dolf.Constant((0.0,) * self.geometric_dimension)
         elif bc_type == "isothermal" or (bc_type == "temperature" and is_linearised):
             value = dolf.Constant(0.0)
         elif bc_type == "inflow" or bc_type == "temperature":
@@ -417,7 +417,6 @@ class BaseTVAcousticWeakForm(ABC, BaseWeakForm):
             raise TypeError(f"Invalid boundary condition type for Dirichlet condition.")
 
         function_space = self.bc_to_fs[bc_type]
-
         return [
             dolf.DirichletBC(
                 function_space,
