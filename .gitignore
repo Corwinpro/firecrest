@@ -7,3 +7,4 @@ firecrest.egg-info/
 *.pvd
 *.vtu
 log.dat
+/Mesh/
