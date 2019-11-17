@@ -40,16 +40,12 @@ solver = EigenvalueTVAcousticSolver(
 solver.solve()
 
 spectrum = []
-mode_imag = dolf.File("long_mode_imag.pvd")
-mode_real = dolf.File("long_mode_real.pvd")
+
 
 for i in range(int(solver.nof_modes_converged / 2)):
     ev, real_mode, imag_mode = solver.extract_solution(i)
     spectrum.append(ev)
-    imag_mode[1].rename("uI", "uI")
-    real_mode[1].rename("uR", "uR")
-    mode_real << real_mode[1], i
-    mode_imag << imag_mode[1], i
+    solver.output_field(real_mode + imag_mode)
 
 
 plt.plot([ev.real for ev in spectrum], [ev.imag for ev in spectrum], "o")
@@ -72,5 +68,3 @@ plt.plot(
 )
 
 plt.show()
-# file << real_mode[1], 0
-# file << imag_mode[1], 1

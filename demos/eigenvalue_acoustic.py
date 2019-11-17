@@ -8,10 +8,10 @@ z = 1.0 + 0.0j
 control_points_1 = [[0.0, 1.0], [0.0, 0.0], [1.0, 0.0]]
 control_points_2 = [[1.0, 0.0], [1.0, 1.0], [0.0, 1.0]]
 boundary1 = LineElement(
-    control_points_1, el_size=0.01, bcond={"noslip": True, "isothermal": True}
+    control_points_1, el_size=0.02, bcond={"noslip": True, "isothermal": True}
 )
 boundary2 = LineElement(
-    control_points_2, el_size=0.01, bcond={"normal_impedance": z, "adiabatic": True}
+    control_points_2, el_size=0.02, bcond={"impedance": z, "adiabatic": True}
 )
 domain_boundaries = (boundary1, boundary2)
 domain = SimpleDomain(domain_boundaries)
