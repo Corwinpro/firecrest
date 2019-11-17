@@ -235,7 +235,7 @@ class PiecewiseLinearBasis:
         else:
             position_offsets = 0.0
         position = self.space[0] + position_offsets
-        while position < self.space[-1]:
+        while abs(position - self.space[-1]) > 1.0e-12:
             self.basis.append(self._basis_function(position))
             position += self.width / 2.0
         if not self._is_reduced_basis:
