@@ -7,9 +7,9 @@ from decimal import Decimal
 rc("text", usetex=True)
 rc("font", size=16)
 
-fig = plt.figure(figsize=(12, 6))
+fig = plt.figure(figsize=(16, 10))
 
-gs = gridspec.GridSpec(1, 2, width_ratios=[4, 3])
+gs = fig.add_gridspec(ncols=4, nrows=4, width_ratios=[3, 3, 3, 0.01])
 
 timer = {"dt": Decimal("0.001"), "T": Decimal("2.0")}
 default_grid = TimeSeries.from_dict(
@@ -182,17 +182,19 @@ final_energies = [
 
 controls = [five_control, coarse_space_control, one_space_control, fine_space_control]
 windows = (5.0e-1, 2.0e-1, 1.0e-1, 0.5e-1)
-colors = ["k", "#707070", "#9F9F9F", "#B8B8B8"]
-ax_left = fig.add_subplot(gs[0])
+# colors = ["k", "#707070", "#9F9F9F", "#B8B8B8"]
+colors = ["#283D3B", "#197278", "#7B435B", "#C2847A"]
+# ax_left = fig.add_subplot(gs[0])
 
-for i in reversed(range(len(controls))):
+for i in range(len(controls)):
     linear_basis = PiecewiseLinearBasis(
         np.array([float(key) for key in default_grid.keys()]), width=windows[i]
     )
     control = [0.0] + controls[i] + [0.0]
     y = linear_basis.extrapolate(control)
     x = linear_basis.space
-    ax_left.plot(
+    ax = fig.add_subplot(gs[i, 1:-1])
+    ax.plot(
         x[:: int((len(y) - 1) / (len(control) - 1))],
         y[:: int((len(y) - 1) / (len(control) - 1))],
         "-o",
@@ -201,22 +203,30 @@ for i in reversed(range(len(controls))):
         ms=4,
     )
 
-ax_left.grid(True)
-plt.xlabel(r"$\mathrm{time}, \mu$s")
-plt.ylabel(r"$\mathcal{U}(t)$")
-plt.legend()
+    ax.grid(True)
+    ax.yaxis.tick_right()
 
-ax_right = fig.add_subplot(gs[1])
+ax.xaxis.label.set_size(22)
+plt.xlabel(r"$\mathrm{time}, \mu$s")
+# plt.ylabel(r"$\mathcal{U}(t)$")
+# plt.legend()
+
+ax_right = fig.add_subplot(gs[:, 0])
 ax_right.semilogx(windows, final_energies, "-", color="k")
 for i in range(len(windows)):
     ax_right.semilogx(
-        windows[i], final_energies[i], "o", color=colors[i], label=f"$w = {windows[i]}$"
+        windows[i],
+        final_energies[i],
+        "o",
+        color=colors[i],
+        label=f"$w = {windows[i]}$",
+        ms=10,
     )
 
-ax_right.set_ylim(0.0, 17.0e-5)
+ax_right.set_ylim(0.0, 14.0e-5)
 ax_right.set_xlim(0.04, max(windows) + 0.1)
 ax_right.ticklabel_format(style="sci", axis="y", scilimits=(0, 0))
-ax_right.yaxis.tick_right()
+# ax_right.yaxis.tick_right()
 ax_right.hlines(
     zero_control_energy,
     xmin=-1,
@@ -227,10 +237,26 @@ ax_right.hlines(
 )
 ax_right.set_xticks(windows)
 ax_right.set_xticklabels(["$%.2f$" % f for f in windows])
-ax_right.yaxis.set_label_position("right")
+# ax_right.yaxis.set_label_position("right")
+ax_right.yaxis.label.set_size(22)
+ax_right.xaxis.label.set_size(22)
 plt.xlabel(r"$\mathrm{Basis \ width}, \mu$s")
 plt.ylabel(r"$\mathrm{Final \ energy}, \mathcal{E}(T)$")
-plt.legend(frameon=False, ncol=2)
+plt.legend(frameon=False, ncol=2, loc=4)
 
+ax_invis = fig.add_subplot(gs[:, -1])
+# make xaxis invisibel
+ax_invis.xaxis.set_visible(False)
+# make spines (the box) invisible
+plt.setp(ax_invis.spines.values(), visible=False)
+# remove ticks and labels for the left axis
+ax_invis.tick_params(left=False, labelleft=False)
+# remove background patch (only needed for non-white background)
+ax_invis.patch.set_visible(False)
+ax_invis.yaxis.set_label_position("right")
+ax_invis.yaxis.label.set_size(22)
+plt.ylabel(r"$\mathcal{U}(t)$")
+
+fig.tight_layout()
 plt.savefig("waveforms_different_w.eps", bbox_inch="tight")
 plt.show()
