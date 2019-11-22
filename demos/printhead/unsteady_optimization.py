@@ -155,6 +155,7 @@ class OptimizationSolver(OptimizationMixin, UnsteadyTVAcousticSolver):
         self.linear_basis = PiecewiseLinearBasis(
             np.array([float(key) for key in default_grid.keys()]),
             width=kwargs.get("signal_window", 2.0),
+            reduced_basis=True,
         )
 
     def flow_rate(self, state):
@@ -164,7 +165,9 @@ class OptimizationSolver(OptimizationMixin, UnsteadyTVAcousticSolver):
         )
 
     def _objective_state(self, control):
-        restored_control = self.linear_basis.extrapolate([0.0] + list(control) + [0.0])
+        # restored_control = self.linear_basis.extrapolate([0.0] + list(control) + [0.0])
+        restored_control = self.linear_basis.extrapolate(list(control))
+
         boundary4.bcond["inflow"] = NormalInflow(
             TimeSeries.from_list(restored_control, default_grid)
         )
@@ -174,27 +177,27 @@ class OptimizationSolver(OptimizationMixin, UnsteadyTVAcousticSolver):
 
         _old_flow_rate = 0
         for state in self.solve_direct(
-            initial_state, verbose=False, yield_state=True, plot_every=10
+            initial_state, verbose=False, yield_state=True, plot_every=1000
         ):
             if isinstance(state, TimeSeries):
                 direct_history = state
                 break
 
-            with open("energy.dat", "a") as file:
-                _str = (
-                    str(self.forms.energy(state))
-                    + " "
-                    + str(surface_model.surface_energy())
-                )
-                file.write(_str)
-                file.write("\n")
+            # with open("energy.dat", "a") as file:
+            #     _str = (
+            #         str(self.forms.energy(state))
+            #         + " "
+            #         + str(surface_model.surface_energy())
+            #     )
+            #     file.write(_str)
+            #     file.write("\n")
 
             _new_flow_rate = self.flow_rate(state)
             surface_model.update_curvature(
                 0.5 * (_new_flow_rate + _old_flow_rate), self._dt
             )
             _old_flow_rate = _new_flow_rate
-        exit()
+        # exit()
 
         with open("log.dat", "a") as file:
             file.write(
@@ -261,8 +264,8 @@ class OptimizationSolver(OptimizationMixin, UnsteadyTVAcousticSolver):
         du[timer["T"]] = 0.0
 
         discrete_grad = self.linear_basis.discretize(du.values())
-        discrete_grad[0] = 0.0
-        discrete_grad[-1] = 0.0
+        # discrete_grad[0] = 0.0
+        # discrete_grad[-1] = 0.0
 
         print("gradient norm: ", (adjoint_stress_averaged * du).integrate())
 
@@ -276,7 +279,7 @@ class OptimizationSolver(OptimizationMixin, UnsteadyTVAcousticSolver):
             ).integrate(),
         )
 
-        return discrete_grad[1:-1]
+        return discrete_grad  # [1:-1]
 
 
 timer = {"dt": Decimal("0.01"), "T": Decimal("20.0")}
@@ -294,7 +297,7 @@ small_grid = TimeSeries.from_dict(
 )
 
 surface_model = SurfaceModel(nondim_constants, kappa_t0=0.25)
-solver = OptimizationSolver(domain, Re=5.0e3, Pr=10.0, timer=timer, signal_window=2.0)
+solver = OptimizationSolver(domain, Re=5.0e3, Pr=10.0, timer=timer, signal_window=5.0)
 initial_state = (0.0, (0.0, 0.0), 0.0)
 
 coarse_space_control = [
@@ -449,10 +452,10 @@ x0 = [0.0 for _ in range(len(default_grid))]
 top_bound = [0.015 for i in range(len(x0))]
 low_bound = [-0.015 for i in range(len(x0))]
 # The first and last elements of the control are zero by default
-top_bound = solver.linear_basis.discretize(top_bound)[1:-1]
-low_bound = solver.linear_basis.discretize(low_bound)[1:-1]
+top_bound = solver.linear_basis.discretize(top_bound)  # [1:-1]
+low_bound = solver.linear_basis.discretize(low_bound)  # [1:-1]
 bnds = list(zip(low_bound, top_bound))
-x0 = solver.linear_basis.discretize(x0)[1:-1]
+x0 = solver.linear_basis.discretize(x0)  # [1:-1]
 # x0 = coarse_space_control
 
 run_taylor_test = False
