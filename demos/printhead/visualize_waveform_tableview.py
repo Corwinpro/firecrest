@@ -19,13 +19,13 @@ default_grid = TimeSeries.from_dict(
     }
 )
 five_control = [
-    0.0011123052547144668,
-    0.001315189925303956,
-    0.0012544573603725047,
-    0.0009488639603679077,
-    0.0019277728046172226,
-    0.0001962439379964585,
-    0.0017446571664308007,
+    0.0016415311773756553,
+    0.0002877549134009383,
+    0.002814305524765201,
+    -0.000577860701974489,
+    0.0032713694963792134,
+    -0.0006372529768249147,
+    0.0021834503389561635,
 ]
 one_space_control = [
     0.005324010468649279,
@@ -174,7 +174,7 @@ fine_space_control = [
 
 zero_control_energy = 0.00011639014803052554
 final_energies = [
-    5.894198989254249e-05,
+    5.808255688313363e-05,
     4.7449879358677454e-05,
     3.718615040954647e-05,
     3.1202885561657123e-05,
@@ -207,7 +207,7 @@ for i in range(len(controls)):
     ax.yaxis.tick_right()
 
 ax.xaxis.label.set_size(22)
-plt.xlabel(r"$\mathrm{time}, \mu$s")
+plt.xlabel(r"$\mathrm{time}, \mu \mathrm{s}$")
 # plt.ylabel(r"$\mathcal{U}(t)$")
 # plt.legend()
 
@@ -240,7 +240,7 @@ ax_right.set_xticklabels(["$%.2f$" % f for f in windows])
 # ax_right.yaxis.set_label_position("right")
 ax_right.yaxis.label.set_size(22)
 ax_right.xaxis.label.set_size(22)
-plt.xlabel(r"$\mathrm{Basis \ width}, \mu$s")
+plt.xlabel(r"$\mathrm{Basis \ width}, \mu \mathrm{s}$")
 plt.ylabel(r"$\mathrm{Final \ energy}, \mathcal{E}(T)$")
 plt.legend(frameon=False, ncol=2, loc=4)
 
