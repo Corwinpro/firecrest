@@ -9,7 +9,7 @@ from firecrest.misc.time_storage import TimeSeries, PiecewiseLinearBasis
 from firecrest.misc.optimization_mixin import OptimizationMixin
 import numpy as np
 
-elsize = 0.08
+elsize = 0.05
 height = 0.7
 length = 9.2
 actuator_length = 4.0
@@ -177,7 +177,7 @@ class OptimizationSolver(OptimizationMixin, UnsteadyTVAcousticSolver):
 
         _old_flow_rate = 0
         for state in self.solve_direct(
-            initial_state, verbose=False, yield_state=True, plot_every=1000
+            initial_state, verbose=False, yield_state=True, plot_every=10
         ):
             if isinstance(state, TimeSeries):
                 direct_history = state
@@ -197,7 +197,7 @@ class OptimizationSolver(OptimizationMixin, UnsteadyTVAcousticSolver):
                 0.5 * (_new_flow_rate + _old_flow_rate), self._dt
             )
             _old_flow_rate = _new_flow_rate
-        # exit()
+        exit()
 
         with open("log.dat", "a") as file:
             file.write(
@@ -282,7 +282,7 @@ class OptimizationSolver(OptimizationMixin, UnsteadyTVAcousticSolver):
         return discrete_grad  # [1:-1]
 
 
-timer = {"dt": Decimal("0.01"), "T": Decimal("20.0")}
+timer = {"dt": Decimal("0.005"), "T": Decimal("20.0")}
 default_grid = TimeSeries.from_dict(
     {
         Decimal(k) * Decimal(timer["dt"]): 0
@@ -443,6 +443,15 @@ one_space_control = [
     0.0030337916492754143,
     0.0039864338178979535,
 ]
+five_control = [
+    0.0016415311773756553,
+    0.0002877549134009383,
+    0.002814305524765201,
+    -0.000577860701974489,
+    0.0032713694963792134,
+    -0.0006372529768249147,
+    0.0021834503389561635,
+]
 # coarse_basis = PiecewiseLinearBasis(
 #     np.array([float(key) for key in default_grid.keys()]), width=2.0
 # )
@@ -456,7 +465,7 @@ top_bound = solver.linear_basis.discretize(top_bound)  # [1:-1]
 low_bound = solver.linear_basis.discretize(low_bound)  # [1:-1]
 bnds = list(zip(low_bound, top_bound))
 x0 = solver.linear_basis.discretize(x0)  # [1:-1]
-# x0 = coarse_space_control
+x0 = five_control
 
 run_taylor_test = False
 if run_taylor_test:
