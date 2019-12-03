@@ -9,7 +9,7 @@ from firecrest.misc.time_storage import TimeSeries, PiecewiseLinearBasis
 from firecrest.misc.optimization_mixin import OptimizationMixin
 import numpy as np
 
-elsize = 0.05
+elsize = 0.08
 height = 0.7
 length = 9.2
 actuator_length = 4.0
@@ -177,26 +177,27 @@ class OptimizationSolver(OptimizationMixin, UnsteadyTVAcousticSolver):
 
         _old_flow_rate = 0
         for state in self.solve_direct(
-            initial_state, verbose=False, yield_state=True, plot_every=10
+            initial_state, verbose=False, yield_state=True, plot_every=1000
         ):
             if isinstance(state, TimeSeries):
                 direct_history = state
                 break
 
-            # with open("energy.dat", "a") as file:
-            #     _str = (
-            #         str(self.forms.energy(state))
-            #         + " "
-            #         + str(surface_model.surface_energy())
-            #     )
-            #     file.write(_str)
-            #     file.write("\n")
+            with open("energy_fine_control.dat", "a") as file:
+                _str = (
+                    str(self.forms.energy(state))
+                    + " "
+                    + str(surface_model.surface_energy())
+                )
+                file.write(_str)
+                file.write("\n")
 
             _new_flow_rate = self.flow_rate(state)
             surface_model.update_curvature(
                 0.5 * (_new_flow_rate + _old_flow_rate), self._dt
             )
             _old_flow_rate = _new_flow_rate
+        self._objective((direct_history.last, surface_model))
         exit()
 
         with open("log.dat", "a") as file:
@@ -282,7 +283,7 @@ class OptimizationSolver(OptimizationMixin, UnsteadyTVAcousticSolver):
         return discrete_grad  # [1:-1]
 
 
-timer = {"dt": Decimal("0.005"), "T": Decimal("20.0")}
+timer = {"dt": Decimal("0.01"), "T": Decimal("20.0")}
 default_grid = TimeSeries.from_dict(
     {
         Decimal(k) * Decimal(timer["dt"]): 0
@@ -297,7 +298,7 @@ small_grid = TimeSeries.from_dict(
 )
 
 surface_model = SurfaceModel(nondim_constants, kappa_t0=0.25)
-solver = OptimizationSolver(domain, Re=5.0e3, Pr=10.0, timer=timer, signal_window=5.0)
+solver = OptimizationSolver(domain, Re=5.0e3, Pr=10.0, timer=timer, signal_window=0.5)
 initial_state = (0.0, (0.0, 0.0), 0.0)
 
 coarse_space_control = [
@@ -452,6 +453,48 @@ five_control = [
     -0.0006372529768249147,
     0.0021834503389561635,
 ]
+projected_fine = [
+    0.007909038157768108,
+    0.0019348361403559756,
+    -0.004509369049995181,
+    -0.0005225391914073145,
+    0.002921588064437401,
+    -0.0026994137737284913,
+    -0.002471272846844872,
+    -0.001686302558975226,
+    8.693224649601913e-05,
+    0.00541177828298831,
+    0.0031339877106502417,
+    -0.0022713854658930823,
+    0.0013579968501991739,
+    0.006526439858421658,
+    -0.0009385448603905156,
+    -0.0018948491620676912,
+    0.0029380809180063754,
+    0.00015798916145636952,
+    -0.0008449447629083128,
+    0.001441802157914634,
+    -0.0013543590199899301,
+    0.00031414320256365966,
+    0.0028635486347110377,
+    -0.0020142682524617807,
+    -7.433538409288133e-05,
+    0.006108909859344069,
+    0.0010161168925907466,
+    -0.00170258007126906,
+    0.00285978984679998,
+    0.003862368235479976,
+    -0.0005988998255681638,
+    -0.001176693858382816,
+    -0.002440533142376165,
+    -0.0015210497939261043,
+    0.0026590418162944825,
+    -0.0007861292246202007,
+    -0.0025095597284796054,
+    0.0021727635733295747,
+    0.0062196088528894,
+]
+
 # coarse_basis = PiecewiseLinearBasis(
 #     np.array([float(key) for key in default_grid.keys()]), width=2.0
 # )
@@ -465,7 +508,7 @@ top_bound = solver.linear_basis.discretize(top_bound)  # [1:-1]
 low_bound = solver.linear_basis.discretize(low_bound)  # [1:-1]
 bnds = list(zip(low_bound, top_bound))
 x0 = solver.linear_basis.discretize(x0)  # [1:-1]
-x0 = five_control
+x0 = fine_space_control
 
 run_taylor_test = False
 if run_taylor_test:
