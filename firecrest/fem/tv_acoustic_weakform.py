@@ -174,6 +174,22 @@ class BaseTVAcousticWeakForm(ABC, BaseWeakForm):
             return self.shear_stress(velocity) - pressure
         return self.shear_stress(velocity) - pressure * self.identity_tensor
 
+    def kinetic_energy_flux(self, state, direction, boundary):
+        """
+        Calculates the kinetic energy flux u_i * sigma_ij * n_j through the
+        `boundary`
+        :param state: self state
+        :param direction: flux direction n_j
+        :param boundary: target surface
+        :return: float energy flux
+        """
+        pressure, velocity, temperature = state
+        flux = dolf.inner(
+            velocity,
+            dolf.dot(dolf.as_vector(direction), self.stress(pressure, velocity)),
+        )
+        return dolf.assemble(flux * self.domain.ds((boundary.surface_index,)))
+
     def heat_flux(self, temperature):
         return (
             dolf.grad(temperature)

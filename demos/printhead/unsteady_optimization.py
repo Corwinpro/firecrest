@@ -188,6 +188,8 @@ class OptimizationSolver(OptimizationMixin, UnsteadyTVAcousticSolver):
                     str(self.forms.energy(state))
                     + " "
                     + str(surface_model.surface_energy())
+                    + " "
+                    + str(self.forms.kinetic_energy_flux(state, (0.0, 1.0), boundary4))
                 )
                 file.write(_str)
                 file.write("\n")
