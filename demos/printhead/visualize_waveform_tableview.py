@@ -1,6 +1,6 @@
 from firecrest.misc.time_storage import PiecewiseLinearBasis, TimeSeries
 import matplotlib.pyplot as plt
-from matplotlib import rc, gridspec
+from matplotlib import rc
 import numpy as np
 from decimal import Decimal
 
@@ -9,9 +9,9 @@ rc("font", size=16)
 
 fig = plt.figure(figsize=(16, 10))
 
-gs = fig.add_gridspec(ncols=4, nrows=4, width_ratios=[3, 3, 3, 0.01])
+gs = fig.add_gridspec(ncols=4, nrows=4, width_ratios=[3.3, 3, 3, 0.01])
 
-timer = {"dt": Decimal("0.001"), "T": Decimal("2.0")}
+timer = {"dt": Decimal("0.01"), "T": Decimal("20.0")}
 default_grid = TimeSeries.from_dict(
     {
         Decimal(k) * Decimal(timer["dt"]): 0
@@ -181,7 +181,7 @@ final_energies = [
 ]
 
 controls = [five_control, coarse_space_control, one_space_control, fine_space_control]
-windows = (5.0e-1, 2.0e-1, 1.0e-1, 0.5e-1)
+windows = (5.0e-0, 2.0e-0, 1.0e-0, 0.5e-0)
 # colors = ["k", "#707070", "#9F9F9F", "#B8B8B8"]
 colors = ["#283D3B", "#197278", "#7B435B", "#C2847A"]
 # ax_left = fig.add_subplot(gs[0])
@@ -192,7 +192,7 @@ for i in range(len(controls)):
     )
     control = [0.0] + controls[i] + [0.0]
     y = linear_basis.extrapolate(control)
-    x = linear_basis.space
+    x = linear_basis.space / 10
     ax = fig.add_subplot(gs[i, 1:-1])
     ax.plot(
         x[:: int((len(y) - 1) / (len(control) - 1))],
@@ -212,19 +212,19 @@ plt.xlabel(r"$\mathrm{time}, \mu \mathrm{s}$")
 # plt.legend()
 
 ax_right = fig.add_subplot(gs[:, 0])
-ax_right.semilogx(windows, final_energies, "-", color="k")
+ax_right.semilogx([w / 10 for w in windows], final_energies, "-", color="k")
 for i in range(len(windows)):
     ax_right.semilogx(
-        windows[i],
+        windows[i] / 10,
         final_energies[i],
         "o",
         color=colors[i],
-        label=f"$w = {windows[i]}$",
+        label=f"$w = {windows[i]/10}$",
         ms=10,
     )
 
 ax_right.set_ylim(0.0, 14.0e-5)
-ax_right.set_xlim(0.04, max(windows) + 0.1)
+ax_right.set_xlim(0.04, 0.6)  # max(windows) / 10 + 0.1
 ax_right.ticklabel_format(style="sci", axis="y", scilimits=(0, 0))
 # ax_right.yaxis.tick_right()
 ax_right.hlines(
@@ -235,17 +235,19 @@ ax_right.hlines(
     linestyles="dashed",
     label=r"$\mathrm{No \ control}$",
 )
-ax_right.set_xticks(windows)
-ax_right.set_xticklabels(["$%.2f$" % f for f in windows])
+ax_right.set_xticks([w / 10 for w in windows])
+ax_right.set_xticklabels(["$%.2f$" % (f / 10) for f in windows])
 # ax_right.yaxis.set_label_position("right")
 ax_right.yaxis.label.set_size(22)
 ax_right.xaxis.label.set_size(22)
+
+
 plt.xlabel(r"$\mathrm{Basis \ width}, \mu \mathrm{s}$")
 plt.ylabel(r"$\mathrm{Final \ energy}, \mathcal{E}(T)$")
 plt.legend(frameon=False, ncol=2, loc=4)
 
 ax_invis = fig.add_subplot(gs[:, -1])
-# make xaxis invisibel
+# make xaxis invisible
 ax_invis.xaxis.set_visible(False)
 # make spines (the box) invisible
 plt.setp(ax_invis.spines.values(), visible=False)

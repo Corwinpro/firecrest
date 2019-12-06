@@ -7,8 +7,7 @@ from decimal import Decimal
 rc("text", usetex=True)
 rc("font", size=16)
 
-fig = plt.figure(figsize=(6, 8))
-gs = fig.add_gridspec(ncols=1, nrows=2)  # , width_ratios=[1, 0.05, 1])
+fig = plt.figure(figsize=(12, 4))
 
 timer = {"dt": Decimal("0.001"), "T": Decimal("2.0")}
 default_grid = TimeSeries.from_dict(
@@ -17,36 +16,6 @@ default_grid = TimeSeries.from_dict(
         for k in range(int(timer["T"] / Decimal(timer["dt"])) + 1)
     }
 )
-five_control = [
-    0.0016415311773756553,
-    0.0002877549134009383,
-    0.002814305524765201,
-    -0.000577860701974489,
-    0.0032713694963792134,
-    -0.0006372529768249147,
-    0.0021834503389561635,
-]
-coarse_space_control = [
-    0.00311044784454318,
-    0.0004090274154494449,
-    -0.000885990885988714,
-    -0.0008301931565113494,
-    0.0006138605251909666,
-    0.003079715517723568,
-    0.002130128882878145,
-    0.00031286018106521223,
-    0.0004994208641695934,
-    0.00023821240779299953,
-    0.0005565306968499129,
-    7.294598827090244e-05,
-    0.0023074793636292004,
-    0.0028340049208040842,
-    0.0002856455582957845,
-    -0.000994241555623156,
-    -0.000504382940868351,
-    0.0005828007281855165,
-    0.0029586014808884215,
-]
 fine_space_control = [
     0.006123724356957945,
     0.004864424218755868,
@@ -128,59 +97,80 @@ fine_space_control = [
     0.004149001282978173,
     0.0034370137449727723,
 ]
+one_space_control = [
+    0.005324010468649279,
+    0.003343322647967684,
+    0.00016064736472172868,
+    -0.002609956815594884,
+    0.00016017495056383385,
+    -0.0017920392639235205,
+    -0.0011684353053945725,
+    -0.0011640435333961354,
+    -0.0003478163580602155,
+    0.002680230469332851,
+    0.0035283592996153594,
+    0.0012350678474811394,
+    0.0020440647579950525,
+    0.0030601016469968645,
+    -0.001300349273811132,
+    -0.0013562631408648453,
+    0.002429822124366182,
+    0.0011903783250840553,
+    -0.0004978743810532501,
+    0.00012618190506874136,
+    -0.0007177418693306068,
+    0.0008351849958615962,
+    0.0023076761486244936,
+    -0.0008946019301380705,
+    -0.0006792350052757791,
+    0.0031896064520691297,
+    0.0019994318287890004,
+    0.0011238524318151117,
+    0.0026527315266341666,
+    0.0017623738953415598,
+    -0.0011358134563953682,
+    -0.0010213713405194979,
+    -0.000925244092293188,
+    -0.0008996721045075374,
+    0.00044937109726455893,
+    -0.0014161497395480105,
+    0.00023472697596130617,
+    0.0030337916492754143,
+    0.0039864338178979535,
+]
 linear_basis = PiecewiseLinearBasis(
-    np.array([float(key) for key in default_grid.keys()]), width=0.05
+    np.array([float(key) for key in default_grid.keys()]), width=0.1
 )
-control = [0.0] + fine_space_control + [0.0]
+control = [0.0] + one_space_control + [0.0]
 y = linear_basis.extrapolate(control)
 x = linear_basis.space
-files = [
-    "demos/printhead/energy_no_control.dat",
-    "demos/printhead/energy_coarse_space_control.dat",
-    "demos/printhead/energy_one_control.dat",
-    "demos/printhead/energy_fine_control.dat",
-]
-linestyles = ["-", "-.", ":", "--"]
-windows = [r"$\mathrm{No \ control}$", 0.5, 0.1, 0.05]
-ax = fig.add_subplot(gs[0, ::])
+
+ax = fig.add_subplot(111)
 ax.ticklabel_format(style="sci", axis="y", scilimits=(0, 0))
-# plt.xlabel(r"$\mathrm{time}, \mu \mathrm{s}$")
-plt.ylabel(r"$\epsilon^{-1}\tilde{E}_{\mathrm{free}}$")
-ax.set_ylim(-1.0e-5, 3.7e-4)
-ax.grid(True)
-ax.set_xticklabels([])
-
-
-for i, file in enumerate(files):
-    with open(file) as f:
-        data = [x.split() for x in f.read().splitlines()]
-        data = [[float(val) for val in line] for line in data]
-        ax.plot(
-            x[:-1],
-            [el[1] for el in data],
-            linestyles[i],
-            color="k",
-            label=(f"$w = {windows[i]}$" if i > 0 else windows[0]),
-        )
-plt.legend(frameon=True, ncol=2, loc=1)
-
-ax = fig.add_subplot(gs[1, ::])
-ax.ticklabel_format(style="sci", axis="y", scilimits=(0, 0))
-ax.set_ylim(-1.0e-5, 3.7e-4)
-plt.xlabel(r"$\mathrm{time}, \mu \mathrm{s}$")
-plt.ylabel(r"$\hat{\mathcal{E}}_{\mathrm{ac}}$")
+ax.set_ylim(-1.2e-2, 2.0e-2)
+ax.plot(
+    x[:: int((len(y) - 1) / (len(control) - 1))],
+    y[:: int((len(y) - 1) / (len(control) - 1))] / 10 ** 0.5,
+    "-o",
+    ms=4,
+)
 plt.grid(True)
 
-for i, file in enumerate(files):
-    with open(file) as f:
-        data = [x.split() for x in f.read().splitlines()]
-        data = [[float(val) for val in line] for line in data]
-        ax.plot(x[:-1], [el[0] for el in data], linestyles[i], color="k")
-# plt.plot(
-#     x[:: int((len(y) - 1) / (len(control) - 1))],
-#     y[:: int((len(y) - 1) / (len(control) - 1))] / 250,
-#     "-o",
-#     ms=4,
-# )
+file = "demos/printhead/energy_fine_control.dat"
+file = "demos/printhead/energy_one_control.dat"
+
+ax2 = ax.twinx()
+ax2.ticklabel_format(style="sci", axis="y", scilimits=(0, 0))
+ax2.set_ylim(-6.0e-3, 1.0e-2)
+with open(file) as f:
+    data = [x.split() for x in f.read().splitlines()]
+    data = np.array([[float(val) for val in line] for line in data])
+    ax2.plot(
+        x[1:-1],
+        ((data[1:, 0] - data[:-1, 0]) + (data[1:, 1] - data[:-1, 1])) / 0.001,
+        color="k",
+    )
+    ax2.plot(x[1:-1], ((data[1:, 0] - data[:-1, 0])) / 0.001, color="r")
+
 fig.tight_layout()
 plt.show()
