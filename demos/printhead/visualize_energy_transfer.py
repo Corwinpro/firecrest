@@ -3,11 +3,12 @@ import matplotlib.pyplot as plt
 from matplotlib import rc
 import numpy as np
 from decimal import Decimal
+import scipy.stats as stats
 
 rc("text", usetex=True)
 rc("font", size=16)
 
-fig = plt.figure(figsize=(12, 4))
+fig = plt.figure(figsize=(15, 4))
 
 timer = {"dt": Decimal("0.001"), "T": Decimal("2.0")}
 default_grid = TimeSeries.from_dict(
@@ -138,10 +139,11 @@ one_space_control = [
     0.0030337916492754143,
     0.0039864338178979535,
 ]
+
 linear_basis = PiecewiseLinearBasis(
-    np.array([float(key) for key in default_grid.keys()]), width=0.1
+    np.array([float(key) for key in default_grid.keys()]), width=0.05
 )
-control = [0.0] + one_space_control + [0.0]
+control = [0.0] + fine_space_control + [0.0]
 y = linear_basis.extrapolate(control)
 x = linear_basis.space
 
@@ -153,24 +155,48 @@ ax.plot(
     y[:: int((len(y) - 1) / (len(control) - 1))] / 10 ** 0.5,
     "-o",
     ms=4,
+    color="k",
+    alpha=0.8,
+)
+ax.vlines(
+    x[:: int((len(y) - 1) / (len(control) - 1))],
+    ymin=-1.5e-2,
+    ymax=3.0e-2,
+    linewidth=0.075,
+    alpha=0.3,
 )
 plt.grid(True)
+plt.ylabel(r"$\mathcal{U}(t)$", fontsize=22)
+plt.xlabel(r"$\mathrm{time}, \mu \mathrm{s}$")
 
 file = "demos/printhead/energy_fine_control.dat"
-file = "demos/printhead/energy_one_control.dat"
+# file = "demos/printhead/energy_one_control.dat"
 
 ax2 = ax.twinx()
 ax2.ticklabel_format(style="sci", axis="y", scilimits=(0, 0))
-ax2.set_ylim(-6.0e-3, 1.0e-2)
+ax2.set_ylim(-6.0e-4, 1.0e-3)
+ax2.tick_params(axis="y", colors="red")
+
 with open(file) as f:
     data = [x.split() for x in f.read().splitlines()]
     data = np.array([[float(val) for val in line] for line in data])
-    ax2.plot(
-        x[1:-1],
-        ((data[1:, 0] - data[:-1, 0]) + (data[1:, 1] - data[:-1, 1])) / 0.001,
-        color="k",
-    )
-    ax2.plot(x[1:-1], ((data[1:, 0] - data[:-1, 0])) / 0.001, color="r")
+    # ax2.plot(
+    #     x[1:-1],
+    #     ((data[1:, 0] - data[:-1, 0]) + (data[1:, 1] - data[:-1, 1])) / 0.01,
+    #     color="k",
+    # )
+    # ax2.plot(x[1:-1], ((data[1:, 0] - data[:-1, 0])) / 0.001, color="r")
+    ax2.plot(x[:-1], data[:, 2], color="r")
+
+    r, p = stats.pearsonr(data[:, 2], -data[::-1, 2])
+    print(f"Scipy computed Pearson r: {r} and p-value: {p}")
+    r, _ = stats.pearsonr(data[:1000, 2], y[:-1001])
+    print(f"Scipy computed Pearson r: {r}")
+    r, _ = stats.pearsonr(data[1000:, 2], y[1001:])
+    print(f"Scipy computed Pearson r: {r}")
+
+plt.ylabel(r"$\hat{\mathcal{F}}_{\Gamma_{\mathrm{opt}}}$", color="r", fontsize=22)
 
 fig.tight_layout()
+plt.savefig("fine_energy_transfer.pdf", bbox_inch="tight")
 plt.show()

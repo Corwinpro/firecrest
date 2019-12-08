@@ -182,5 +182,6 @@ for i, file in enumerate(files):
 #     "-o",
 #     ms=4,
 # )
+plt.savefig("energy_history.pdf", bbox_inch="tight")
 fig.tight_layout()
 plt.show()

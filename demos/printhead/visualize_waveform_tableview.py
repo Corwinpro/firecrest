@@ -192,7 +192,7 @@ for i in range(len(controls)):
     )
     control = [0.0] + controls[i] + [0.0]
     y = linear_basis.extrapolate(control)
-    x = linear_basis.space / 10
+    x = linear_basis.space / 20
     ax = fig.add_subplot(gs[i, 1:-1])
     ax.plot(
         x[:: int((len(y) - 1) / (len(control) - 1))],
@@ -212,19 +212,19 @@ plt.xlabel(r"$\mathrm{time}, \mu \mathrm{s}$")
 # plt.legend()
 
 ax_right = fig.add_subplot(gs[:, 0])
-ax_right.semilogx([w / 10 for w in windows], final_energies, "-", color="k")
+ax_right.semilogx([w / 20 for w in windows], final_energies, "-", color="k")
 for i in range(len(windows)):
     ax_right.semilogx(
-        windows[i] / 10,
+        windows[i] / 20,
         final_energies[i],
         "o",
         color=colors[i],
-        label=f"$w = {windows[i]/10}$",
+        label=f"$w = {windows[i]/20}$",
         ms=10,
     )
 
 ax_right.set_ylim(0.0, 14.0e-5)
-ax_right.set_xlim(0.04, 0.6)  # max(windows) / 10 + 0.1
+ax_right.set_xlim(0.02, 0.3)  # max(windows) / 10 + 0.1
 ax_right.ticklabel_format(style="sci", axis="y", scilimits=(0, 0))
 # ax_right.yaxis.tick_right()
 ax_right.hlines(
@@ -235,8 +235,8 @@ ax_right.hlines(
     linestyles="dashed",
     label=r"$\mathrm{No \ control}$",
 )
-ax_right.set_xticks([w / 10 for w in windows])
-ax_right.set_xticklabels(["$%.2f$" % (f / 10) for f in windows])
+ax_right.set_xticks([w / 20 for w in windows])
+ax_right.set_xticklabels(["$%.2f$" % (f / 20) for f in windows])
 # ax_right.yaxis.set_label_position("right")
 ax_right.yaxis.label.set_size(22)
 ax_right.xaxis.label.set_size(22)
