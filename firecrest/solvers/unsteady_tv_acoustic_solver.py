@@ -119,8 +119,14 @@ class UnsteadyTVAcousticSolver(BaseSolver):
 
         while current_time < final_time - Decimal(1.0e-8):
             w = self.solve(state.last, time_scheme=time_scheme)
+            # This is a workaround to delete unused data. Otherwise
+            # too much RAM is used
+            try:
+                state[current_time] = None
+            except:
+                pass
             current_time += self.timer["dt"]
-            state[current_time] = w.split()  # True
+            state[current_time] = w.split()
 
             if yield_state:
                 yield state[current_time]
@@ -196,7 +202,7 @@ class UnsteadyTVAcousticSolver(BaseSolver):
         while current_time > final_time + Decimal(1.0e-8):
             w = self.solve(current_state, time_scheme=time_scheme)
 
-            current_state = w.split()  # True
+            current_state = w.split()
             if yield_state:
                 yield current_state
 
@@ -209,6 +215,12 @@ class UnsteadyTVAcousticSolver(BaseSolver):
                         current_time, current_time - self.timer["dt"]
                     )
                 )
+            # This is a workaround to delete unused data. Otherwise
+            # too much RAM is used
+            try:
+                state[current_time] = None
+            except:
+                pass
             current_time -= self.timer["dt"]
             state[current_time] = current_state
 
