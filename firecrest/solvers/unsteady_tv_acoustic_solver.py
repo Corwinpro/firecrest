@@ -121,10 +121,10 @@ class UnsteadyTVAcousticSolver(BaseSolver):
             w = self.solve(state.last, time_scheme=time_scheme)
             # This is a workaround to delete unused data. Otherwise
             # too much RAM is used
-            try:
-                state[current_time] = None
-            except:
-                pass
+            # try:
+            #     state[current_time] = None
+            # except:
+            #     pass
             current_time += self.timer["dt"]
             state[current_time] = w.split()
 
@@ -217,10 +217,10 @@ class UnsteadyTVAcousticSolver(BaseSolver):
                 )
             # This is a workaround to delete unused data. Otherwise
             # too much RAM is used
-            try:
-                state[current_time] = None
-            except:
-                pass
+            # try:
+            #     state[current_time] = None
+            # except:
+            #     pass
             current_time -= self.timer["dt"]
             state[current_time] = current_state
 
