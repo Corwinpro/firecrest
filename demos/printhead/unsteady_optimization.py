@@ -9,7 +9,7 @@ from firecrest.misc.time_storage import TimeSeries, PiecewiseLinearBasis
 from firecrest.misc.optimization_mixin import OptimizationMixin
 import numpy as np
 
-elsize = 0.08
+elsize = 0.1
 height = 0.7
 length = 9.2
 actuator_length = 4.0
@@ -28,15 +28,6 @@ epsilon = 1.0e-3
 gamma_st = 50.0e-3
 mu = 1.0e-2
 Re = rho * c_s * L / mu
-a1 = 4.0 / 3.0
-a2 = 8
-kappa_prime = epsilon / nozzle_r ** 4 * 0.25  # up to a constant
-
-# non dimensional
-alpha_1 = nozzle_l / (3.1415 * nozzle_r ** 2) * a1
-alpha_2 = nozzle_l / (3.1415 * nozzle_r ** 3) / Re * a2 / nozzle_r
-gamma_nd = 2 * gamma_st / (rho * c_s ** 2 * nozzle_r * epsilon)
-
 
 Constants = namedtuple(
     "Constants",
@@ -165,7 +156,6 @@ class OptimizationSolver(OptimizationMixin, UnsteadyTVAcousticSolver):
         )
 
     def _objective_state(self, control):
-        # restored_control = self.linear_basis.extrapolate([0.0] + list(control) + [0.0])
         restored_control = self.linear_basis.extrapolate(list(control))
 
         boundary4.bcond["inflow"] = NormalInflow(
@@ -179,43 +169,36 @@ class OptimizationSolver(OptimizationMixin, UnsteadyTVAcousticSolver):
         for state in self.solve_direct(
             initial_state, verbose=False, yield_state=True, plot_every=1000
         ):
-            if isinstance(state, TimeSeries):
-                direct_history = state
-                break
 
-            with open("energy_fine_control.dat", "a") as file:
-                _str = (
-                    str(self.forms.energy(state))
-                    + " "
-                    + str(surface_model.surface_energy())
-                    + " "
-                    + str(self.forms.kinetic_energy_flux(state, (0.0, 1.0), boundary4))
-                )
-                file.write(_str)
-                file.write("\n")
+            # with open("energy_fine_control.dat", "a") as file:
+            #     _str = (
+            #         str(self.forms.energy(state))
+            #         + " "
+            #         + str(surface_model.surface_energy())
+            #         + " "
+            #         + str(self.forms.kinetic_energy_flux(state, (0.0, 1.0), boundary4))
+            #     )
+            #     file.write(_str)
+            #     file.write("\n")
 
             _new_flow_rate = self.flow_rate(state)
             surface_model.update_curvature(
                 0.5 * (_new_flow_rate + _old_flow_rate), self._dt
             )
             _old_flow_rate = _new_flow_rate
-        self._objective((direct_history.last, surface_model))
-        exit()
 
-        with open("log.dat", "a") as file:
-            file.write(
-                str(
-                    self._objective((direct_history.last, surface_model), verbose=False)
-                )
-                + "  "
-                + str(surface_model.kappa)
-                + ":\t"
-            )
-            for c in control:
-                file.write(str(c) + ",")
-            file.write("\n")
+        # with open("log.dat", "a") as file:
+        #     file.write(
+        #         str(self._objective((state, surface_model), verbose=False))
+        #         + "  "
+        #         + str(surface_model.kappa)
+        #         + ":\t"
+        #     )
+        #     for c in control:
+        #         file.write(str(c) + ",")
+        #     file.write("\n")
 
-        return direct_history.last, surface_model
+        return state, surface_model
 
     def _objective(self, state, verbose=True):
         if verbose:
@@ -230,12 +213,23 @@ class OptimizationSolver(OptimizationMixin, UnsteadyTVAcousticSolver):
             self.forms.energy(state[0]) + state[1].surface_energy(state[1].kappa) / 2.0
         )
 
+    def boundary_averaged_stress(self, adjoint_state):
+        stress = self.forms.stress(adjoint_state[0], adjoint_state[1])
+        stress = dolf.assemble(
+            dolf.dot(dolf.dot(stress, self.domain.n), self.domain.n)
+            * self.domain.ds((boundary4.surface_index,))
+        )
+        return stress
+
     def _jacobian(self, state):
         state, surface_model = state
         state = (state[0], -state[1], state[2])
 
         adjoint_surface = AdjointSurfaceModel(direct_surface=surface_model)
         boundary2.bcond["normal_force"] = adjoint_surface
+
+        adjoint_stress_averaged = midpoint_grid
+        current_time = self.timer["T"] - self.timer["dt"] / Decimal("2")
 
         _old_flow_rate = 0
         _new_flow_rate = 0
@@ -245,30 +239,22 @@ class OptimizationSolver(OptimizationMixin, UnsteadyTVAcousticSolver):
         for adjoint_state in solver.solve_adjoint(
             initial_state=state, verbose=False, yield_state=True
         ):
-            if isinstance(adjoint_state, TimeSeries):
-                adjoint_history = adjoint_state
-                break
             _old_flow_rate = _new_flow_rate
             _new_flow_rate = self.flow_rate(adjoint_state)
             adjoint_surface.update_curvature(
                 0.5 * (_new_flow_rate + _old_flow_rate), self._dt
             )
 
-        adjoint_stress = adjoint_history.apply(lambda x: self.forms.stress(x[0], x[1]))
-        adjoint_stress_averaged = adjoint_stress.apply(
-            lambda x: dolf.assemble(
-                dolf.dot(dolf.dot(x, self.domain.n), self.domain.n)
-                * self.domain.ds((boundary4.surface_index,))
+            adjoint_stress_averaged[current_time] = self.boundary_averaged_stress(
+                adjoint_state
             )
-        )
+            current_time -= self.timer["dt"]
 
         du = TimeSeries.interpolate_to_keys(adjoint_stress_averaged, small_grid)
         du[Decimal("0")] = 0.0
         du[timer["T"]] = 0.0
 
         discrete_grad = self.linear_basis.discretize(du.values())
-        # discrete_grad[0] = 0.0
-        # discrete_grad[-1] = 0.0
 
         print("gradient norm: ", (adjoint_stress_averaged * du).integrate())
 
@@ -282,10 +268,10 @@ class OptimizationSolver(OptimizationMixin, UnsteadyTVAcousticSolver):
             ).integrate(),
         )
 
-        return discrete_grad  # [1:-1]
+        return discrete_grad
 
 
-timer = {"dt": Decimal("0.01"), "T": Decimal("20.0")}
+timer = {"dt": Decimal("0.01"), "T": Decimal("1.0")}
 default_grid = TimeSeries.from_dict(
     {
         Decimal(k) * Decimal(timer["dt"]): 0
@@ -298,9 +284,15 @@ small_grid = TimeSeries.from_dict(
         for k in range(1, int(timer["T"] / Decimal(timer["dt"])))
     }
 )
+midpoint_grid = TimeSeries.from_dict(
+    {
+        Decimal(k + 0.5) * Decimal(timer["dt"]): 0
+        for k in range(int(timer["T"] / Decimal(timer["dt"])) - 1)
+    }
+)
 
 surface_model = SurfaceModel(nondim_constants, kappa_t0=0.25)
-solver = OptimizationSolver(domain, Re=5.0e3, Pr=10.0, timer=timer, signal_window=0.5)
+solver = OptimizationSolver(domain, Re=5.0e3, Pr=10.0, timer=timer, signal_window=0.05)
 initial_state = (0.0, (0.0, 0.0), 0.0)
 
 coarse_space_control = [
@@ -505,12 +497,11 @@ projected_fine = [
 x0 = [0.0 for _ in range(len(default_grid))]
 top_bound = [0.015 for i in range(len(x0))]
 low_bound = [-0.015 for i in range(len(x0))]
-# The first and last elements of the control are zero by default
-top_bound = solver.linear_basis.discretize(top_bound)  # [1:-1]
-low_bound = solver.linear_basis.discretize(low_bound)  # [1:-1]
+top_bound = solver.linear_basis.discretize(top_bound)
+low_bound = solver.linear_basis.discretize(low_bound)
 bnds = list(zip(low_bound, top_bound))
-x0 = solver.linear_basis.discretize(x0)  # [1:-1]
-x0 = fine_space_control
+x0 = solver.linear_basis.discretize(x0)
+# x0 = fine_space_control
 
 run_taylor_test = False
 if run_taylor_test:

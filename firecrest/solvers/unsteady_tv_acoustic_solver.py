@@ -114,25 +114,19 @@ class UnsteadyTVAcousticSolver(BaseSolver):
     ):
         current_time = Decimal("0")
         final_time = self.timer["T"]
-        state = TimeSeries(initial_state, current_time)
+        state = initial_state
         self.LUSolver = None
 
         while current_time < final_time - Decimal(1.0e-8):
-            w = self.solve(state.last, time_scheme=time_scheme)
-            # This is a workaround to delete unused data. Otherwise
-            # too much RAM is used
-            # try:
-            #     state[current_time] = None
-            # except:
-            #     pass
+            w = self.solve(state, time_scheme=time_scheme)
             current_time += self.timer["dt"]
-            state[current_time] = w.split()
+            state = w.split()
 
             if yield_state:
-                yield state[current_time]
+                yield state
 
             if int(current_time / self.timer["dt"]) % plot_every == plot_every - 1:
-                self.output_field(state[current_time])
+                self.output_field(state)
 
             if verbose:
                 print(
@@ -140,8 +134,6 @@ class UnsteadyTVAcousticSolver(BaseSolver):
                         current_time - self.timer["dt"], current_time
                     )
                 )
-
-        yield state
 
     def solve_adjoint(
         self,
@@ -167,47 +159,33 @@ class UnsteadyTVAcousticSolver(BaseSolver):
             )
         current_time = self.timer["T"]
         final_time = Decimal(self._dt)
-        current_state = initial_state
+        state = initial_state
         # I reset the factorization for the adjoint solver
         self.LUSolver = None
         self.is_linearised = True
 
-        state = TimeSeries()
-
         # Half stepping first
         self._dt = self._dt / 2.0
 
-        # form, bcs = self._implicit_euler(current_state)
-        # linear_form = dolf.assemble(dolf.rhs(form))
-        # bilinear_form = dolf.assemble(dolf.lhs(form))
-        # for bc in bcs:
-        #     bc.apply(bilinear_form)
-        #     bc.apply(linear_form)
-        # w = dolf.Function(self.forms.function_space)
-        # dolf.solve(bilinear_form, w.vector(), linear_form)
-
-        w = self.solve(current_state, "implicit_euler")
+        w = self.solve(state, "implicit_euler")
         self.LUSolver = None
 
-        current_state = w.split(True)
-        # if yield_state:
-        #     yield current_state
+        state = w.split(True)
         current_time -= self.timer["dt"] / Decimal("2")
-        state[current_time] = current_state
         self._dt = self._dt * 2.0
         if yield_state:
-            yield current_state
+            yield state
 
         # Regular time stepping
         while current_time > final_time + Decimal(1.0e-8):
-            w = self.solve(current_state, time_scheme=time_scheme)
+            w = self.solve(state, time_scheme=time_scheme)
 
-            current_state = w.split()
+            state = w.split()
             if yield_state:
-                yield current_state
+                yield state
 
             if int(float(current_time) / self._dt) % plot_every == plot_every - 1:
-                self.output_field(current_state)
+                self.output_field(state)
 
             if verbose:
                 print(
@@ -215,19 +193,10 @@ class UnsteadyTVAcousticSolver(BaseSolver):
                         current_time, current_time - self.timer["dt"]
                     )
                 )
-            # This is a workaround to delete unused data. Otherwise
-            # too much RAM is used
-            # try:
-            #     state[current_time] = None
-            # except:
-            #     pass
             current_time -= self.timer["dt"]
-            state[current_time] = current_state
 
         self.is_linearised = False
         self.LUSolver = None
-
-        yield state
 
     def initialize_solver(self, form, bcs, solver_type="mumps"):
         """
