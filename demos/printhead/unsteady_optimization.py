@@ -10,6 +10,7 @@ from firecrest.misc.time_storage import TimeSeries, PiecewiseLinearBasis
 from firecrest.misc.optimization_mixin import OptimizationMixin
 import numpy as np
 import json
+import csv
 
 decimal.getcontext().prec = 6
 
@@ -237,10 +238,10 @@ class OptimizationSolver(OptimizationMixin, UnsteadyTVAcousticSolver):
             reduced_basis=True,
         )
 
-    def flow_rate(self, state):
+    def flow_rate(self, state, boundary=boundary2):
         return 2.0 * dolf.assemble(
             dolf.inner(state[1], self.domain.n)
-            * self.domain.ds((boundary2.surface_index,))
+            * self.domain.ds((boundary.surface_index,))
         )
 
     def _objective_state(self, control):
@@ -261,17 +262,21 @@ class OptimizationSolver(OptimizationMixin, UnsteadyTVAcousticSolver):
             if energy_history_log_filename:
                 file_name = energy_history_log_filename + experiment_id + ".dat"
                 with open(file_name, "a") as file:
-                    _str = (
-                        str(self.forms.energy(state))
-                        + " "
-                        + str(surface_model.surface_energy() / 2.0)
-                        + " "
-                        + str(
-                            self.forms.kinetic_energy_flux(state, (0.0, 1.0), boundary4)
-                        )
-                        + "\n"
+                    writer = csv.writer(file)
+                    writer.writerow(
+                        [
+                            str(self.forms.energy(state)),
+                            str(surface_model.surface_energy() / 2.0),
+                            self.forms.kinetic_energy_flux(
+                                state, (0.0, 1.0), boundary4
+                            ),
+                            self.forms.kinetic_energy_flux(
+                                state, (0.0, -1.0), boundary2
+                            ),
+                            str(self.flow_rate(state, boundary4)),
+                            str(self.flow_rate(state, boundary2)),
+                        ]
                     )
-                    file.write(_str)
 
             _new_flow_rate = self.flow_rate(state)
             surface_model.update_curvature(
@@ -282,15 +287,14 @@ class OptimizationSolver(OptimizationMixin, UnsteadyTVAcousticSolver):
         if optimization_log_filename:
             file_name = optimization_log_filename + experiment_id + ".dat"
             with open(file_name, "a") as file:
-                file.write(
-                    str(self._objective((state, surface_model), verbose=False))
-                    + "  "
-                    + str(surface_model.kappa)
-                    + ":\t"
+                writer = csv.writer(file)
+                writer.writerow(
+                    [
+                        str(self._objective((state, surface_model), verbose=False)),
+                        str(surface_model.kappa),
+                    ]
+                    + control
                 )
-                for c in control:
-                    file.write(str(c) + ",")
-                file.write("\n")
 
         return state, surface_model
 
