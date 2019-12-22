@@ -14,6 +14,8 @@ class BaseSolver(ABC):
 
         self._visualization_files = None
         experiment_id = kwargs.get("experiment_id", "")
+        if experiment_id:
+            experiment_id = "_" + experiment_id
         self.vis_dir = "Visualization" + experiment_id + "/"
         if not os.path.exists(self.vis_dir):
             os.makedirs(self.vis_dir)

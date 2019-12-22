@@ -31,8 +31,8 @@ assert plot_every == 1000
 assert optimization_log_filename == "optimisation_log_"
 assert energy_history_log_filename == "energy_history_"
 
-# Geometry data parse
-geometry_data = setup_data["geometry"]
+# Geometry data for acoustic domain
+geometry_data = setup_data["acoustic_domain"]
 elsize = geometry_data["element_size"]
 height = geometry_data["channel_height"]
 length = geometry_data["channel_length"]
@@ -115,7 +115,7 @@ def configure_experiment_id():
 
 
 experiment_id = configure_experiment_id()
-exit()
+print(experiment_id)
 
 Constants = namedtuple(
     "Constants",

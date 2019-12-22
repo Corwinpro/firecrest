@@ -1,6 +1,6 @@
 {
   "mode": "optimization",
-  "geometry": {
+  "acoustic_domain": {
     "element_size": 0.08,
     "channel_height": 0.7,
     "channel_length": 9.2,
