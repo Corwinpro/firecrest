@@ -7,16 +7,14 @@ from firecrest.misc.type_checker import (
     is_dolfin_exp,
 )
 from collections import OrderedDict
-from firecrest.misc.time_storage import TimeSeries
 from decimal import Decimal
-import logging
 
 DEFAULT_DT = 1.0e-3
 
 
 class UnsteadyTVAcousticSolver(BaseSolver):
     def __init__(self, domain, **kwargs):
-        super().__init__(domain)
+        super().__init__(domain, **kwargs)
         self.timer = kwargs.get("timer", None)
         if self.timer:
             self._dt = float(self.timer.get("dt", DEFAULT_DT))

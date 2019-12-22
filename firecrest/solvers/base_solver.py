@@ -13,7 +13,8 @@ class BaseSolver(ABC):
         self.domain = domain
 
         self._visualization_files = None
-        self.vis_dir = "Visualization/"
+        experiment_id = kwargs.get("experiment_id", "")
+        self.vis_dir = "Visualization" + experiment_id + "/"
         if not os.path.exists(self.vis_dir):
             os.makedirs(self.vis_dir)
 
