@@ -4,30 +4,118 @@ from firecrest.solvers.unsteady_tv_acoustic_solver import UnsteadyTVAcousticSolv
 from firecrest.models.free_surface_cap import SurfaceModel, AdjointSurfaceModel
 import dolfin as dolf
 from collections import namedtuple
+import decimal
 from decimal import Decimal
 from firecrest.misc.time_storage import TimeSeries, PiecewiseLinearBasis
 from firecrest.misc.optimization_mixin import OptimizationMixin
 import numpy as np
+import json
 
-elsize = 0.1
-height = 0.7
-length = 9.2
-actuator_length = 4.0
-offset_top = 1.0
-nozzle_r = 0.1
-nozzle_l = 0.2
-nozzle_offset = 0.2
-manifold_width = 2.0
-manifold_height = 4.7
+decimal.getcontext().prec = 6
 
-# Define constants
-L = 1.0e-4
-c_s = 1.0e3
-rho = 1.0e3
-epsilon = 1.0e-3
-gamma_st = 50.0e-3
-mu = 1.0e-2
+JSON_FILE = "demos/printhead/printhead_configuration.json"
+with open(JSON_FILE) as json_data:
+    setup_data = json.load(json_data)
+
+# Run mode
+run_mode = setup_data["mode"]
+assert run_mode == "optimization"
+
+# Logging settings
+logging_data = setup_data["logging"]
+plot_every = logging_data["plot_frequency"]
+optimization_log_filename = logging_data["optimisation"]
+energy_history_log_filename = logging_data["energy_history"]
+
+assert plot_every == 1000
+assert optimization_log_filename == "optimisation_log_"
+assert energy_history_log_filename == "energy_history_"
+
+# Geometry data parse
+geometry_data = setup_data["geometry"]
+elsize = geometry_data["element_size"]
+height = geometry_data["channel_height"]
+length = geometry_data["channel_length"]
+actuator_length = geometry_data["actuator_length"]
+nozzle_r = geometry_data["nozzle_r"]
+nozzle_l = geometry_data["nozzle_l"]
+nozzle_offset = geometry_data["nozzle_offset"]
+manifold_width = geometry_data["manifold_width"]
+manifold_height = geometry_data["manifold_height"]
+
+assert elsize == 0.08
+assert height == 0.7
+assert length == 9.2
+assert actuator_length == 4.0
+assert nozzle_r == 0.1
+assert nozzle_l == 0.2
+assert nozzle_offset == 0.2
+assert manifold_width == 2.0
+assert manifold_height == 4.7
+
+# Dimensional constants parse
+constants_data = setup_data["constants"]
+L = constants_data["length"]
+c_s = constants_data["sound_speed"]
+rho = constants_data["density"]
+epsilon = constants_data["Mach"]
+gamma_st = constants_data["surface_tension"]
+mu = constants_data["viscosity"]
+Pr = constants_data["Pr"]
+
+assert L == 1.0e-4
+assert c_s == 1.0e3
+assert rho == 1.0e3
+assert epsilon == 1.0e-3
+assert gamma_st == 50.0e-3
+assert mu == 2.0e-2
+assert Pr == 10
 Re = rho * c_s * L / mu
+
+# Nozzle domain constants
+nozzle_domain_data = setup_data["nozzle_domain"]
+initial_curvature = nozzle_domain_data["initial_curvature"]
+nozzle_domain_length = nozzle_domain_data["length"]
+nozzle_domain_radius = nozzle_domain_data["radius"]
+
+assert initial_curvature == 0.25
+assert nozzle_domain_length == 10.0e-6
+assert nozzle_domain_radius == 10.0e-6
+
+# Time domain data
+
+printhead_timescale = Decimal("0.1")  # in microseconds
+time_domain_data = setup_data["time_domain"]
+final_time = Decimal(str(time_domain_data["final_time"]))  # in microseconds
+time_step = Decimal(str(time_domain_data["dt"]))  # in microseconds
+nondim_final_time = final_time / printhead_timescale
+nondim_time_step = time_step / printhead_timescale
+
+assert final_time == Decimal("2")
+assert time_step == Decimal("0.001")
+assert printhead_timescale == Decimal("0.1")
+assert nondim_final_time == Decimal("20")
+assert nondim_time_step == Decimal("0.01")
+
+timer = {"dt": nondim_time_step, "T": nondim_final_time}
+assert timer["dt"] == Decimal("0.01")
+assert timer["T"] == Decimal("20")
+
+# Waveform control data
+waveform_data = setup_data["control_space"]
+control_type = waveform_data["type"]
+waveform_window = waveform_data["window"]  # in microseconds
+
+assert control_type == "piecewise_linear"
+assert waveform_window == 0.5
+
+
+def configure_experiment_id():
+    return "act_" + str(actuator_length) + "_window_" + str(waveform_window)
+
+
+experiment_id = configure_experiment_id()
+exit()
 
 Constants = namedtuple(
     "Constants",
@@ -42,7 +130,9 @@ Constants = namedtuple(
         "sound_speed",
     ],
 )
-printhead_constants = Constants(rho, epsilon, L, 10.0e-6, 10.0e-6, gamma_st, Re, c_s)
+printhead_constants = Constants(
+    rho, epsilon, L, nozzle_domain_length, nozzle_domain_radius, gamma_st, Re, c_s
+)
 
 nondim_constants = Constants(
     1.0,
@@ -162,24 +252,28 @@ class OptimizationSolver(OptimizationMixin, UnsteadyTVAcousticSolver):
             TimeSeries.from_list(restored_control, default_grid)
         )
 
-        surface_model = SurfaceModel(nondim_constants, kappa_t0=0.25)
+        surface_model = SurfaceModel(nondim_constants, kappa_t0=initial_curvature)
         boundary2.bcond["normal_force"] = surface_model
 
         _old_flow_rate = 0
         for state in self.solve_direct(
-            initial_state, verbose=False, yield_state=True, plot_every=1000
+            initial_state, verbose=False, yield_state=True, plot_every=plot_every
         ):
 
-            # with open("energy_fine_control.dat", "a") as file:
-            #     _str = (
-            #         str(self.forms.energy(state))
-            #         + " "
-            #         + str(surface_model.surface_energy())
-            #         + " "
-            #         + str(self.forms.kinetic_energy_flux(state, (0.0, 1.0), boundary4))
-            #     )
-            #     file.write(_str)
-            #     file.write("\n")
+            if energy_history_log_filename:
+                file_name = energy_history_log_filename + experiment_id + ".dat"
+                with open(file_name, "a") as file:
+                    _str = (
+                        str(self.forms.energy(state))
+                        + " "
+                        + str(surface_model.surface_energy() / 2.0)
+                        + " "
+                        + str(
+                            self.forms.kinetic_energy_flux(state, (0.0, 1.0), boundary4)
+                        )
+                        + "\n"
+                    )
+                    file.write(_str)
 
             _new_flow_rate = self.flow_rate(state)
             surface_model.update_curvature(
@@ -187,31 +281,32 @@ class OptimizationSolver(OptimizationMixin, UnsteadyTVAcousticSolver):
             )
             _old_flow_rate = _new_flow_rate
 
-        # with open("log.dat", "a") as file:
-        #     file.write(
-        #         str(self._objective((state, surface_model), verbose=False))
-        #         + "  "
-        #         + str(surface_model.kappa)
-        #         + ":\t"
-        #     )
-        #     for c in control:
-        #         file.write(str(c) + ",")
-        #     file.write("\n")
+        if optimization_log_filename:
+            file_name = optimization_log_filename + experiment_id + ".dat"
+            with open(file_name, "a") as file:
+                file.write(
+                    str(self._objective((state, surface_model), verbose=False))
+                    + "  "
+                    + str(surface_model.kappa)
+                    + ":\t"
+                )
+                for c in control:
+                    file.write(str(c) + ",")
+                file.write("\n")
 
         return state, surface_model
 
     def _objective(self, state, verbose=True):
+        acoustic_energy = self.forms.energy(state[0])
+        free_energy = state[1].surface_energy(state[1].kappa) / 2.0
         if verbose:
             print(
                 "evaluated at: ",
-                self.forms.energy(state[0])
-                + state[1].surface_energy(state[1].kappa) / 2.0,
+                acoustic_energy + free_energy,
                 " curvature: ",
                 state[1].kappa,
             )
-        return (
-            self.forms.energy(state[0]) + state[1].surface_energy(state[1].kappa) / 2.0
-        )
+        return acoustic_energy + free_energy
 
     def boundary_averaged_stress(self, adjoint_state):
         stress = self.forms.stress(adjoint_state[0], adjoint_state[1])
@@ -271,7 +366,6 @@ class OptimizationSolver(OptimizationMixin, UnsteadyTVAcousticSolver):
         return discrete_grad
 
 
-timer = {"dt": Decimal("0.01"), "T": Decimal("1.0")}
 default_grid = TimeSeries.from_dict(
     {
         Decimal(k) * Decimal(timer["dt"]): 0
@@ -291,8 +385,14 @@ midpoint_grid = TimeSeries.from_dict(
     }
 )
 
-surface_model = SurfaceModel(nondim_constants, kappa_t0=0.25)
-solver = OptimizationSolver(domain, Re=5.0e3, Pr=10.0, timer=timer, signal_window=0.05)
+solver = OptimizationSolver(
+    domain,
+    Re=Re,
+    Pr=Pr,
+    timer=timer,
+    signal_window=waveform_window,
+    experiment_id=experiment_id,
+)
 initial_state = (0.0, (0.0, 0.0), 0.0)
 
 coarse_space_control = [
@@ -503,18 +603,19 @@ bnds = list(zip(low_bound, top_bound))
 x0 = solver.linear_basis.discretize(x0)
 # x0 = fine_space_control
 
-run_taylor_test = False
-if run_taylor_test:
+if run_mode == "taylor_test":
     energy = []
-    state = solver._objective_state(x0)
-    energy.append(solver._objective(state))
+    _state = solver._objective_state(x0)
+    energy.append(solver._objective(_state))
     print(energy[-1])
-    grad = solver._jacobian(state)
+    grad = solver._jacobian(_state)
 
     for i in range(1, 11):
         new_state = solver._objective_state(grad * 1.0e-3 * i)
         energy.append(solver._objective(new_state))
-
-    exit()
-
-res = solver.minimize(x0, bnds)
+elif run_mode == "optimization":
+    res = solver.minimize(x0, bnds)
+elif run_mode == "single_run":
+    solver._objective_state(x0)
+else:
+    raise NotImplementedError(f"No mode called {run_mode} is implemented")
