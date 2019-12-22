@@ -105,16 +105,14 @@ assert timer["T"] == Decimal("20")
 waveform_data = setup_data["control_space"]
 control_type = waveform_data["type"]
 waveform_window = waveform_data["window"]  # in microseconds
+nondim_waveform_window = waveform_window / float(printhead_timescale)
 
 assert control_type == "piecewise_linear"
 assert waveform_window == 0.5
+assert nondim_waveform_window == 5.0
 
 
-def configure_experiment_id():
-    return "act_" + str(actuator_length) + "_window_" + str(waveform_window)
-
-
-experiment_id = configure_experiment_id()
+experiment_id = "act_" + str(actuator_length) + "_window_" + str(waveform_window)
 print(experiment_id)
 
 Constants = namedtuple(
@@ -390,7 +388,7 @@ solver = OptimizationSolver(
     Re=Re,
     Pr=Pr,
     timer=timer,
-    signal_window=waveform_window,
+    signal_window=nondim_waveform_window,
     experiment_id=experiment_id,
 )
 initial_state = (0.0, (0.0, 0.0), 0.0)
