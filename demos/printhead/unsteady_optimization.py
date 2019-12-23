@@ -40,17 +40,12 @@ setup_data = json.load(args.filename)
 
 # Run mode
 run_mode = setup_data["mode"]
-assert run_mode == "optimization"
 
 # Logging settings
 logging_data = setup_data["logging"]
 plot_every = logging_data["plot_frequency"]
 optimization_log_filename = logging_data["optimisation"]
 energy_history_log_filename = logging_data["energy_history"]
-
-assert plot_every == 1000
-assert optimization_log_filename == "optimisation_log_"
-assert energy_history_log_filename == "energy_history_"
 
 # Geometry data for acoustic domain
 geometry_data = setup_data["acoustic_domain"]
@@ -64,16 +59,6 @@ nozzle_offset = geometry_data["nozzle_offset"]
 manifold_width = geometry_data["manifold_width"]
 manifold_height = geometry_data["manifold_height"]
 
-assert elsize == 0.08
-assert height == 0.7
-assert length == 9.2
-assert actuator_length == 4.0
-assert nozzle_r == 0.1
-assert nozzle_l == 0.2
-assert nozzle_offset == 0.2
-assert manifold_width == 2.0
-assert manifold_height == 4.7
-
 # Dimensional constants parse
 constants_data = setup_data["constants"]
 L = constants_data["length"]
@@ -83,14 +68,6 @@ epsilon = constants_data["Mach"]
 gamma_st = constants_data["surface_tension"]
 mu = constants_data["viscosity"]
 Pr = constants_data["Pr"]
-
-assert L == 1.0e-4
-assert c_s == 1.0e3
-assert rho == 1.0e3
-assert epsilon == 1.0e-3
-assert gamma_st == 50.0e-3
-assert mu == 2.0e-2
-assert Pr == 10
 Re = rho * c_s * L / mu
 
 # Nozzle domain constants
@@ -98,10 +75,6 @@ nozzle_domain_data = setup_data["nozzle_domain"]
 initial_curvature = nozzle_domain_data["initial_curvature"]
 nozzle_domain_length = nozzle_domain_data["length"]
 nozzle_domain_radius = nozzle_domain_data["radius"]
-
-assert initial_curvature == 0.25
-assert nozzle_domain_length == 10.0e-6
-assert nozzle_domain_radius == 10.0e-6
 
 # Time domain data
 
@@ -112,15 +85,7 @@ time_step = Decimal(str(time_domain_data["dt"]))  # in microseconds
 nondim_final_time = final_time / printhead_timescale
 nondim_time_step = time_step / printhead_timescale
 
-assert final_time == Decimal("2")
-assert time_step == Decimal("0.001")
-assert printhead_timescale == Decimal("0.1")
-assert nondim_final_time == Decimal("20")
-assert nondim_time_step == Decimal("0.01")
-
 timer = {"dt": nondim_time_step, "T": nondim_final_time}
-assert timer["dt"] == Decimal("0.01")
-assert timer["T"] == Decimal("20")
 
 # Waveform control data
 waveform_data = setup_data["control_space"]
@@ -129,19 +94,57 @@ waveform_window = waveform_data["window"]  # in microseconds
 nondim_waveform_window = waveform_window / float(printhead_timescale)
 control_default_value = waveform_data.get("control_default", None)
 
-assert control_type == "piecewise_linear"
-assert waveform_window == 0.5
-assert nondim_waveform_window == 5.0
-assert control_default_value == [
-    0.0016415311773756553,
-    0.0002877549134009383,
-    0.002814305524765201,
-    -0.000577860701974489,
-    0.0032713694963792134,
-    -0.0006372529768249147,
-    0.0021834503389561635,
-]
+assert_values = False
+if assert_values:
+    assert run_mode == "optimization"
 
+    assert plot_every == 1000
+    assert optimization_log_filename == "optimisation_log_"
+    assert energy_history_log_filename == "energy_history_"
+
+    assert elsize == 0.08
+    assert height == 0.7
+    assert length == 9.2
+    assert actuator_length == 4.0
+    assert nozzle_r == 0.1
+    assert nozzle_l == 0.2
+    assert nozzle_offset == 0.2
+    assert manifold_width == 2.0
+    assert manifold_height == 4.7
+
+    assert L == 1.0e-4
+    assert c_s == 1.0e3
+    assert rho == 1.0e3
+    assert epsilon == 1.0e-3
+    assert gamma_st == 50.0e-3
+    assert mu == 2.0e-2
+    assert Pr == 10
+
+    assert initial_curvature == 0.25
+    assert nozzle_domain_length == 10.0e-6
+    assert nozzle_domain_radius == 10.0e-6
+
+    assert final_time == Decimal("2")
+    assert time_step == Decimal("0.001")
+    assert printhead_timescale == Decimal("0.1")
+    assert nondim_final_time == Decimal("20")
+    assert nondim_time_step == Decimal("0.01")
+
+    assert timer["dt"] == Decimal("0.01")
+    assert timer["T"] == Decimal("20")
+
+    assert control_type == "piecewise_linear"
+    assert waveform_window == 0.5
+    assert nondim_waveform_window == 5.0
+    assert control_default_value == [
+        0.0016415311773756553,
+        0.0002877549134009383,
+        0.002814305524765201,
+        -0.000577860701974489,
+        0.0032713694963792134,
+        -0.0006372529768249147,
+        0.0021834503389561635,
+    ]
 
 experiment_id = "act_" + str(actuator_length) + "_window_" + str(waveform_window)
 print(experiment_id)
