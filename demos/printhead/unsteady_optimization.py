@@ -326,7 +326,7 @@ class OptimizationSolver(OptimizationMixin, UnsteadyTVAcousticSolver):
                         self._objective((state, surface_model), verbose=False),
                         surface_model.kappa,
                     ]
-                    + control
+                    + list(control)
                 )
 
         return state, surface_model
