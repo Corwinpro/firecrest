@@ -259,7 +259,7 @@ class OptimizationSolver(OptimizationMixin, UnsteadyTVAcousticSolver):
             initial_state, verbose=False, yield_state=True, plot_every=plot_every
         ):
 
-            if energy_history_log_filename:
+            if energy_history_log_filename and run_mode == "single_run":
                 file_name = energy_history_log_filename + experiment_id + ".dat"
                 with open(file_name, "a") as file:
                     writer = csv.writer(file)
