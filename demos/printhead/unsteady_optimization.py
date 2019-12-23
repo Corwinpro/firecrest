@@ -591,10 +591,6 @@ projected_fine = [
     0.0062196088528894,
 ]
 
-# coarse_basis = PiecewiseLinearBasis(
-#     np.array([float(key) for key in default_grid.keys()]), width=2.0
-# )
-# x0 = coarse_basis.extrapolate([0.0] + list(coarse_space_control) + [0.0])
 
 x0 = [0.0 for _ in range(len(default_grid))]
 top_bound = [0.015 for i in range(len(x0))]
