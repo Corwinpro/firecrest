@@ -11,12 +11,32 @@ from firecrest.misc.optimization_mixin import OptimizationMixin
 import numpy as np
 import json
 import csv
+from argparse import ArgumentParser
+import os.path
 
 decimal.getcontext().prec = 6
 
-JSON_FILE = "demos/printhead/printhead_configuration.json"
-with open(JSON_FILE) as json_data:
-    setup_data = json.load(json_data)
+
+def is_valid_file(parser, arg):
+    if not os.path.exists(arg):
+        parser.error("The file %s does not exist!" % arg)
+    else:
+        return open(arg, "r")  # return an open file handle
+
+
+parser = ArgumentParser(description="JSON configuration file")
+parser.add_argument(
+    "-i",
+    "--input",
+    dest="filename",
+    required=True,
+    help="input JSON file with printhead waveform run configuration",
+    metavar="FILE",
+    type=lambda x: is_valid_file(parser, x),
+)
+args = parser.parse_args()
+
+setup_data = json.load(args.filename)
 
 # Run mode
 run_mode = setup_data["mode"]
@@ -107,10 +127,20 @@ waveform_data = setup_data["control_space"]
 control_type = waveform_data["type"]
 waveform_window = waveform_data["window"]  # in microseconds
 nondim_waveform_window = waveform_window / float(printhead_timescale)
+control_default_value = waveform_data.get("control_default", None)
 
 assert control_type == "piecewise_linear"
 assert waveform_window == 0.5
 assert nondim_waveform_window == 5.0
+assert control_default_value == [
+    0.0016415311773756553,
+    0.0002877549134009383,
+    0.002814305524765201,
+    -0.000577860701974489,
+    0.0032713694963792134,
+    -0.0006372529768249147,
+    0.0021834503389561635,
+]
 
 
 experiment_id = "act_" + str(actuator_length) + "_window_" + str(waveform_window)
@@ -284,7 +314,7 @@ class OptimizationSolver(OptimizationMixin, UnsteadyTVAcousticSolver):
             )
             _old_flow_rate = _new_flow_rate
 
-        if optimization_log_filename:
+        if optimization_log_filename and run_mode == "optimization":
             file_name = optimization_log_filename + experiment_id + ".dat"
             with open(file_name, "a") as file:
                 writer = csv.writer(file)
@@ -598,8 +628,10 @@ low_bound = [-0.015 for i in range(len(x0))]
 top_bound = solver.linear_basis.discretize(top_bound)
 low_bound = solver.linear_basis.discretize(low_bound)
 bnds = list(zip(low_bound, top_bound))
-x0 = solver.linear_basis.discretize(x0)
-# x0 = fine_space_control
+if control_default_value:
+    x0 = control_default_value
+else:
+    x0 = solver.linear_basis.discretize(x0)
 
 if run_mode == "taylor_test":
     energy = []
