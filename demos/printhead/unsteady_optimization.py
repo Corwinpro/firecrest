@@ -265,16 +265,16 @@ class OptimizationSolver(OptimizationMixin, UnsteadyTVAcousticSolver):
                     writer = csv.writer(file)
                     writer.writerow(
                         [
-                            str(self.forms.energy(state)),
-                            str(surface_model.surface_energy() / 2.0),
+                            self.forms.energy(state),
+                            surface_model.surface_energy() / 2.0,
                             self.forms.kinetic_energy_flux(
                                 state, (0.0, 1.0), boundary4
                             ),
                             self.forms.kinetic_energy_flux(
                                 state, (0.0, -1.0), boundary2
                             ),
-                            str(self.flow_rate(state, boundary4)),
-                            str(self.flow_rate(state, boundary2)),
+                            self.flow_rate(state, boundary4),
+                            self.flow_rate(state, boundary2),
                         ]
                     )
 
@@ -290,8 +290,8 @@ class OptimizationSolver(OptimizationMixin, UnsteadyTVAcousticSolver):
                 writer = csv.writer(file)
                 writer.writerow(
                     [
-                        str(self._objective((state, surface_model), verbose=False)),
-                        str(surface_model.kappa),
+                        self._objective((state, surface_model), verbose=False),
+                        surface_model.kappa,
                     ]
                     + control
                 )
