@@ -367,7 +367,7 @@ class OptimizationSolver(OptimizationMixin, UnsteadyTVAcousticSolver):
             0.5 * (_new_flow_rate + _old_flow_rate), self._dt
         )
         for adjoint_state in solver.solve_adjoint(
-            initial_state=state, verbose=False, yield_state=True
+            initial_state=state, verbose=False, yield_state=True, plot_every=plot_every
         ):
             _old_flow_rate = _new_flow_rate
             _new_flow_rate = self.flow_rate(adjoint_state)
