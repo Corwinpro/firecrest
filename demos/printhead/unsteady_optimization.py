@@ -93,6 +93,8 @@ control_type = waveform_data["type"]
 waveform_window = waveform_data["window"]  # in microseconds
 nondim_waveform_window = waveform_window / float(printhead_timescale)
 control_default_value = waveform_data.get("control_default", None)
+control_upper_limit = waveform_data.get("upper_limit", 0.015)
+control_lower_limit = waveform_data.get("lower_limit", -0.015)
 
 assert_values = False
 if assert_values:
@@ -626,8 +628,8 @@ projected_fine = [
 
 
 x0 = [0.0 for _ in range(len(default_grid))]
-top_bound = [0.015 for i in range(len(x0))]
-low_bound = [-0.015 for i in range(len(x0))]
+top_bound = [control_upper_limit for i in range(len(x0))]
+low_bound = [control_lower_limit for i in range(len(x0))]
 top_bound = solver.linear_basis.discretize(top_bound)
 low_bound = solver.linear_basis.discretize(low_bound)
 bnds = list(zip(low_bound, top_bound))
