@@ -95,6 +95,7 @@ nondim_waveform_window = waveform_window / float(printhead_timescale)
 control_default_value = waveform_data.get("control_default", None)
 control_upper_limit = waveform_data.get("upper_limit", 0.015)
 control_lower_limit = waveform_data.get("lower_limit", -0.015)
+control_algorithm = waveform_data.get("algorithm", "L-BFGS-B")
 
 assert_values = False
 if assert_values:
@@ -429,6 +430,7 @@ solver = OptimizationSolver(
     timer=timer,
     signal_window=nondim_waveform_window,
     experiment_id=experiment_id,
+    optimization_method=control_algorithm,
 )
 initial_state = (0.0, (0.0, 0.0), 0.0)
 
