@@ -21,6 +21,7 @@ class OptimizationMixin(ABC):
         self.objective_cache = {}
         self.jacobian_cache = {}
         self.verbose = kwargs.get("verbose", False)
+        self.optimization_method = kwargs.get("optimization_method", "L-BFGS-B")
 
         self.default_renormalization = 1.0e6
 
@@ -53,7 +54,7 @@ class OptimizationMixin(ABC):
         res = minimize(
             self.objective,
             x0,
-            method="L-BFGS-B",
+            method=self.optimization_method,
             jac=self.jacobian,
             bounds=bnds,
             options={"disp": True, "maxiter": 40, "ftol": 1.0e-8},
