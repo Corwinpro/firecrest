@@ -112,10 +112,6 @@ class OptimizationSolver(OptimizationMixin, UnsteadyTVAcousticSolver):
         for state in self.solve_direct(
             initial_state, verbose=False, yield_state=True, plot_every=1000
         ):
-            if isinstance(state, TimeSeries):
-                direct_history = state
-                break
-
             # with open("energy.dat", "a") as file:
             #     _str = (
             #         str(self.forms.energy(state))
@@ -133,9 +129,7 @@ class OptimizationSolver(OptimizationMixin, UnsteadyTVAcousticSolver):
 
         with open("log.dat", "a") as file:
             file.write(
-                str(
-                    self._objective((direct_history.last, surface_model), verbose=False)
-                )
+                str(self._objective((state, surface_model), verbose=False))
                 + "  "
                 + str(surface_model.kappa)
                 + ":\t"
@@ -144,7 +138,7 @@ class OptimizationSolver(OptimizationMixin, UnsteadyTVAcousticSolver):
                 file.write(str(c) + ",")
             file.write("\n")
 
-        return direct_history.last, surface_model
+        return state, surface_model
 
     def _objective(self, state, verbose=True):
         if verbose:
@@ -156,12 +150,22 @@ class OptimizationSolver(OptimizationMixin, UnsteadyTVAcousticSolver):
             )
         return self.forms.energy(state[0]) + state[1].surface_energy(state[1].kappa)
 
+    def boundary_averaged_stress(self, adjoint_state):
+        stress = self.forms.stress(adjoint_state[0], adjoint_state[1])
+        stress = dolf.assemble(
+            dolf.dot(dolf.dot(stress, self.domain.n), self.domain.n)
+            * self.domain.ds((p2.surface_index,))
+        )
+        return stress
+
     def _jacobian(self, state):
         state, surface_model = state
         state = (state[0], -state[1], state[2])
 
         adjoint_surface = AdjointSurfaceModel(direct_surface=surface_model)
         p1.bcond["normal_force"] = adjoint_surface
+        adjoint_stress_averaged = midpoint_grid
+        current_time = self.timer["T"] - self.timer["dt"] / Decimal("2")
 
         _old_flow_rate = 0
         _new_flow_rate = 0
@@ -171,22 +175,16 @@ class OptimizationSolver(OptimizationMixin, UnsteadyTVAcousticSolver):
         for adjoint_state in solver.solve_adjoint(
             initial_state=state, verbose=False, yield_state=True
         ):
-            if isinstance(adjoint_state, TimeSeries):
-                adjoint_history = adjoint_state
-                break
             _old_flow_rate = _new_flow_rate
             _new_flow_rate = self.flow_rate(adjoint_state)
             adjoint_surface.update_curvature(
                 0.5 * (_new_flow_rate + _old_flow_rate), self._dt
             )
 
-        adjoint_stress = adjoint_history.apply(lambda x: self.forms.stress(x[0], x[1]))
-        adjoint_stress_averaged = adjoint_stress.apply(
-            lambda x: dolf.assemble(
-                dolf.dot(dolf.dot(x, self.domain.n), self.domain.n)
-                * self.domain.ds((p2.surface_index,))
+            adjoint_stress_averaged[current_time] = self.boundary_averaged_stress(
+                adjoint_state
             )
-        )
+            current_time -= self.timer["dt"]
 
         du = TimeSeries.interpolate_to_keys(adjoint_stress_averaged, small_grid)
         du[Decimal("0")] = 0.0
@@ -210,6 +208,12 @@ small_grid = TimeSeries.from_dict(
         for k in range(1, int(timer["T"] / Decimal(timer["dt"])))
     }
 )
+midpoint_grid = TimeSeries.from_dict(
+    {
+        Decimal(k + 0.5) * Decimal(timer["dt"]): 0
+        for k in range(int(timer["T"] / Decimal(timer["dt"])) - 1)
+    }
+)
 
 surface_model = SurfaceModel(nondim_constants, kappa_t0=0.05)
 solver = OptimizationSolver(domain, Re=5.0e3, Pr=10.0, timer=timer)
@@ -222,16 +226,15 @@ low_bound = [-0.01 for i in range(len(x0))]
 bnds = list(zip(low_bound, top_bound))
 
 
-run_taylor_test = False
+run_taylor_test = True
 if run_taylor_test:
     energy = []
     state = solver._objective_state(x0)
     energy.append(solver._objective(state))
-    print(energy[-1])
     grad = np.array(solver._jacobian(state))
 
     for i in range(1, 11):
-        new_state = solver._objective_state(grad * 1.0e-5 * i)
+        new_state = solver._objective_state(grad * 1.0e-4 * i)
         energy.append(solver._objective(new_state))
 
     exit()
