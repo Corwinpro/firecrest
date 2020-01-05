@@ -16,7 +16,7 @@ p1 = PointBoundary(
 p2 = PointBoundary(
     [1], inside=lambda x: x[0] > 0.9, bcond={"inflow": 0.0, "adiabatic": True}
 )
-domain = IntervalDomain([p1, p2], resolution=1000)
+domain = IntervalDomain([p1, p2], resolution=100)
 
 elsize = 0.08
 height = 0.7
@@ -220,10 +220,11 @@ solver = OptimizationSolver(domain, Re=5.0e3, Pr=10.0, timer=timer)
 initial_state = (0.0, 0.0, 0.0)
 
 
-x0 = [0.0 for _ in range(len(default_grid) - 2)]
+x0 = [1.0e-1 for _ in range(len(default_grid) - 2)]
 top_bound = [0.03 for i in range(len(x0))]
 low_bound = [-0.01 for i in range(len(x0))]
 bnds = list(zip(low_bound, top_bound))
+x0 = np.array(x0)
 
 
 run_taylor_test = True
@@ -234,7 +235,7 @@ if run_taylor_test:
     grad = np.array(solver._jacobian(state))
 
     for i in range(1, 11):
-        new_state = solver._objective_state(grad * 1.0e-4 * i)
+        new_state = solver._objective_state(x0 + grad * 1.0e-4 * i)
         energy.append(solver._objective(new_state))
 
     exit()
