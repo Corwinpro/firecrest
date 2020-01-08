@@ -1,40 +1,22 @@
-from firecrest.solvers.unsteady_tv_acoustic_solver import UnsteadyTVAcousticSolver
-from firecrest.models.free_surface_cap import SurfaceModel, AdjointSurfaceModel
 import dolfin as dolf
 import decimal
 from decimal import Decimal
+import numpy as np
+import json
+import csv
+
+from firecrest.solvers.unsteady_tv_acoustic_solver import UnsteadyTVAcousticSolver
+from firecrest.models.free_surface_cap import SurfaceModel, AdjointSurfaceModel
 from firecrest.misc.time_storage import TimeSeries, PiecewiseLinearBasis
 from firecrest.misc.optimization_mixin import OptimizationMixin
 from firecrest.models.geometry_registry.symmetric_printhead_assembler import (
     SymmetricPrintheadGeometryAssembler,
 )
 from firecrest.models.free_surface_cap import Constants
-import numpy as np
-import json
-import csv
-from argparse import ArgumentParser
-import os.path
+from firecrest.misc.input_argparser import parser
 
 decimal.getcontext().prec = 6
 
-
-def is_valid_file(parser, arg):
-    if not os.path.exists(arg):
-        parser.error("The file %s does not exist!" % arg)
-    else:
-        return open(arg, "r")  # return an open file handle
-
-
-parser = ArgumentParser(description="JSON configuration file")
-parser.add_argument(
-    "-i",
-    "--input",
-    dest="filename",
-    required=True,
-    help="input JSON file with printhead waveform run configuration",
-    metavar="FILE",
-    type=lambda x: is_valid_file(parser, x),
-)
 args = parser.parse_args()
 
 setup_data = json.load(args.filename)
