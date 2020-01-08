@@ -1,4 +1,19 @@
 import math
+from collections import namedtuple
+
+Constants = namedtuple(
+    "Constants",
+    [
+        "density",
+        "acoustic_mach",
+        "channel_L",
+        "nozzle_L",
+        "nozzle_R",
+        "surface_tension",
+        "Re",
+        "sound_speed",
+    ],
+)
 
 
 class SurfaceModel:
