@@ -9,9 +9,7 @@ from firecrest.solvers.unsteady_tv_acoustic_solver import UnsteadyTVAcousticSolv
 from firecrest.models.free_surface_cap import SurfaceModel, AdjointSurfaceModel
 from firecrest.misc.time_storage import TimeSeries, PiecewiseLinearBasis
 from firecrest.misc.optimization_mixin import OptimizationMixin
-from firecrest.models.geometry_registry.symmetric_printhead_assembler import (
-    SymmetricPrintheadGeometryAssembler,
-)
+from firecrest.models.geometry_registry.geometry_registry import geometry_registry
 from firecrest.models.free_surface_cap import Constants
 from firecrest.misc.input_argparser import parser
 
@@ -83,13 +81,18 @@ nondim_constants = Constants(
     c_s / c_s,
 )
 
-geometry_assembler = SymmetricPrintheadGeometryAssembler(geometry_data)
+geometry_type = geometry_data.get("type", "symmetric_printhead")
+geometry_assembler = geometry_registry[geometry_type](geometry_data)
 domain = geometry_assembler.domain
 control_boundary = geometry_assembler.control_boundary
 shared_boundary = geometry_assembler.shared_boundary
 
 experiment_id = (
-    "act_" + str(geometry_data["actuator_length"]) + "_window_" + str(waveform_window)
+    geometry_type
+    + "_act_"
+    + str(geometry_data["actuator_length"])
+    + "_window_"
+    + str(waveform_window)
 )
 print(experiment_id)
 
