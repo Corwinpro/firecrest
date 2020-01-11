@@ -296,10 +296,11 @@ if run_mode == "taylor_test":
     _state = solver._objective_state(x0)
     energy.append(solver._objective(_state))
     print(energy[-1])
-    grad = solver._jacobian(_state)
+    grad = np.array(solver._jacobian(_state))
+    x0 = np.array(x0)
 
     for i in range(1, 11):
-        new_state = solver._objective_state(grad * 1.0e-3 * i)
+        new_state = solver._objective_state(x0 + grad * 1.0e-3 * i)
         energy.append(solver._objective(new_state))
 elif run_mode == "optimization":
     res = solver.minimize(x0, bnds)
