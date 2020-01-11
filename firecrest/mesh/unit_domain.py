@@ -9,10 +9,12 @@ class IntervalDomain(Geometry):
         self.dimensions = 1
         self.boundary_elements = boundary_elements
         self.resolution = kwargs.get("resolution", 100)
+        self.start_point = kwargs.get("a", 0.0)
+        self.end_point = kwargs.get("b", 1.0)
 
         self.mark_boundaries()
 
-        self.mesh = dolf.UnitIntervalMesh(self.resolution)
+        self.mesh = dolf.IntervalMesh(self.resolution, self.start_point, self.end_point)
         self._boundary_parts = None
         self._ds = None
         self._dx = None

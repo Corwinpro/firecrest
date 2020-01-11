@@ -16,9 +16,20 @@ p1 = PointBoundary(
 p2 = PointBoundary(
     [1], inside=lambda x: x[0] > 0.9, bcond={"inflow": 0.0, "adiabatic": True}
 )
-domain = IntervalDomain([p1, p2], resolution=100)
+domain = IntervalDomain([p1, p2], resolution=1000)
+timer = {"dt": Decimal("0.01"), "T": Decimal("0.5")}
 
-elsize = 0.08
+# mesh = domain.mesh
+# for _ in range(1):
+#     markers = dolf.MeshFunction("bool", mesh, False)
+#     for c in dolf.cells(mesh):
+#         if c.midpoint().x() > 0.98:
+#             markers[c] = True
+#
+#     mesh = dolf.refine(mesh, markers)
+# domain.mesh = mesh
+
+print("num cells: ", domain.mesh.num_cells())
 height = 0.7
 length = 9.2
 actuator_length = 4.0
@@ -79,6 +90,8 @@ nondim_constants = Constants(
     printhead_constants.Re,
     1.0,
 )
+
+grad_data = {"grad_norm": None}
 
 
 class NormalInflow:
@@ -191,11 +204,14 @@ class OptimizationSolver(OptimizationMixin, UnsteadyTVAcousticSolver):
         du[timer["T"]] = 0.0
 
         print("gradient norm: ", (adjoint_stress_averaged * du).integrate())
+        if grad_data["grad_norm"] is None:
+            grad_data["grad_norm"] = (
+                adjoint_stress_averaged * du
+            ).integrate()  # * self._dt ** 0.5
 
-        return np.array(du.values()[1:-1]) * self._dt ** 0.5
+        return np.array(du.values()[1:-1])  #  * self._dt ** 0.5
 
 
-timer = {"dt": Decimal("0.01"), "T": Decimal("3.0")}
 default_grid = TimeSeries.from_dict(
     {
         Decimal(k) * Decimal(timer["dt"]): 0
@@ -220,7 +236,7 @@ solver = OptimizationSolver(domain, Re=5.0e3, Pr=10.0, timer=timer)
 initial_state = (0.0, 0.0, 0.0)
 
 
-x0 = [1.0e-1 for _ in range(len(default_grid) - 2)]
+x0 = [1.0e-3 for _ in range(len(default_grid) - 2)]
 top_bound = [0.03 for i in range(len(x0))]
 low_bound = [-0.01 for i in range(len(x0))]
 bnds = list(zip(low_bound, top_bound))
@@ -233,11 +249,23 @@ if run_taylor_test:
     state = solver._objective_state(x0)
     energy.append(solver._objective(state))
     grad = np.array(solver._jacobian(state))
+    remainders = []
 
-    for i in range(1, 11):
-        new_state = solver._objective_state(x0 + grad * 1.0e-4 * i)
+    for i in range(1, 30):
+        step_size = 1.0e-1 * 2.0 ** (-i)
+        new_state = solver._objective_state(x0 + grad * step_size)
         energy.append(solver._objective(new_state))
+        remainders.append(energy[-1] - energy[0] - step_size * grad_data["grad_norm"])
+
+    for i, el in enumerate(remainders):
+        print(1.0e-1 * 2.0 ** (-i - 1), el)
 
     exit()
 
+solver.optimization_method = "TNC"
 res = solver.minimize(x0, bnds)
+
+import matplotlib.pyplot as plt
+
+plt.plot(res.x)
+plt.show()
