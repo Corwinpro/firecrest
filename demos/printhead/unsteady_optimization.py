@@ -292,7 +292,7 @@ else:
     x0 = solver.linear_basis.discretize(x0)
 
 if run_mode == "taylor_test":
-    x0 = [0.001 for _ in range(len(x0))]
+    x0 = [1.0e-4 for _ in range(len(x0))]
     energy = []
     _state = solver._objective_state(x0)
     energy.append(solver._objective(_state))
