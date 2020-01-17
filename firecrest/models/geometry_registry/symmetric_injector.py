@@ -74,7 +74,7 @@ class SymmetricInjectorAssembler(BaseAssembler):
         )
         bot_left = self._generate_boundary_dict(
             name="bot_left",
-            default_element_size=self.element_size / 2.0,
+            default_element_size=self.element_size,
             default_bcond={"noslip": True, "adiabatic": True},
         )
         nozzle_noslip_data = self._generate_boundary_dict(
@@ -94,7 +94,7 @@ class SymmetricInjectorAssembler(BaseAssembler):
         )
         actuator_data = self._generate_boundary_dict(
             name="actuator",
-            default_element_size=self.element_size / 6.0,
+            default_element_size=self.element_size / 4.0,
             default_bcond={"inflow": (0.0, 0.0), "adiabatic": True},
         )
         return (
