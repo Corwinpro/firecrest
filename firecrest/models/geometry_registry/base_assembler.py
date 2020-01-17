@@ -5,6 +5,8 @@ from firecrest.mesh.geometry import SimpleDomain
 
 
 class BaseAssembler(ABC):
+    geometry_metadata_tag = "metadata"
+
     def __init__(self, geometry_data):
         # Geometry data for acoustic domain
         self.geometry_data = geometry_data
@@ -24,7 +26,7 @@ class BaseAssembler(ABC):
         pass
 
     def _generate_boundary_dict(self, name, default_element_size, default_bcond):
-        boundary_data = self.geometry_data.get(name, {})
+        boundary_data = self.geometry_data.get(self.geometry_metadata_tag, {}).get(name, {})
         if "el_size" not in boundary_data:
             boundary_data["el_size"] = default_element_size
         if "bcond" not in boundary_data:
