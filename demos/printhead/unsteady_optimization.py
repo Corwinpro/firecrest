@@ -133,7 +133,8 @@ class OptimizationSolver(OptimizationMixin, UnsteadyTVAcousticSolver):
         )
 
         surface_model = SurfaceModel(nondim_constants, kappa_t0=initial_curvature)
-        shared_boundary.bcond["normal_force"] = surface_model
+        if "normal_force" in shared_boundary.bcond:
+            shared_boundary.bcond["normal_force"] = surface_model
 
         _old_flow_rate = 0
         for state in self.solve_direct(
