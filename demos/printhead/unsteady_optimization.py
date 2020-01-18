@@ -93,6 +93,8 @@ experiment_id = (
     + str(geometry_data["actuator_length"])
     + "_window_"
     + str(waveform_window)
+    + "_T_"
+    + str(final_time)
 )
 print(experiment_id)
 
