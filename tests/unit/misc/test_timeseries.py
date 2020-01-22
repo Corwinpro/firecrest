@@ -82,6 +82,12 @@ def test_interpolate_to_keys():
     assert interpolated.first == mid_point.first
     assert interpolated.last == mid_point.last
 
+    interpolated = TimeSeries.interpolate_to_keys(mid_point, grid)
+    assert interpolated._first == grid.first
+    assert interpolated._last == grid.last
+    assert interpolated.first == 0.0
+    assert interpolated.last == 0.0
+
 
 def test_multiply():
     series, mid_point = numeric_series()

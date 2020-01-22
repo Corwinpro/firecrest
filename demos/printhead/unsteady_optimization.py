@@ -19,16 +19,16 @@ args = parser.parse_args()
 
 setup_data = json.load(args.filename)
 
-# Run mode
+# Run mode +
 run_mode = setup_data["mode"]
 
-# Logging settings
+# Logging settings +
 logging_data = setup_data["logging"]
 plot_every = logging_data["plot_frequency"]
 optimization_log_filename = logging_data["optimisation"]
 energy_history_log_filename = logging_data["energy_history"]
 
-# Geometry data for acoustic domain
+# Geometry data for acoustic domain +
 geometry_data = setup_data["acoustic_domain"]
 
 # Dimensional constants parse
@@ -48,8 +48,7 @@ initial_curvature = nozzle_domain_data["initial_curvature"]
 nozzle_domain_length = nozzle_domain_data["length"]
 nozzle_domain_radius = nozzle_domain_data["radius"]
 
-# Time domain data
-
+# Time domain data +
 printhead_timescale = Decimal("0.1")  # in microseconds
 time_domain_data = setup_data["time_domain"]
 final_time = Decimal(str(time_domain_data["final_time"]))  # in microseconds
@@ -59,7 +58,7 @@ nondim_time_step = time_step / printhead_timescale
 
 timer = {"dt": nondim_time_step, "T": nondim_final_time}
 
-# Waveform control data
+# Waveform control data +
 waveform_data = setup_data["control_space"]
 control_type = waveform_data["type"]
 waveform_window = waveform_data["window"]  # in microseconds
@@ -81,12 +80,14 @@ nondim_constants = Constants(
     c_s / c_s,
 )
 
+# +
 geometry_type = geometry_data.get("type", "symmetric_printhead")
 geometry_assembler = geometry_registry[geometry_type](geometry_data)
 domain = geometry_assembler.domain
 control_boundary = geometry_assembler.control_boundary
 shared_boundary = geometry_assembler.shared_boundary
 
+# +
 experiment_id = (
     geometry_type
     + "_act_"
@@ -112,12 +113,39 @@ class NormalInflow:
         return 0.0, 0.0
 
 
+def pre(function):
+    def wrapped(self, discrete_control):
+        restored_control = self.linear_basis.extrapolate(list(discrete_control))
+        return function(self, restored_control)
+
+    return wrapped
+
+
+def post(function):
+    def wrapped(self, discrete_control):
+        result = function(self, discrete_control)
+
+        if optimization_log_filename and run_mode == "optimization":
+            file_name = optimization_log_filename + experiment_id + ".dat"
+            output_data = [
+                self._objective(result, verbose=False),
+                result[1].kappa,
+            ] + list(discrete_control)
+            with open(file_name, "a") as file:
+                writer = csv.writer(file)
+                writer.writerow(output_data)
+
+        return result
+
+    return wrapped
+
+
 class OptimizationSolver(OptimizationMixin, UnsteadyTVAcousticSolver):
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, signal_window=None, **kwargs):
         super().__init__(*args, **kwargs)
         self.linear_basis = PiecewiseLinearBasis(
             np.array([float(key) for key in default_grid.keys()]),
-            width=kwargs.get("signal_window"),
+            width=signal_window,
             reduced_basis=True,
         )
 
@@ -170,15 +198,13 @@ class OptimizationSolver(OptimizationMixin, UnsteadyTVAcousticSolver):
 
         if optimization_log_filename and run_mode == "optimization":
             file_name = optimization_log_filename + experiment_id + ".dat"
+            output_data = [
+                self._objective((state, surface_model), verbose=False),
+                surface_model.kappa,
+            ] + list(control)
             with open(file_name, "a") as file:
                 writer = csv.writer(file)
-                writer.writerow(
-                    [
-                        self._objective((state, surface_model), verbose=False),
-                        surface_model.kappa,
-                    ]
-                    + list(control)
-                )
+                writer.writerow(output_data)
 
         return state, surface_model
 
@@ -231,9 +257,7 @@ class OptimizationSolver(OptimizationMixin, UnsteadyTVAcousticSolver):
             )
             current_time -= self.timer["dt"]
 
-        du = TimeSeries.interpolate_to_keys(adjoint_stress_averaged, small_grid)
-        du[Decimal("0")] = 0.0
-        du[timer["T"]] = 0.0
+        du = TimeSeries.interpolate_to_keys(adjoint_stress_averaged, default_grid)
 
         discrete_grad = self.linear_basis.discretize(du.values())
 
@@ -256,12 +280,6 @@ default_grid = TimeSeries.from_dict(
     {
         Decimal(k) * Decimal(timer["dt"]): 0
         for k in range(int(timer["T"] / Decimal(timer["dt"])) + 1)
-    }
-)
-small_grid = TimeSeries.from_dict(
-    {
-        Decimal(k) * Decimal(timer["dt"]): 0
-        for k in range(1, int(timer["T"] / Decimal(timer["dt"])))
     }
 )
 midpoint_grid = TimeSeries.from_dict(

@@ -1,4 +1,5 @@
 import decimal
+from decimal import Decimal
 from collections import OrderedDict
 import warnings
 import numpy as np
@@ -153,26 +154,37 @@ class TimeSeries(OrderedDict):
         :param keys_series:TimeSeries with keys
         :return:TimeSeries
         """
-        if len(series) - 1 != len(keys_series):
+        _copy_series = TimeSeries.from_dict(series)
+
+        if len(_copy_series) == len(keys_series) - 1:
+            _copy_series[_copy_series._first - _copy_series._dt] = -_copy_series[
+                _copy_series._first
+            ]
+            _copy_series[_copy_series._last + _copy_series._dt] = -_copy_series[
+                _copy_series._last
+            ]
+
+        if len(_copy_series) - 1 != len(keys_series):
             raise TimeGridError(
                 "The interpolated series must be of length of keys plus 1"
             )
         instance = cls()
         dt = keys_series._dt
         if dt is None:
-            dt = series._dt
+            dt = _copy_series._dt
             warnings.warn(
-                f"The interpolation TimeSeries grid has no dt attribute. Using the interpolating grid dt={dt} instead"
+                f"The interpolation TimeSeries grid has no dt attribute. "
+                f"Using the interpolating grid dt={dt} instead"
             )
 
         for key in keys_series:
             instance[key] = 0.5 * (
-                series[key - dt / decimal.Decimal(2.0)]
-                + series[key + dt / decimal.Decimal(2.0)]
+                _copy_series[key - dt / decimal.Decimal(2.0)]
+                + _copy_series[key + dt / decimal.Decimal(2.0)]
             )
 
         if len(instance) == 1:
-            instance._dt = series._dt or keys_series._dt
+            instance._dt = _copy_series._dt or keys_series._dt
         return instance
 
 
@@ -284,3 +296,58 @@ class PiecewiseLinearBasis:
             res += coefficients[i] * self.basis[i]
 
         return res
+
+    @classmethod
+    def convert_between_spaces(cls, from_basis, data, to_width):
+        """ Given the `data` array representation of a signal on
+        the `from_basis`, converts this discrete signal (reducing or
+        increasing the number of discrete points) to a signal with `to_width`
+        discrete basis width
+
+        :return
+        new_data: array
+            representation of the `data` on the new space of width `to_width`
+        new_bases: PiecewiseLinearBasis
+            basis with `to_width` width
+        """
+        from_signal = from_basis.extrapolate(data)
+
+        space = from_basis.space
+        new_basis = cls(space, to_width, reduced_basis=from_basis._is_reduced_basis)
+        return new_basis.discretize(from_signal), new_basis
+
+
+class LinearControlBasis:
+    def __init__(self, dt, final_time, signal_window, *args, **kwargs):
+        final_time = Decimal(final_time)
+        self._default_grid = TimeSeries.from_dict(
+            {
+                Decimal(k) * Decimal(dt): 0
+                for k in range(int(final_time / Decimal(dt)) + 1)
+            }
+        )
+        self._small_grid = TimeSeries.from_dict(
+            {
+                Decimal(k) * Decimal(dt): 0
+                for k in range(1, int(final_time / Decimal(dt)))
+            }
+        )
+        self._midpoint_grid = TimeSeries.from_dict(
+            {
+                Decimal(k + 0.5) * Decimal(dt): 0
+                for k in range(int(final_time / Decimal(dt)) - 1)
+            }
+        )
+        self._is_reduced_basis = kwargs.get("reduced_basis", True)
+        self.linear_basis = PiecewiseLinearBasis(
+            np.array([float(key) for key in self._default_grid.keys()]),
+            width=signal_window,
+            reduced_basis=self._is_reduced_basis,
+        )
+
+    def discrete_to_continuous(self, control_list):
+        restored_control = self.linear_basis.extrapolate(list(control_list))
+        return TimeSeries.from_list(restored_control, self._default_grid)
+
+    def continuous_to_discrete(self, function):
+        return self.linear_basis.discretize(function.values())
