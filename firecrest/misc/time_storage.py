@@ -122,7 +122,8 @@ class TimeSeries(OrderedDict):
         """
         if len(array) != len(template_grid):
             raise TimeGridError(
-                f"Array must be of the same size as template grid ({len(template_grid)})"
+                f"Array len {len(array)} must be of the same size "
+                f"as template grid ({len(template_grid)})"
             )
         instance = cls()
         for item, key in zip(array, template_grid):

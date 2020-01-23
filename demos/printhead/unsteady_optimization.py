@@ -294,7 +294,7 @@ class OptimizationSolver(OptimizationMixin, UnsteadyTVAcousticSolver):
         self.midpoint_grid = TimeSeries.from_dict(
             {
                 Decimal(k + 0.5) * Decimal(timer["dt"]): 0
-                for k in range(int(timer["T"] / Decimal(timer["dt"])) - 1)
+                for k in range(int(timer["T"] / Decimal(timer["dt"])))
             }
         )
         # We define a control space, a PiecewiseLinearBasis in this case
@@ -306,8 +306,8 @@ class OptimizationSolver(OptimizationMixin, UnsteadyTVAcousticSolver):
 
         # We prepare the initial guess and bounds on the control
         if bounds is not None:
-            top_bound = [bounds[0] for _ in range(len(self.time_grid))]
-            low_bound = [bounds[1] for _ in range(len(self.time_grid))]
+            low_bound = [bounds[0] for _ in range(len(self.time_grid))]
+            top_bound = [bounds[1] for _ in range(len(self.time_grid))]
             top_bound = self.linear_basis.discretize(top_bound)
             low_bound = self.linear_basis.discretize(low_bound)
             bounds = list(zip(low_bound, top_bound))
