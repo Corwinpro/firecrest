@@ -50,11 +50,13 @@ class OptimizationMixin(ABC):
 
         return self.jacobian_cache[key] * self.default_renormalization
 
-    def minimize(self, x0, bnds, maxiter=200):
+    def minimize(self, x0, bnds, maxiter=200, optimization_method=None):
+        if optimization_method is None:
+            optimization_method = self.optimization_method
         res = minimize(
             self.objective,
             x0,
-            method=self.optimization_method,
+            method=optimization_method,
             jac=self.jacobian,
             bounds=bnds,
             options={"disp": True, "maxiter": maxiter, "ftol": 1.0e-8},
