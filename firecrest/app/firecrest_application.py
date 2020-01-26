@@ -4,8 +4,9 @@ from decimal import Decimal
 import logging
 
 from firecrest.models.geometry_registry.geometry_registry import geometry_registry
-from firecrest.misc.time_storage import TimeSeries, PiecewiseLinearBasis
-
+from firecrest.models.free_surface_cap import SurfaceModelFactory
+from firecrest.misc.logger import LoggerFactory
+from firecrest.solvers.unsteady_optimizer import UnsteadyOptimizationSolver
 
 decimal.getcontext().prec = 6
 log = logging.getLogger(__name__)
@@ -17,16 +18,33 @@ class FirecrestApp:
         with open(self.workflow_file) as f:
             self.setup_data = json.load(f)
 
-        self.run_mode = run_mode or "optimization"
-        if run_mode is not None:
-            self.setup_data["mode"] = run_mode
+        self.run_mode = run_mode or self.setup_data["mode"] or "optimization"
+        self.setup_data["mode"] = self.run_mode
 
         self.timescale = Decimal("0.1")  # in microseconds
 
-        # self.domain_configuration = self._configure_domain()
         self.time_domain_configuration = self._configure_time_domain()
         self.control_space_configuration = self._configure_control_space()
         self.experiment_id = self._configure_experiment_id()
+        self.log_config = self._configure_logging()
+        self.constants = self._configure_constants()
+        self.domain_configuration = self._configure_domain()
+
+        self.factories = self.setup_model_factories()
+
+    def setup_model_factories(self):
+        factories = {
+            "models": {"surface_model": SurfaceModelFactory(self.setup_data)},
+            "solvers": {"unsteady_solver": None},
+            "loggers": {
+                "base_logger": LoggerFactory(
+                    run_mode=self.run_mode,
+                    experiment_id=self.experiment_id,
+                    log_names=self.log_config,
+                )
+            },
+        }
+        return factories
 
     def run(self):
         log.info(
@@ -34,6 +52,28 @@ class FirecrestApp:
             f"Workflow File: {self.workflow_file}\n"
             f"Run mode: {self.run_mode}\n"
             f"Experiment ID: {self.experiment_id}\n"
+        )
+
+        domain = self.domain_configuration["domain"]
+        logger = self.factories["loggers"]["base_logger"].create_basic_logger()
+        model_factory = self.factories["models"]["surface_model"]
+        optimizer = UnsteadyOptimizationSolver(
+            domain,
+            Re=self.constants["Re"],
+            Pr=self.constants["Pr"],
+            timer=self.time_domain_configuration,
+            experiment_id=self.experiment_id,
+            initial_state=(0.0, (0.0, 0.0), 0.0),
+            control_boundary=self.domain_configuration["control_boundary"],
+            shared_boundary=self.domain_configuration["shared_boundary"],
+            logger=logger,
+            model_factory=model_factory,
+        )
+        result = optimizer.run(
+            self.control_space_configuration["control_default"],
+            self.control_space_configuration["bounds"],
+            signal_window=self.control_space_configuration["window"],
+            optimization_method=self.control_space_configuration["algorithm"],
         )
 
     def _configure_domain(self):
@@ -47,17 +87,24 @@ class FirecrestApp:
             "shared_boundary": geometry_assembler.shared_boundary,
         }
 
-    def _configure_dim_constants(self):
-        # Dimensional constants parse
-        constants_data = self.setup_data["constants"]
-        L = constants_data["length"]
-        c_s = constants_data["sound_speed"]
-        rho = constants_data["density"]
-        epsilon = constants_data["Mach"]
-        gamma_st = constants_data["surface_tension"]
-        mu = constants_data["viscosity"]
-        Pr = constants_data["Pr"]
-        Re = rho * c_s * L / mu
+    def _configure_constants(self):
+        # Constants parsing
+        constants_data = self.setup_data["constants"].copy()
+        constants_data["Re"] = (
+            constants_data["density"]
+            * constants_data["sound_speed"]
+            * constants_data["length"]
+            / constants_data["viscosity"]
+        )
+        # L = constants_data["length"]
+        # c_s = constants_data["sound_speed"]
+        # rho = constants_data["density"]
+        # epsilon = constants_data["Mach"]
+        # gamma_st = constants_data["surface_tension"]
+        # mu = constants_data["viscosity"]
+        # Pr = constants_data["Pr"]
+        # Re = rho * c_s * L / mu
+        return constants_data
 
     def _configure_time_domain(self):
         # Time domain data
@@ -70,7 +117,7 @@ class FirecrestApp:
         return timer
 
     def _configure_control_space(self):
-        # Waveform control data
+        # Control data
         waveform_data = self.setup_data["control_space"]
         control_type = waveform_data["type"]
         waveform_window = waveform_data["window"]  # in microseconds
@@ -92,12 +139,13 @@ class FirecrestApp:
         # Logging settings
         logging_data = self.setup_data["logging"]
         plot_every = logging_data["plot_frequency"]
-        optimization_log_filename = logging_data.get(
-            "optimisation", "optimisation_log_"
-        )
-        energy_history_log_filename = logging_data.get(
-            "energy_history", "energy_history_"
-        )
+        optimization = logging_data.get("optimisation", "optimisation_log_")
+        in_process = logging_data.get("energy_history", "energy_history_")
+        return {
+            "plot_every": plot_every,
+            "optimization": optimization,
+            "in_process": in_process,
+        }
 
     def _configure_experiment_id(self):
         experiment_id = (
@@ -110,6 +158,3 @@ class FirecrestApp:
             + str(self.setup_data["time_domain"]["final_time"])
         )
         return experiment_id
-
-    def _configure_control_space(self):
-        pass
