@@ -16,6 +16,40 @@ Constants = namedtuple(
 )
 
 
+class SurfaceModelFactory:
+    def __init__(self, setup_data):
+        model_data = setup_data["nozzle_domain"]
+        self.initial_condition = model_data["initial_curvature"]
+        nozzle_domain_length = model_data["length"]
+        nozzle_domain_radius = model_data["radius"]
+
+        constants_data = setup_data["constants"]
+        L = constants_data["length"]
+        c_s = constants_data["sound_speed"]
+        rho = constants_data["density"]
+        epsilon = constants_data["Mach"]
+        gamma_st = constants_data["surface_tension"]
+        mu = constants_data["viscosity"]
+        Re = rho * c_s * L / mu
+
+        self.constants = Constants(
+            rho / rho,
+            epsilon,
+            L / L,
+            nozzle_domain_length / L,
+            nozzle_domain_radius / L,
+            2.0 * gamma_st / (rho * c_s ** 2.0 * nozzle_domain_radius * epsilon),
+            Re,
+            c_s / c_s,
+        )
+
+    def create_direct_model(self):
+        return SurfaceModel(constants=self.constants, kappa_t0=self.initial_condition)
+
+    def create_adjoint_model(self, direct_surface):
+        return AdjointSurfaceModel(direct_surface=direct_surface)
+
+
 class SurfaceModel:
     def __init__(self, constants, kappa_t0=None, kappa_history=None):
         """
