@@ -127,7 +127,8 @@ class BaseTVAcousticWeakForm(ABC, BaseWeakForm):
             return self.function_space_factory.function_spaces
         except AttributeError:
             raise AttributeError(
-                "A function_space_factory which implements functions_spaces must be provided."
+                "A function_space_factory which implements "
+                "`functions_spaces` must be provided."
             )
 
     @property
@@ -365,8 +366,8 @@ class BaseTVAcousticWeakForm(ABC, BaseWeakForm):
         bc = set(bcond.keys()) & set(allowed_bconds.keys())
         if len(bc) != 1:
             raise TypeError(
-                "Incorrect number of boundary condition."
-                f"One expected, {len(bc)} received."
+                "Incorrect number of boundary conditions."
+                f"Expected 1, but {len(bc)} received."
             )
         return bc.pop()
 
