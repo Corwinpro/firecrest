@@ -26,7 +26,6 @@ class NormalInflow:
 def discrete_to_continuous_direct(function):
     def wrapped(self, discrete_control):
         continuous_control = self.basis.extrapolate(list(discrete_control))
-        print(continuous_control[:10])
         return function(self, continuous_control)
 
     return wrapped
@@ -162,7 +161,7 @@ class UnsteadyOptimizationSolver(OptimizationMixin, UnsteadyTVAcousticSolver):
         self.initialize_control_boundary(control)
 
         surface_model = self.initialize_shared_boundary()
-
+        print(self.initial_state)
         _old_flow_rate = 0
         for state in self.solve_direct(
             self.initial_state,
