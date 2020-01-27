@@ -110,6 +110,7 @@ class UnsteadyTVAcousticSolver(BaseSolver):
         yield_state=False,
         plot_every=10,
     ):
+        print(initial_state)
         current_time = Decimal("0")
         final_time = self.timer["T"]
         state = initial_state

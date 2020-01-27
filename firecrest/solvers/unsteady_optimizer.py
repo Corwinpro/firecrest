@@ -161,7 +161,6 @@ class UnsteadyOptimizationSolver(OptimizationMixin, UnsteadyTVAcousticSolver):
         self.initialize_control_boundary(control)
 
         surface_model = self.initialize_shared_boundary()
-        print(self.initial_state)
         _old_flow_rate = 0
         for state in self.solve_direct(
             self.initial_state,
