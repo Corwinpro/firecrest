@@ -26,6 +26,7 @@ class NormalInflow:
 def discrete_to_continuous_direct(function):
     def wrapped(self, discrete_control):
         continuous_control = self.basis.extrapolate(list(discrete_control))
+        print(continuous_control[:10])
         return function(self, continuous_control)
 
     return wrapped
