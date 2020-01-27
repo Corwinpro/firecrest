@@ -41,16 +41,6 @@ def post(function):
                 result[1].kappa,
             ] + list(discrete_control)
             self.logger.log_optimization_step(output_data)
-        # if optimization_log_filename and run_mode == "optimization":
-        #     file_name = optimization_log_filename + experiment_id + ".dat"
-        #     output_data = [
-        #         self._objective(result, verbose=False),
-        #         result[1].kappa,
-        #     ] + list(discrete_control)
-        #     with open(file_name, "a") as file:
-        #         writer = csv.writer(file)
-        #         writer.writerow(output_data)
-
         return result
 
     return wrapped
@@ -85,7 +75,7 @@ def continuous_to_discrete_adj(function):
 class UnsteadyOptimizationSolver(OptimizationMixin, UnsteadyTVAcousticSolver):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.initial_state = kwargs["initial_state"]
+        self.acoustic_initial_state = kwargs["initial_state"]
         self.control_boundary = kwargs.get("control_boundary")
         self.shared_boundary = kwargs.get("shared_boundary")
 
@@ -116,7 +106,6 @@ class UnsteadyOptimizationSolver(OptimizationMixin, UnsteadyTVAcousticSolver):
                 self.flow_rate(state, self.shared_boundary),
             ]
             self.logger.log_intermediate_step(data)
-
         # if energy_history_log_filename and run_mode == "single_run":
         #     file_name = energy_history_log_filename + experiment_id + ".dat"
         #     with open(file_name, "a") as file:
@@ -163,7 +152,7 @@ class UnsteadyOptimizationSolver(OptimizationMixin, UnsteadyTVAcousticSolver):
         surface_model = self.initialize_shared_boundary()
         _old_flow_rate = 0
         for state in self.solve_direct(
-            self.initial_state,
+            self.acoustic_initial_state,
             verbose=False,
             yield_state=True,
             plot_every=self.logger.plot_every,
