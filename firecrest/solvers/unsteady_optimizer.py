@@ -106,34 +106,14 @@ class UnsteadyOptimizationSolver(OptimizationMixin, UnsteadyTVAcousticSolver):
                 self.flow_rate(state, self.shared_boundary),
             ]
             self.logger.log_intermediate_step(data)
-        # if energy_history_log_filename and run_mode == "single_run":
-        #     file_name = energy_history_log_filename + experiment_id + ".dat"
-        #     with open(file_name, "a") as file:
-        #         writer = csv.writer(file)
-        #         writer.writerow(
-        #             [
-        #                 self.forms.energy(state),
-        #                 surface_model.surface_energy() / 2.0,
-        #                 self.forms.kinetic_energy_flux(
-        #                     state, (0.0, 1.0), self.control_boundary
-        #                 ),
-        #                 self.forms.kinetic_energy_flux(
-        #                     state, (0.0, -1.0), self.shared_boundary
-        #                 ),
-        #                 self.flow_rate(state, self.control_boundary),
-        #                 self.flow_rate(state, self.shared_boundary),
-        #             ]
-        #         )
 
     def initialize_shared_boundary(self):
-        # surface_model = SurfaceModel(nondim_constants, kappa_t0=initial_curvature)
         surface_model = self.model_factory.create_direct_model()
         if "normal_force" in self.shared_boundary.bcond:
             self.shared_boundary.bcond["normal_force"] = surface_model
         return surface_model
 
     def initialize_adjoint_shared_boundary(self, direct_shared_boundary):
-        # adjoint_surface = AdjointSurfaceModel(direct_surface=direct_shared_boundary)
         adjoint_surface = self.model_factory.create_adjoint_model(
             direct_shared_boundary
         )
