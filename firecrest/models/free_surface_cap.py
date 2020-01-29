@@ -1,4 +1,4 @@
-import math
+from math import pi as PI
 from collections import namedtuple
 
 Constants = namedtuple(
@@ -18,7 +18,7 @@ Constants = namedtuple(
 
 class SurfaceModelFactory:
     def __init__(self, setup_data):
-        model_data = setup_data["nozzle_domain"]
+        model_data = setup_data["nozzle_domain"].copy()
         self.initial_condition = model_data["initial_curvature"]
         nozzle_domain_length = model_data["length"]
         nozzle_domain_radius = model_data["radius"]
@@ -113,7 +113,7 @@ class SurfaceModel:
         if abs(kappa) < 1.0e-3:
             return (
                 2.0
-                * math.pi
+                * PI
                 * self.r ** 3.0
                 / 8
                 * (
@@ -126,7 +126,7 @@ class SurfaceModel:
         else:
             return (
                 8.0
-                * math.pi
+                * PI
                 / kappa ** 4.0
                 * (1.0 - self._cos_theta(kappa)) ** 2.0
                 / self._cos_theta(kappa)
@@ -155,10 +155,10 @@ class SurfaceModel:
         energy = (
             self.r ** 3.0
             / (8.0 * self.epsilon)
-            * (self.gamma_tension * 8.0 * math.pi * _kappa_function)
+            * (self.gamma_tension * 8.0 * PI * _kappa_function)
         )
         static_energy = (
-            self.r ** 3.0 / (8.0 * self.epsilon) * self.gamma_tension * 4.0 * math.pi
+            self.r ** 3.0 / (8.0 * self.epsilon) * self.gamma_tension * 4.0 * PI
         )
 
         return energy - static_energy
