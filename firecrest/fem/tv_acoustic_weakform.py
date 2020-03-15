@@ -191,6 +191,20 @@ class BaseTVAcousticWeakForm(ABC, BaseWeakForm):
         )
         return dolf.assemble(flux * self.domain.ds((boundary.surface_index,)))
 
+    def mass_flow_rate(self, state, boundary):
+        return dolf.assemble(
+            dolf.inner(state[1], self.domain.n)
+            * self.domain.ds((boundary.surface_index,))
+        )
+
+    def avg_normal_stress(self, state, boundary):
+        stress = self.stress(state[0], state[1])
+        stress = dolf.assemble(
+            dolf.dot(dolf.dot(stress, self.domain.n), self.domain.n)
+            * self.domain.ds((boundary.surface_index,))
+        )
+        return stress
+
     def heat_flux(self, temperature):
         return (
             dolf.grad(temperature)
