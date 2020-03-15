@@ -13,91 +13,91 @@ from firecrest.models.geometry_registry.geometry_registry import geometry_regist
 from firecrest.models.free_surface_cap import Constants
 from firecrest.misc.input_argparser import parser
 
-decimal.getcontext().prec = 6
-
-args = parser.parse_args()
-
-setup_data = json.load(args.filename)
-
-# Run mode +
-run_mode = setup_data["mode"]
-
-# Logging settings +
-logging_data = setup_data["logging"]
-plot_every = logging_data["plot_frequency"]
-optimization_log_filename = logging_data["optimisation"]
-energy_history_log_filename = logging_data["energy_history"]
-
-# Geometry data for acoustic domain +
-geometry_data = setup_data["acoustic_domain"]
-
-# Dimensional constants parse
-constants_data = setup_data["constants"]
-L = constants_data["length"]
-c_s = constants_data["sound_speed"]
-rho = constants_data["density"]
-epsilon = constants_data["Mach"]
-gamma_st = constants_data["surface_tension"]
-mu = constants_data["viscosity"]
-Pr = constants_data["Pr"]
-Re = rho * c_s * L / mu
-
-# Nozzle domain constants
-nozzle_domain_data = setup_data["nozzle_domain"]
-initial_curvature = nozzle_domain_data["initial_curvature"]
-nozzle_domain_length = nozzle_domain_data["length"]
-nozzle_domain_radius = nozzle_domain_data["radius"]
-
-# Time domain data +
-printhead_timescale = Decimal("0.1")  # in microseconds
-time_domain_data = setup_data["time_domain"]
-final_time = Decimal(str(time_domain_data["final_time"]))  # in microseconds
-time_step = Decimal(str(time_domain_data["dt"]))  # in microseconds
-nondim_final_time = final_time / printhead_timescale
-nondim_time_step = time_step / printhead_timescale
-
-timer = {"dt": nondim_time_step, "T": nondim_final_time}
-
-# Waveform control data +
-waveform_data = setup_data["control_space"]
-control_type = waveform_data["type"]
-waveform_window = waveform_data["window"]  # in microseconds
-nondim_waveform_window = waveform_window / float(printhead_timescale)
-control_default_value = waveform_data.get("control_default", None)
-control_upper_limit = waveform_data.get("upper_limit", 0.015)
-control_lower_limit = waveform_data.get("lower_limit", -0.015)
-control_algorithm = waveform_data.get("algorithm", "L-BFGS-B")
-
-
-nondim_constants = Constants(
-    rho / rho,
-    epsilon,
-    L / L,
-    nozzle_domain_length / L,
-    nozzle_domain_radius / L,
-    2.0 * gamma_st / (rho * c_s ** 2.0 * nozzle_domain_radius * epsilon),
-    Re,
-    c_s / c_s,
-)
-
-# +
-geometry_type = geometry_data.get("type", "symmetric_printhead")
-geometry_assembler = geometry_registry[geometry_type](geometry_data)
-domain = geometry_assembler.domain
-control_boundary = geometry_assembler.control_boundary
-shared_boundary = geometry_assembler.shared_boundary
-
-# +
-experiment_id = (
-    geometry_type
-    + "_act_"
-    + str(geometry_data["actuator_length"])
-    + "_window_"
-    + str(waveform_window)
-    + "_T_"
-    + str(final_time)
-)
-print(experiment_id)
+# decimal.getcontext().prec = 6
+#
+# args = parser.parse_args()
+#
+# setup_data = json.load(args.filename)
+#
+# # Run mode +
+# run_mode = setup_data["mode"]
+#
+# # Logging settings +
+# logging_data = setup_data["logging"]
+# plot_every = logging_data["plot_frequency"]
+# optimization_log_filename = logging_data["optimisation"]
+# energy_history_log_filename = logging_data["energy_history"]
+#
+# # Geometry data for acoustic domain +
+# geometry_data = setup_data["acoustic_domain"]
+#
+# # Dimensional constants parse
+# constants_data = setup_data["constants"]
+# L = constants_data["length"]
+# c_s = constants_data["sound_speed"]
+# rho = constants_data["density"]
+# epsilon = constants_data["Mach"]
+# gamma_st = constants_data["surface_tension"]
+# mu = constants_data["viscosity"]
+# Pr = constants_data["Pr"]
+# Re = rho * c_s * L / mu
+#
+# # Nozzle domain constants
+# nozzle_domain_data = setup_data["nozzle_domain"]
+# initial_curvature = nozzle_domain_data["initial_curvature"]
+# nozzle_domain_length = nozzle_domain_data["length"]
+# nozzle_domain_radius = nozzle_domain_data["radius"]
+#
+# # Time domain data +
+# printhead_timescale = Decimal("0.1")  # in microseconds
+# time_domain_data = setup_data["time_domain"]
+# final_time = Decimal(str(time_domain_data["final_time"]))  # in microseconds
+# time_step = Decimal(str(time_domain_data["dt"]))  # in microseconds
+# nondim_final_time = final_time / printhead_timescale
+# nondim_time_step = time_step / printhead_timescale
+#
+# timer = {"dt": nondim_time_step, "T": nondim_final_time}
+#
+# # Waveform control data +
+# waveform_data = setup_data["control_space"]
+# control_type = waveform_data["type"]
+# waveform_window = waveform_data["window"]  # in microseconds
+# nondim_waveform_window = waveform_window / float(printhead_timescale)
+# control_default_value = waveform_data.get("control_default", None)
+# control_upper_limit = waveform_data.get("upper_limit", 0.015)
+# control_lower_limit = waveform_data.get("lower_limit", -0.015)
+# control_algorithm = waveform_data.get("algorithm", "L-BFGS-B")
+#
+#
+# nondim_constants = Constants(
+#     rho / rho,
+#     epsilon,
+#     L / L,
+#     nozzle_domain_length / L,
+#     nozzle_domain_radius / L,
+#     2.0 * gamma_st / (rho * c_s ** 2.0 * nozzle_domain_radius * epsilon),
+#     Re,
+#     c_s / c_s,
+# )
+#
+# # +
+# geometry_type = geometry_data.get("type", "symmetric_printhead")
+# geometry_assembler = geometry_registry[geometry_type](geometry_data)
+# domain = geometry_assembler.domain
+# control_boundary = geometry_assembler.control_boundary
+# shared_boundary = geometry_assembler.shared_boundary
+#
+# # +
+# experiment_id = (
+#     geometry_type
+#     + "_act_"
+#     + str(geometry_data["actuator_length"])
+#     + "_window_"
+#     + str(waveform_window)
+#     + "_T_"
+#     + str(final_time)
+# )
+# print(experiment_id)
 
 
 class NormalInflow:
@@ -113,7 +113,7 @@ class NormalInflow:
         return 0.0, 0.0
 
 
-def discrete_to_continuous_control(function):
+def discrete_to_continuous_direct(function):
     def wrapped(self, discrete_control):
         continuous_control = self.linear_basis.extrapolate(list(discrete_control))
         return function(self, continuous_control)
@@ -125,15 +125,21 @@ def post(function):
     def wrapped(self, discrete_control):
         result = function(self, discrete_control)
 
-        if optimization_log_filename and run_mode == "optimization":
-            file_name = optimization_log_filename + experiment_id + ".dat"
+        if self.logger.if_log_data("optimization"):
             output_data = [
                 self._objective(result, verbose=False),
                 result[1].kappa,
             ] + list(discrete_control)
-            with open(file_name, "a") as file:
-                writer = csv.writer(file)
-                writer.writerow(output_data)
+            self.logger.log_optimization_step(output_data)
+        # if optimization_log_filename and run_mode == "optimization":
+        #     file_name = optimization_log_filename + experiment_id + ".dat"
+        #     output_data = [
+        #         self._objective(result, verbose=False),
+        #         result[1].kappa,
+        #     ] + list(discrete_control)
+        #     with open(file_name, "a") as file:
+        #         writer = csv.writer(file)
+        #         writer.writerow(output_data)
 
         return result
 
@@ -166,13 +172,15 @@ def continuous_to_discrete_adj(function):
     return wrapped
 
 
-class OptimizationSolver(OptimizationMixin, UnsteadyTVAcousticSolver):
+class UnsteadyOptimizationSolver(OptimizationMixin, UnsteadyTVAcousticSolver):
     def __init__(self, *args, signal_window=None, **kwargs):
         super().__init__(*args, **kwargs)
-        self.signal_window = signal_window
         self.initial_state = kwargs["initial_state"]
         self.control_boundary = kwargs.get("control_boundary")
         self.shared_boundary = kwargs.get("shared_boundary")
+
+        self.logger = kwargs.get("logger")
+        self.model_factory = kwargs.get("model_factory")
 
     def flow_rate(self, state, boundary):
         return 2.0 * dolf.assemble(
@@ -185,33 +193,61 @@ class OptimizationSolver(OptimizationMixin, UnsteadyTVAcousticSolver):
         self.control_boundary.bcond["inflow"] = inflow
 
     def log_intermediate_step(self, state, surface_model):
-        if energy_history_log_filename and run_mode == "single_run":
-            file_name = energy_history_log_filename + experiment_id + ".dat"
-            with open(file_name, "a") as file:
-                writer = csv.writer(file)
-                writer.writerow(
-                    [
-                        self.forms.energy(state),
-                        surface_model.surface_energy() / 2.0,
-                        self.forms.kinetic_energy_flux(
-                            state, (0.0, 1.0), control_boundary
-                        ),
-                        self.forms.kinetic_energy_flux(
-                            state, (0.0, -1.0), self.shared_boundary
-                        ),
-                        self.flow_rate(state, self.control_boundary),
-                        self.flow_rate(state, self.shared_boundary),
-                    ]
-                )
+        if self.logger.if_log_data("in_process"):
+            data = [
+                self.forms.energy(state),
+                surface_model.surface_energy() / 2.0,
+                self.forms.kinetic_energy_flux(
+                    state, (0.0, 1.0), self.control_boundary
+                ),
+                self.forms.kinetic_energy_flux(
+                    state, (0.0, -1.0), self.shared_boundary
+                ),
+                self.flow_rate(state, self.control_boundary),
+                self.flow_rate(state, self.shared_boundary),
+            ]
+            self.logger.log_intermediate_step(data)
+
+        # if energy_history_log_filename and run_mode == "single_run":
+        #     file_name = energy_history_log_filename + experiment_id + ".dat"
+        #     with open(file_name, "a") as file:
+        #         writer = csv.writer(file)
+        #         writer.writerow(
+        #             [
+        #                 self.forms.energy(state),
+        #                 surface_model.surface_energy() / 2.0,
+        #                 self.forms.kinetic_energy_flux(
+        #                     state, (0.0, 1.0), self.control_boundary
+        #                 ),
+        #                 self.forms.kinetic_energy_flux(
+        #                     state, (0.0, -1.0), self.shared_boundary
+        #                 ),
+        #                 self.flow_rate(state, self.control_boundary),
+        #                 self.flow_rate(state, self.shared_boundary),
+        #             ]
+        #         )
 
     def initialize_shared_boundary(self):
-        surface_model = SurfaceModel(nondim_constants, kappa_t0=initial_curvature)
+        # surface_model = SurfaceModel(nondim_constants, kappa_t0=initial_curvature)
+        surface_model = self.model_factory.create_direct_model()
         if "normal_force" in self.shared_boundary.bcond:
             self.shared_boundary.bcond["normal_force"] = surface_model
         return surface_model
 
+    def initialize_adjoint_shared_boundary(self, direct_shared_boundary):
+        # adjoint_surface = AdjointSurfaceModel(direct_surface=direct_shared_boundary)
+        adjoint_surface = self.model_factory.create_adjoint_model(
+            direct_shared_boundary
+        )
+        self.shared_boundary.bcond["normal_force"] = adjoint_surface
+        adjoint_surface.update_curvature(0.0, self._dt)
+        return adjoint_surface
+
+    def evaluate_adjoint_sensitivity(self, adjoint_state):
+        return self.boundary_averaged_stress(adjoint_state, self.control_boundary)
+
     @post
-    @discrete_to_continuous_control
+    @discrete_to_continuous_direct
     def _objective_state(self, control):
         self.initialize_control_boundary(control)
 
@@ -219,7 +255,10 @@ class OptimizationSolver(OptimizationMixin, UnsteadyTVAcousticSolver):
 
         _old_flow_rate = 0
         for state in self.solve_direct(
-            self.initial_state, verbose=False, yield_state=True, plot_every=plot_every
+            self.initial_state,
+            verbose=False,
+            yield_state=True,
+            plot_every=self.logger.plot_every,
         ):
             _new_flow_rate = self.flow_rate(state, self.shared_boundary)
             surface_model.update_curvature(
@@ -256,32 +295,28 @@ class OptimizationSolver(OptimizationMixin, UnsteadyTVAcousticSolver):
         state, surface_model = state
         state = (state[0], -state[1], state[2])
 
-        adjoint_surface = AdjointSurfaceModel(direct_surface=surface_model)
-        self.shared_boundary.bcond["normal_force"] = adjoint_surface
+        adjoint_surface = self.initialize_adjoint_shared_boundary(surface_model)
 
-        adjoint_stress_averaged = []
+        continuous_gradient = []
 
         _old_flow_rate = 0
         _new_flow_rate = 0
-        adjoint_surface.update_curvature(
-            0.5 * (_new_flow_rate + _old_flow_rate), self._dt
-        )
         for adjoint_state in solver.solve_adjoint(
-            initial_state=state, verbose=False, yield_state=True, plot_every=plot_every
+            initial_state=state,
+            verbose=False,
+            yield_state=True,
+            plot_every=self.logger.plot_every,
         ):
             _old_flow_rate = _new_flow_rate
             _new_flow_rate = self.flow_rate(adjoint_state, self.shared_boundary)
             adjoint_surface.update_curvature(
                 0.5 * (_new_flow_rate + _old_flow_rate), self._dt
             )
+            continuous_gradient.append(self.evaluate_adjoint_sensitivity(adjoint_state))
 
-            adjoint_stress_averaged.append(
-                self.boundary_averaged_stress(adjoint_state, self.control_boundary)
-            )
+        return continuous_gradient[::-1]
 
-        return adjoint_stress_averaged[::-1]
-
-    def run(self, initial_guess=None, bounds=None):
+    def run(self, signal_window, initial_guess=None, bounds=None):
         # 1. define control
         # `time_grid` defines the time grid for the direct simulation
         self.time_grid = TimeSeries.from_dict(
@@ -293,14 +328,14 @@ class OptimizationSolver(OptimizationMixin, UnsteadyTVAcousticSolver):
         # `midpoint_grid` defines the time grid for the adjoint simulation
         self.midpoint_grid = TimeSeries.from_dict(
             {
-                Decimal(k + 0.5) * Decimal(timer["dt"]): 0
-                for k in range(int(timer["T"] / Decimal(timer["dt"])))
+                Decimal(k + 0.5) * Decimal(self.timer["dt"]): 0
+                for k in range(int(self.timer["T"] / Decimal(self.timer["dt"])))
             }
         )
         # We define a control space, a PiecewiseLinearBasis in this case
         self.linear_basis = PiecewiseLinearBasis(
             np.array([float(key) for key in self.time_grid.keys()]),
-            width=self.signal_window,
+            width=signal_window,
             reduced_basis=True,
         )
 
@@ -319,7 +354,7 @@ class OptimizationSolver(OptimizationMixin, UnsteadyTVAcousticSolver):
         return res
 
 
-solver = OptimizationSolver(
+solver = UnsteadyOptimizationSolver(
     domain,
     Re=Re,
     Pr=Pr,
