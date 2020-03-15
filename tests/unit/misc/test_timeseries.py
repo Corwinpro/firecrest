@@ -94,9 +94,6 @@ def test_multiply():
     multiplied = series * series
     assert len(multiplied) == len(series)
     assert multiplied == TimeSeries.from_dict({i: i ** 2 for i in series})
-    with pytest.raises(TimeGridError):
-        _ = series * mid_point
-
     assert mid_point * series == mid_point * mid_point
 
 
@@ -104,3 +101,25 @@ def test_integrate():
     series, mid_point = numeric_series()
     assert series.integrate() == 45
     assert mid_point.integrate() == 40.5
+
+
+def test_from_parameters():
+    start = decimal.Decimal("1")
+    stop = decimal.Decimal("2")
+    step = decimal.Decimal("0.1")
+
+    series = TimeSeries.from_parameters(start, stop, step)
+    assert series.first == 0
+    assert series.last == 0
+    for i in range(11):
+        assert series[start + i * step] == 0
+    assert series[stop] == 0
+
+    midpoint_grid = TimeSeries.from_parameters(
+        start + decimal.Decimal("0.5") * step,
+        stop - decimal.Decimal("0.5") * step,
+        step,
+    )
+    assert len(midpoint_grid) == 10
+    assert start + decimal.Decimal("0.5") * step in midpoint_grid
+    assert stop - decimal.Decimal("0.5") * step in midpoint_grid

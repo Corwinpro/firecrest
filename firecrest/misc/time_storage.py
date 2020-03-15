@@ -78,7 +78,8 @@ class TimeSeries(OrderedDict):
         else:
             if self._dt and self._dt != _dt:
                 warnings.warn(
-                    f"The time series time intervals appear to be non-uniform, with current dt = {self._dt} != {_dt}",
+                    f"The time series time intervals appear to be non-uniform, "
+                    f"with current dt = {self._dt} != {_dt}",
                     RuntimeWarning,
                 )
             self._dt = _dt
@@ -129,6 +130,25 @@ class TimeSeries(OrderedDict):
         for item, key in zip(array, template_grid):
             instance[key] = item
 
+        return instance
+
+    def _from_list(self, array):
+        return self.__class__.from_list(array, self)
+
+    @classmethod
+    def from_parameters(cls, start, stop, step):
+        if not isinstance(start, Decimal):
+            start = Decimal(start)
+        if not isinstance(stop, Decimal):
+            stop = Decimal(stop)
+        if not isinstance(step, Decimal):
+            step = Decimal(step)
+        instance = TimeSeries.from_dict(
+            {
+                start + Decimal(k) * step: 0
+                for k in range(int((stop - start) / step) + 1)
+            }
+        )
         return instance
 
     def apply(self, func):
@@ -188,6 +208,9 @@ class TimeSeries(OrderedDict):
             instance._dt = _copy_series._dt or keys_series._dt
         return instance
 
+    def interpolate(self, series):
+        return self.__class__.interpolate_to_keys(series, self)
+
 
 class PiecewiseLinearBasis:
     """
@@ -198,10 +221,10 @@ class PiecewiseLinearBasis:
     """
 
     def __init__(self, space, width, **kwargs):
+        self.width = width
         self.space = space
         self.space_step_size = abs(self.space[1] - self.space[0])
 
-        self.width = width
         assert (self.space[-1] - self.space[0]) % self.width < 1.0e-8 or (
             self.space[-1] - self.space[0]
         ) % self.width > self.width - 1.0e-8, (
@@ -272,14 +295,21 @@ class PiecewiseLinearBasis:
         coefficients = self.discretize(y)
         return self.extrapolate(coefficients)
 
-    def discretize(self, y):
+    def discretize(self, y, *, mid_point=False):
         """
         Calculates a discrete lower-order space representation of the y-function
         :param y:np.array function to discretize
+        :param mid_point:bool grid or mid points provided
         :return:list discrete coefficients
         """
+        if mid_point:
+            signal = (
+                [0.0] + [0.5 * (y[i] + y[i + 1]) for i in range(len(y) - 1)] + [0.0]
+            )
+        else:
+            signal = y
         return self.inv_mass_matrix.dot(
-            np.array([sum(y * b) * self.space_step_size for b in self.basis])
+            np.array([sum(signal * b) * self.space_step_size for b in self.basis])
         )
 
     def extrapolate(self, coefficients):
@@ -318,37 +348,45 @@ class PiecewiseLinearBasis:
         return new_basis.discretize(from_signal), new_basis
 
 
-class LinearControlBasis:
+class ControlSpaceFactory:
+    def __init__(self, *args, **kwargs):
+        self.args = args
+        self.kwargs = kwargs
+
+    def create_piecewise_linear_space(self):
+        return LinearControlSpace(*self.args, **self.kwargs)
+
+
+class LinearControlSpace:
     def __init__(self, dt, final_time, signal_window, *args, **kwargs):
         final_time = Decimal(final_time)
-        self._default_grid = TimeSeries.from_dict(
+
+        # 1. define control
+        # `time_grid` defines the time grid for the direct simulation
+        self.time_grid = TimeSeries.from_dict(
             {
                 Decimal(k) * Decimal(dt): 0
                 for k in range(int(final_time / Decimal(dt)) + 1)
             }
         )
-        self._small_grid = TimeSeries.from_dict(
-            {
-                Decimal(k) * Decimal(dt): 0
-                for k in range(1, int(final_time / Decimal(dt)))
-            }
-        )
-        self._midpoint_grid = TimeSeries.from_dict(
+        # `midpoint_grid` defines the time grid for the adjoint simulation
+        self.midpoint_grid = TimeSeries.from_dict(
             {
                 Decimal(k + 0.5) * Decimal(dt): 0
-                for k in range(int(final_time / Decimal(dt)) - 1)
+                for k in range(int(final_time / Decimal(dt)))
             }
         )
+        # We define a control space, a PiecewiseLinearBasis in this case
         self._is_reduced_basis = kwargs.get("reduced_basis", True)
-        self.linear_basis = PiecewiseLinearBasis(
-            np.array([float(key) for key in self._default_grid.keys()]),
+        self.basis = PiecewiseLinearBasis(
+            np.array([float(key) for key in self.time_grid.keys()]),
             width=signal_window,
             reduced_basis=self._is_reduced_basis,
         )
 
-    def discrete_to_continuous(self, control_list):
-        restored_control = self.linear_basis.extrapolate(list(control_list))
-        return TimeSeries.from_list(restored_control, self._default_grid)
+    def discrete_to_continuous(self, discrete_values):
+        continuous_values = self.basis.extrapolate(list(discrete_values))
+        return continuous_values
 
     def continuous_to_discrete(self, function):
-        return self.linear_basis.discretize(function.values())
+        return self.basis.discretize(function.values())
