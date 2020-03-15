@@ -1,4 +1,3 @@
-import dolfin as dolf
 from decimal import Decimal
 import numpy as np
 import logging
@@ -10,19 +9,6 @@ from firecrest.misc.optimization_mixin import OptimizationMixin
 log = logging.getLogger("UnsteadyOptimizationSolver")
 
 
-class NormalInflow:
-    def __init__(self, control_data):
-        self.counter = 1
-        self.control_data = control_data
-
-    def eval(self):
-        if self.counter < len(self.control_data):
-            value = (0.0, self.control_data[self.counter])
-            self.counter += 1
-            return value
-        return 0.0, 0.0
-
-
 def discrete_to_continuous_direct(function):
     def wrapped(self, discrete_control):
         continuous_control = self.basis.extrapolate(list(discrete_control))
@@ -32,14 +18,13 @@ def discrete_to_continuous_direct(function):
 
 
 def post(function):
+    """ Logs the function output"""
+
     def wrapped(self, discrete_control):
         result = function(self, discrete_control)
 
         if self.logger.if_log_data("optimization"):
-            output_data = [
-                self._objective(result, verbose=False),
-                result[1].kappa,
-            ] + list(discrete_control)
+            output_data = self.log_result(result) + list(discrete_control)
             self.logger.log_optimization_step(output_data)
         return result
 
@@ -82,15 +67,6 @@ class UnsteadyOptimizationSolver(OptimizationMixin, UnsteadyTVAcousticSolver):
         self.logger = kwargs.get("logger")
         self.model_factory = kwargs.get("model_factory")
 
-    def flow_rate(self, state, boundary):
-        return 2.0 * dolf.assemble(
-            dolf.inner(state[1], self.domain.n)
-            * self.domain.ds((boundary.surface_index,))
-        )
-
-    def initialize_control_boundary(self, control_data):
-        self.control_boundary.bcond["inflow"] = NormalInflow(control_data)
-
     def log_intermediate_step(self, state, surface_model):
         if self.logger.if_log_data("in_process"):
             data = [
@@ -102,19 +78,27 @@ class UnsteadyOptimizationSolver(OptimizationMixin, UnsteadyTVAcousticSolver):
                 self.forms.kinetic_energy_flux(
                     state, (0.0, -1.0), self.shared_boundary
                 ),
-                self.flow_rate(state, self.control_boundary),
-                self.flow_rate(state, self.shared_boundary),
+                2.0 * self.forms.mass_flow_rate(state, self.control_boundary),
+                2.0 * self.forms.mass_flow_rate(state, self.shared_boundary),
             ]
             self.logger.log_intermediate_step(data)
 
+    def log_result(self, result):
+        data = [self._objective(result, verbose=False), result[1].kappa]
+        return data
+
+    def initialize_control_boundary(self, control_data):
+        inflow = self.model_factory["inflow_model"].create_normal_inflow_model
+        self.control_boundary.bcond["inflow"] = inflow(control_data)
+
     def initialize_shared_boundary(self):
-        surface_model = self.model_factory.create_direct_model()
+        surface_model = self.model_factory["surface_model"].create_direct_model()
         if "normal_force" in self.shared_boundary.bcond:
             self.shared_boundary.bcond["normal_force"] = surface_model
         return surface_model
 
     def initialize_adjoint_shared_boundary(self, direct_shared_boundary):
-        adjoint_surface = self.model_factory.create_adjoint_model(
+        adjoint_surface = self.model_factory["surface_model"].create_adjoint_model(
             direct_shared_boundary
         )
         self.shared_boundary.bcond["normal_force"] = adjoint_surface
@@ -122,7 +106,7 @@ class UnsteadyOptimizationSolver(OptimizationMixin, UnsteadyTVAcousticSolver):
         return adjoint_surface
 
     def evaluate_adjoint_sensitivity(self, adjoint_state):
-        return self.boundary_averaged_stress(adjoint_state, self.control_boundary)
+        return self.forms.avg_normal_stress(adjoint_state, self.control_boundary)
 
     @post
     @discrete_to_continuous_direct
@@ -137,7 +121,9 @@ class UnsteadyOptimizationSolver(OptimizationMixin, UnsteadyTVAcousticSolver):
             yield_state=True,
             plot_every=self.logger.plot_every,
         ):
-            _new_flow_rate = self.flow_rate(state, self.shared_boundary)
+            _new_flow_rate = 2.0 * self.forms.mass_flow_rate(
+                state, self.shared_boundary
+            )
             surface_model.update_curvature(
                 0.5 * (_new_flow_rate + _old_flow_rate), self._dt
             )
@@ -157,14 +143,6 @@ class UnsteadyOptimizationSolver(OptimizationMixin, UnsteadyTVAcousticSolver):
             )
         return acoustic_energy + free_energy
 
-    def boundary_averaged_stress(self, state, boundary):
-        stress = self.forms.stress(state[0], state[1])
-        stress = dolf.assemble(
-            dolf.dot(dolf.dot(stress, self.domain.n), self.domain.n)
-            * self.domain.ds((boundary.surface_index,))
-        )
-        return stress
-
     @continuous_to_discrete_adj
     def _jacobian(self, state):
         state, surface_model = state
@@ -183,7 +161,9 @@ class UnsteadyOptimizationSolver(OptimizationMixin, UnsteadyTVAcousticSolver):
             plot_every=self.logger.plot_every,
         ):
             _old_flow_rate = _new_flow_rate
-            _new_flow_rate = self.flow_rate(adjoint_state, self.shared_boundary)
+            _new_flow_rate = 2.0 * self.forms.mass_flow_rate(
+                adjoint_state, self.shared_boundary
+            )
             adjoint_surface.update_curvature(
                 0.5 * (_new_flow_rate + _old_flow_rate), self._dt
             )
@@ -200,19 +180,27 @@ class UnsteadyOptimizationSolver(OptimizationMixin, UnsteadyTVAcousticSolver):
     ):
         # 1. define control
         # `time_grid` defines the time grid for the direct simulation
-        self.time_grid = TimeSeries.from_dict(
-            {
-                Decimal(k) * Decimal(self.timer["dt"]): 0
-                for k in range(int(self.timer["T"] / Decimal(self.timer["dt"])) + 1)
-            }
+        self.time_grid = TimeSeries.from_parameters(
+            Decimal("0"), self.timer["T"], self.timer["dt"]
         )
+        # self.time_grid = TimeSeries.from_dict(
+        #     {
+        #         Decimal(k) * Decimal(self.timer["dt"]): 0
+        #         for k in range(int(self.timer["T"] / Decimal(self.timer["dt"])) + 1)
+        #     }
+        # )
         # `midpoint_grid` defines the time grid for the adjoint simulation
-        self.midpoint_grid = TimeSeries.from_dict(
-            {
-                Decimal(k + 0.5) * Decimal(self.timer["dt"]): 0
-                for k in range(int(self.timer["T"] / Decimal(self.timer["dt"])))
-            }
+        self.midpoint_grid = TimeSeries.from_parameters(
+            Decimal("0.5") * Decimal(self.timer["dt"]),
+            self.timer["T"] - Decimal("0.5") * Decimal(self.timer["dt"]),
+            self.timer["dt"],
         )
+        # self.midpoint_grid = TimeSeries.from_dict(
+        #     {
+        #         Decimal(k + 0.5) * Decimal(self.timer["dt"]): 0
+        #         for k in range(int(self.timer["T"] / Decimal(self.timer["dt"])))
+        #     }
+        # )
         # We define a control space, a PiecewiseLinearBasis in this case
         self.basis = PiecewiseLinearBasis(
             np.array([float(key) for key in self.time_grid.keys()]),
@@ -237,4 +225,8 @@ class UnsteadyOptimizationSolver(OptimizationMixin, UnsteadyTVAcousticSolver):
             )
         elif self.logger.run_mode == "single_run":
             res = self._objective_state(initial_guess)
+        else:
+            log.warn(f"The runtime {self.logger.run_mode} is not implemented")
+            res = None
+
         return res
