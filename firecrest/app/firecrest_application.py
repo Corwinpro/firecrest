@@ -5,8 +5,10 @@ import logging
 
 from firecrest.models.geometry_registry.geometry_registry import geometry_registry
 from firecrest.models.free_surface_cap import SurfaceModelFactory
+from firecrest.models.inflow import InflowModelFactory
 from firecrest.misc.logger import LoggerFactory
 from firecrest.solvers.unsteady_optimizer import UnsteadyOptimizationSolver
+from firecrest.misc.time_storage import ControlSpaceFactory
 
 decimal.getcontext().prec = 6
 log = logging.getLogger(__name__)
@@ -34,7 +36,10 @@ class FirecrestApp:
 
     def setup_model_factories(self):
         factories = {
-            "models": {"surface_model": SurfaceModelFactory(self.setup_data)},
+            "models": {
+                "surface_model": SurfaceModelFactory(self.setup_data),
+                "inflow_model": InflowModelFactory(),
+            },
             "solvers": {"unsteady_solver": None},
             "loggers": {
                 "base_logger": LoggerFactory(
@@ -42,6 +47,14 @@ class FirecrestApp:
                     experiment_id=self.experiment_id,
                     log_names=self.log_config,
                 )
+            },
+            "control_spaces": {
+                "piecewise_linear": ControlSpaceFactory(
+                    dt=self.time_domain_configuration["dt"],
+                    final_time=self.time_domain_configuration["T"],
+                    signal_window=self.control_space_configuration["window"],
+                    reduced_basis=True,
+                ).create_piecewise_linear_space()
             },
         }
         return factories
@@ -56,7 +69,7 @@ class FirecrestApp:
 
         domain = self.domain_configuration["domain"]
         logger = self.factories["loggers"]["base_logger"].create_basic_logger()
-        model_factory = self.factories["models"]["surface_model"]
+        model_factory = self.factories["models"]
         optimizer = UnsteadyOptimizationSolver(
             domain,
             Re=self.constants["Re"],
