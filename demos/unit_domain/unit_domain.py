@@ -16,7 +16,7 @@ p1 = PointBoundary(
 p2 = PointBoundary(
     [1], inside=lambda x: x[0] > 0.9, bcond={"inflow": 0.0, "adiabatic": True}
 )
-domain = IntervalDomain([p1, p2], resolution=1000)
+domain = IntervalDomain([p1, p2], resolution=2000)
 timer = {"dt": Decimal("0.01"), "T": Decimal("0.5")}
 
 # mesh = domain.mesh
