@@ -77,7 +77,8 @@ class TimeSeries(OrderedDict):
         else:
             if self._dt and self._dt != _dt:
                 warnings.warn(
-                    f"The time series time intervals appear to be non-uniform, with current dt = {self._dt} != {_dt}",
+                    f"The time series time intervals appear to be non-uniform, "
+                    f"with current dt = {self._dt} != {_dt}",
                     RuntimeWarning,
                 )
             self._dt = _dt
