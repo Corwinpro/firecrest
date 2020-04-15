@@ -57,7 +57,7 @@ class OptimizationMixin(ABC):
             method=self.optimization_method,
             jac=self.jacobian,
             bounds=bnds,
-            options={"disp": True, "maxiter": 40, "ftol": 1.0e-8},
+            options={"disp": True, "maxiter": 200, "ftol": 1.0e-8},
         )
         return res
 
