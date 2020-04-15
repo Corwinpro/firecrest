@@ -16,20 +16,23 @@ p1 = PointBoundary(
 p2 = PointBoundary(
     [1], inside=lambda x: x[0] > 0.9, bcond={"inflow": 0.0, "adiabatic": True}
 )
-domain = IntervalDomain([p1, p2], resolution=2000)
-timer = {"dt": Decimal("0.01"), "T": Decimal("0.5")}
+domain = IntervalDomain([p1, p2], resolution=100)
+timer = {"dt": Decimal("0.001"), "T": Decimal("0.1")}
 
-# mesh = domain.mesh
-# for _ in range(1):
-#     markers = dolf.MeshFunction("bool", mesh, False)
-#     for c in dolf.cells(mesh):
-#         if c.midpoint().x() > 0.98:
-#             markers[c] = True
-#
-#     mesh = dolf.refine(mesh, markers)
-# domain.mesh = mesh
 
-print("num cells: ", domain.mesh.num_cells())
+def resolve_mesh(mesh, iterations, cut):
+    for _ in range(iterations):
+        markers = dolf.MeshFunction("bool", mesh, False)
+        for c in dolf.cells(mesh):
+            if c.midpoint().x() > cut:
+                markers[c] = True
+
+        mesh = dolf.refine(mesh, markers)
+    return mesh
+
+
+# domain.mesh = resolve_mesh(domain.mesh, 1)
+
 height = 0.7
 length = 9.2
 actuator_length = 4.0
@@ -123,9 +126,9 @@ class OptimizationSolver(OptimizationMixin, UnsteadyTVAcousticSolver):
 
         _old_flow_rate = 0
         for state in self.solve_direct(
-            initial_state, verbose=False, yield_state=True, plot_every=1000
+            initial_state, verbose=False, yield_state=True, plot_every=100000
         ):
-            # with open("energy.dat", "a") as file:
+            # with open("energy_25.dat", "a") as file:
             #     _str = (
             #         str(self.forms.energy(state))
             #         + " "
@@ -140,16 +143,16 @@ class OptimizationSolver(OptimizationMixin, UnsteadyTVAcousticSolver):
             )
             _old_flow_rate = _new_flow_rate
 
-        with open("log.dat", "a") as file:
-            file.write(
-                str(self._objective((state, surface_model), verbose=False))
-                + "  "
-                + str(surface_model.kappa)
-                + ":\t"
-            )
-            for c in control:
-                file.write(str(c) + ",")
-            file.write("\n")
+        # with open("log.dat", "a") as file:
+        #     file.write(
+        #         str(self._objective((state, surface_model), verbose=False))
+        #         + "  "
+        #         + str(surface_model.kappa)
+        #         + ":\t"
+        #     )
+        #     for c in control:
+        #         file.write(str(c) + ",")
+        #     file.write("\n")
 
         return state, surface_model
 
@@ -186,7 +189,7 @@ class OptimizationSolver(OptimizationMixin, UnsteadyTVAcousticSolver):
             0.5 * (_new_flow_rate + _old_flow_rate), self._dt
         )
         for adjoint_state in solver.solve_adjoint(
-            initial_state=state, verbose=False, yield_state=True
+            initial_state=state, verbose=False, yield_state=True, plot_every=1000000
         ):
             _old_flow_rate = _new_flow_rate
             _new_flow_rate = self.flow_rate(adjoint_state)
@@ -197,19 +200,21 @@ class OptimizationSolver(OptimizationMixin, UnsteadyTVAcousticSolver):
             adjoint_stress_averaged[current_time] = self.boundary_averaged_stress(
                 adjoint_state
             )
+            # with open("jacobian_25.dat", "a") as file:
+            #     _str = str(adjoint_stress_averaged[current_time])
+            #     file.write(_str)
+            #     file.write("\n")
             current_time -= self.timer["dt"]
 
         du = TimeSeries.interpolate_to_keys(adjoint_stress_averaged, small_grid)
         du[Decimal("0")] = 0.0
-        du[timer["T"]] = 0.0
+        du[self.timer["T"]] = 0.0
 
         print("gradient norm: ", (adjoint_stress_averaged * du).integrate())
         if grad_data["grad_norm"] is None:
-            grad_data["grad_norm"] = (
-                adjoint_stress_averaged * du
-            ).integrate()  # * self._dt ** 0.5
+            grad_data["grad_norm"] = (adjoint_stress_averaged * du).integrate()
 
-        return np.array(du.values()[1:-1])  #  * self._dt ** 0.5
+        return np.array(du.values()[1:-1])
 
 
 default_grid = TimeSeries.from_dict(
@@ -234,38 +239,89 @@ midpoint_grid = TimeSeries.from_dict(
 surface_model = SurfaceModel(nondim_constants, kappa_t0=0.05)
 solver = OptimizationSolver(domain, Re=5.0e3, Pr=10.0, timer=timer)
 initial_state = (0.0, 0.0, 0.0)
+initial_state = (dolf.Expression("0.1*x[0]*(1.0-x[0])", degree=2), 0.0, 0.0)
 
 
-x0 = [1.0e-3 for _ in range(len(default_grid) - 2)]
-top_bound = [0.03 for i in range(len(x0))]
-low_bound = [-0.01 for i in range(len(x0))]
+x0 = [0.0e-0 for _ in range(len(default_grid) - 2)]
+top_bound = [0.06 for i in range(len(x0))]
+low_bound = [-0.03 for i in range(len(x0))]
 bnds = list(zip(low_bound, top_bound))
 x0 = np.array(x0)
 
 
-run_taylor_test = True
-if run_taylor_test:
+def calculate_taylor_remainders(solver, max_iter=30):
     energy = []
+    grad_data["grad_norm"] = None
     state = solver._objective_state(x0)
     energy.append(solver._objective(state))
     grad = np.array(solver._jacobian(state))
-    remainders = []
 
-    for i in range(1, 30):
-        step_size = 1.0e-1 * 2.0 ** (-i)
+    x = []
+    y = []
+    constant = 1.0e-1
+    for i in range(1, max_iter):
+        step_size = constant * 2.0 ** (-i)
         new_state = solver._objective_state(x0 + grad * step_size)
         energy.append(solver._objective(new_state))
-        remainders.append(energy[-1] - energy[0] - step_size * grad_data["grad_norm"])
+        # remainders.append(energy[-1] - energy[0] - step_size * grad_data["grad_norm"])
+        x.append(constant * 2.0 ** (-i))
+        y.append(
+            abs(energy[-1] - energy[0] - step_size * grad_data["grad_norm"]) / energy[0]
+        )
+    constant = 1.0e-6
+    for i in range(1, max_iter):
+        step_size = constant * 2.0 ** (-i)
+        new_state = solver._objective_state(x0 + grad * step_size)
+        energy.append(solver._objective(new_state))
+        # remainders.append(energy[-1] - energy[0] - step_size * grad_data["grad_norm"])
+        x.append(constant * 2.0 ** (-i))
+        y.append(
+            abs(energy[-1] - energy[0] - step_size * grad_data["grad_norm"]) / energy[0]
+        )
+    # for i, el in enumerate(remainders):
+    #     x.append(constant * 2.0 ** (-i - 1))
+    #     y.append(abs(el) / energy[0])
+    return x[::-1], y[::-1]
 
-    for i, el in enumerate(remainders):
-        print(1.0e-1 * 2.0 ** (-i - 1), el)
+
+run_taylor_test = True
+if run_taylor_test:
+
+    def piecewise_linear(x, x0, y0, k1, k2):
+        return np.piecewise(
+            x,
+            [x < x0],
+            [lambda x: k1 * x + y0 - k1 * x0, lambda x: k2 * x + y0 - k2 * x0],
+        )
+
+    # c = np.arange(0, 12)  # 4, 12, 2
+    c = np.arange(100, 3320, 50)
+    for iterations in c[::-1]:
+        initial_resolution = 100 + iterations  # * 2 ** iterations  # iterations
+        domain = IntervalDomain([p1, p2], resolution=initial_resolution)
+        cut = 0.8
+        # domain.mesh = resolve_mesh(domain.mesh, iterations=iterations, cut=cut)
+        print("num cells: ", domain.mesh.num_cells())
+        # domain.mesh = resolve_mesh(domain.mesh, 4, cut=1.0 - 0.1 * iterations)
+        solver = OptimizationSolver(domain, Re=5.0e3, Pr=10.0, timer=timer)
+
+        x, y = calculate_taylor_remainders(solver, max_iter=14)
+        with open("taylor_state_uniform_T_01_dt_0001.dat", "a") as file:
+            # file.write(
+            #     str((1.0 - cut) / (domain.mesh.num_cells() - initial_resolution * cut))
+            #     + "\n"
+            # )
+            file.write(str(1.0 / domain.mesh.num_cells()) + "\n")
+            # file.write(str(float(timer["dt"])) + "\n")
+            file.write(",".join(map(str, x)))
+            file.write("\n")
+            file.write(",".join(map(str, y)))
+            file.write("\n")
 
     exit()
 
 solver.optimization_method = "TNC"
 res = solver.minimize(x0, bnds)
-
-import matplotlib.pyplot as plt
 
 plt.plot(res.x)
 plt.show()
