@@ -263,6 +263,9 @@ class BaseTVAcousticWeakForm(ABC, BaseWeakForm):
             * self.domain.dx
         )
 
+    def volume_dissipation(self, state):
+        return dolf.assemble(self.spatial_component(state, state))
+
     def boundary_components(self, trial, test):
         """
         Generates momentum (stress, velocity) and thermal (heat flux. temperature) boundary components
