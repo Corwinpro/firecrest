@@ -80,6 +80,7 @@ class UnsteadyOptimizationSolver(OptimizationMixin, UnsteadyTVAcousticSolver):
                 ),
                 2.0 * self.forms.mass_flow_rate(state, self.control_boundary),
                 2.0 * self.forms.mass_flow_rate(state, self.shared_boundary),
+                self.forms.volume_dissipation(state),
             ]
             self.logger.log_intermediate_step(data)
 
@@ -95,6 +96,8 @@ class UnsteadyOptimizationSolver(OptimizationMixin, UnsteadyTVAcousticSolver):
         surface_model = self.model_factory["surface_model"].create_direct_model()
         if "normal_force" in self.shared_boundary.bcond:
             self.shared_boundary.bcond["normal_force"] = surface_model
+        # self.shared_boundary.bcond.pop("normal_force")
+        # self.shared_boundary.bcond["noslip"] = True
         return surface_model
 
     def initialize_adjoint_shared_boundary(self, direct_shared_boundary):
