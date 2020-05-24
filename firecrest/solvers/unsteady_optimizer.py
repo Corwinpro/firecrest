@@ -41,17 +41,15 @@ def continuous_to_discrete_adj(function):
 
         discrete_grad = self.basis.discretize(du.values())
 
-        log.info(f"gradient norm: {(gradient_time_series * du).integrate()}")
-        log.info(
-            "discrete gradient norm: {}".format(
-                (
-                    gradient_time_series
-                    * TimeSeries.from_list(
-                        self.basis.extrapolate(discrete_grad), self.time_grid
-                    )
-                ).integrate()
+        gradient_norm = (gradient_time_series * du).integrate()
+        log.info(f"gradient norm: {gradient_norm}")
+        discrete_grad_norm = (
+            gradient_time_series
+            * TimeSeries.from_list(
+                self.basis.extrapolate(discrete_grad), self.time_grid
             )
-        )
+        ).integrate()
+        log.info("discrete gradient norm: {}".format(discrete_grad_norm))
         return discrete_grad
 
     return wrapped
@@ -83,6 +81,10 @@ class UnsteadyOptimizationSolver(OptimizationMixin, UnsteadyTVAcousticSolver):
                 self.forms.volume_dissipation(state),
             ]
             self.logger.log_intermediate_step(data)
+
+    def log_adjoint_step(self, sensitivity):
+        if self.logger.if_log_data("in_process"):
+            self.logger.log_adjoint_step(sensitivity)
 
     def log_result(self, result):
         data = [self._objective(result, verbose=False), result[1].kappa]
@@ -172,6 +174,7 @@ class UnsteadyOptimizationSolver(OptimizationMixin, UnsteadyTVAcousticSolver):
             )
             continuous_gradient.append(self.evaluate_adjoint_sensitivity(adjoint_state))
 
+        self.log_adjoint_step(continuous_gradient[::-1])
         return continuous_gradient[::-1]
 
     def run(
@@ -228,6 +231,7 @@ class UnsteadyOptimizationSolver(OptimizationMixin, UnsteadyTVAcousticSolver):
             )
         elif self.logger.run_mode == "single_run":
             res = self._objective_state(initial_guess)
+            grad = self._jacobian(res)
         else:
             log.warn(f"The runtime {self.logger.run_mode} is not implemented")
             res = None

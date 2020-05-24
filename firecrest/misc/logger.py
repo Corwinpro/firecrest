@@ -46,6 +46,11 @@ class BaseLogger:
             file_name = self.log_name(self.log_names["in_process"])
             self.write(file_name, data)
 
+    def log_adjoint_step(self, data):
+        if self.run_mode == "single_run" and self.log_names["in_process"]:
+            file_name = self.log_name("adjoint_")
+            self.write(file_name, data)
+
     def log_optimization_step(self, data):
         if self.run_mode == "optimization" and self.log_names["optimization"]:
             file_name = self.log_name(self.log_names["optimization"])
