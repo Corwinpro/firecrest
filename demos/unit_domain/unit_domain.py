@@ -128,7 +128,7 @@ class OptimizationSolver(OptimizationMixin, UnsteadyTVAcousticSolver):
         counter = 0
         _old_flow_rate = 0
         for state in self.solve_direct(
-            initial_state, verbose=False, yield_state=True, plot_every=1
+            initial_state, verbose=False, yield_state=True, plot_every=10000000
         ):
             # with open("energy_25.dat", "a") as file:
             #     _str = (
