@@ -52,7 +52,7 @@ solver = EigenvalueTVAcousticSolver(
     domain,
     complex_shift=-0.004 + 0.13j,
     Re=6000.0,
-    Pe=1.0,
+    Pr=10.0,
     nmodes=2,
 )
 solver.solve()
