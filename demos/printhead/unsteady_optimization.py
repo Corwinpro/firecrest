@@ -1,472 +1,389 @@
-from firecrest.mesh.boundaryelement import LineElement
-from firecrest.mesh.geometry import SimpleDomain
+import dolfin as dolf
+import decimal
+from decimal import Decimal
+import numpy as np
+import json
+import csv
+
 from firecrest.solvers.unsteady_tv_acoustic_solver import UnsteadyTVAcousticSolver
 from firecrest.models.free_surface_cap import SurfaceModel, AdjointSurfaceModel
-import dolfin as dolf
-from collections import namedtuple
-from decimal import Decimal
 from firecrest.misc.time_storage import TimeSeries, PiecewiseLinearBasis
 from firecrest.misc.optimization_mixin import OptimizationMixin
-import numpy as np
+from firecrest.models.geometry_registry.geometry_registry import geometry_registry
+from firecrest.models.free_surface_cap import Constants
+from firecrest.misc.input_argparser import parser
 
-elsize = 0.08
-height = 0.7
-length = 9.2
-actuator_length = 4.0
-offset_top = 1.0
-nozzle_r = 0.1
-nozzle_l = 0.2
-nozzle_offset = 0.2
-manifold_width = 2.0
-manifold_height = 4.7
-
-# Define constants
-L = 1.0e-4
-c_s = 1.0e3
-rho = 1.0e3
-epsilon = 1.0e-3
-gamma_st = 50.0e-3
-mu = 1.0e-2
-Re = rho * c_s * L / mu
-a1 = 4.0 / 3.0
-a2 = 8
-kappa_prime = epsilon / nozzle_r ** 4 * 0.25  # up to a constant
-
-# non dimensional
-alpha_1 = nozzle_l / (3.1415 * nozzle_r ** 2) * a1
-alpha_2 = nozzle_l / (3.1415 * nozzle_r ** 3) / Re * a2 / nozzle_r
-gamma_nd = 2 * gamma_st / (rho * c_s ** 2 * nozzle_r * epsilon)
-
-
-Constants = namedtuple(
-    "Constants",
-    [
-        "density",
-        "acoustic_mach",
-        "channel_L",
-        "nozzle_L",
-        "nozzle_R",
-        "surface_tension",
-        "Re",
-        "sound_speed",
-    ],
-)
-printhead_constants = Constants(rho, epsilon, L, 10.0e-6, 10.0e-6, gamma_st, Re, c_s)
-
-nondim_constants = Constants(
-    1.0,
-    printhead_constants.acoustic_mach,
-    1,
-    printhead_constants.nozzle_L / printhead_constants.channel_L,
-    printhead_constants.nozzle_R / printhead_constants.channel_L,
-    2.0
-    * printhead_constants.surface_tension
-    / (
-        printhead_constants.density
-        * printhead_constants.sound_speed ** 2.0
-        * printhead_constants.nozzle_R
-        * printhead_constants.acoustic_mach
-    ),
-    printhead_constants.Re,
-    1.0,
-)
-
-control_points_1 = [
-    [length - actuator_length, height],
-    [manifold_width, height],
-    [manifold_width, manifold_height],
-]
-control_points_free_left = [
-    [manifold_width, manifold_height],
-    [1.0e-16, manifold_height],
-]
-control_points_bot_left = [
-    [1.0e-16, manifold_height],
-    [0.0, 0.0],
-    [length - nozzle_r - nozzle_offset, 0.0],
-]
-control_points_refine_left = [
-    [length - nozzle_r - nozzle_offset, 0.0],
-    [length - nozzle_r, 0.0],
-    [length - nozzle_r, -nozzle_l],
-]
-control_points_2 = [[length - nozzle_r, -nozzle_l], [length, -nozzle_l + 1.0e-16]]
-control_points_3 = [[length, -nozzle_l + 1.0e-16], [length, height + 1.0e-16]]
-control_points_4 = [[length, height + 1.0e-16], [length - actuator_length, height]]
-
-
-boundary1 = LineElement(
-    control_points_1, el_size=elsize, bcond={"noslip": True, "adiabatic": True}
-)
-boundary_free_left = LineElement(
-    control_points_free_left,
-    el_size=elsize * 2.0,
-    bcond={"free": True, "adiabatic": True},
-)
-boundary_bot_left = LineElement(
-    control_points_bot_left, el_size=elsize, bcond={"noslip": True, "adiabatic": True}
-)
-boundary_refine_left = LineElement(
-    control_points_refine_left,
-    el_size=elsize / 8.0,
-    bcond={"noslip": True, "adiabatic": True},
-)
-boundary2 = LineElement(
-    control_points_2,
-    el_size=elsize / 8.0,
-    bcond={"normal_force": None, "adiabatic": True},
-)
-boundary3 = LineElement(
-    control_points_3, el_size=elsize / 2.0, bcond={"slip": True, "adiabatic": True}
-)
-boundary4 = LineElement(
-    control_points_4,
-    el_size=elsize / 20.0,
-    bcond={"inflow": (0.0, 0.0), "adiabatic": True},
-)
-domain_boundaries = (
-    boundary1,
-    boundary_free_left,
-    boundary_bot_left,
-    boundary_refine_left,
-    boundary2,
-    boundary3,
-    boundary4,
-)
-domain = SimpleDomain(domain_boundaries)
+# decimal.getcontext().prec = 6
+#
+# args = parser.parse_args()
+#
+# setup_data = json.load(args.filename)
+#
+# # Run mode +
+# run_mode = setup_data["mode"]
+#
+# # Logging settings +
+# logging_data = setup_data["logging"]
+# plot_every = logging_data["plot_frequency"]
+# optimization_log_filename = logging_data["optimisation"]
+# energy_history_log_filename = logging_data["energy_history"]
+#
+# # Geometry data for acoustic domain +
+# geometry_data = setup_data["acoustic_domain"]
+#
+# # Dimensional constants parse
+# constants_data = setup_data["constants"]
+# L = constants_data["length"]
+# c_s = constants_data["sound_speed"]
+# rho = constants_data["density"]
+# epsilon = constants_data["Mach"]
+# gamma_st = constants_data["surface_tension"]
+# mu = constants_data["viscosity"]
+# Pr = constants_data["Pr"]
+# Re = rho * c_s * L / mu
+#
+# # Nozzle domain constants
+# nozzle_domain_data = setup_data["nozzle_domain"]
+# initial_curvature = nozzle_domain_data["initial_curvature"]
+# nozzle_domain_length = nozzle_domain_data["length"]
+# nozzle_domain_radius = nozzle_domain_data["radius"]
+#
+# # Time domain data +
+# printhead_timescale = Decimal("0.1")  # in microseconds
+# time_domain_data = setup_data["time_domain"]
+# final_time = Decimal(str(time_domain_data["final_time"]))  # in microseconds
+# time_step = Decimal(str(time_domain_data["dt"]))  # in microseconds
+# nondim_final_time = final_time / printhead_timescale
+# nondim_time_step = time_step / printhead_timescale
+#
+# timer = {"dt": nondim_time_step, "T": nondim_final_time}
+#
+# # Waveform control data +
+# waveform_data = setup_data["control_space"]
+# control_type = waveform_data["type"]
+# waveform_window = waveform_data["window"]  # in microseconds
+# nondim_waveform_window = waveform_window / float(printhead_timescale)
+# control_default_value = waveform_data.get("control_default", None)
+# control_upper_limit = waveform_data.get("upper_limit", 0.015)
+# control_lower_limit = waveform_data.get("lower_limit", -0.015)
+# control_algorithm = waveform_data.get("algorithm", "L-BFGS-B")
+#
+#
+# nondim_constants = Constants(
+#     rho / rho,
+#     epsilon,
+#     L / L,
+#     nozzle_domain_length / L,
+#     nozzle_domain_radius / L,
+#     2.0 * gamma_st / (rho * c_s ** 2.0 * nozzle_domain_radius * epsilon),
+#     Re,
+#     c_s / c_s,
+# )
+#
+# # +
+# geometry_type = geometry_data.get("type", "symmetric_printhead")
+# geometry_assembler = geometry_registry[geometry_type](geometry_data)
+# domain = geometry_assembler.domain
+# control_boundary = geometry_assembler.control_boundary
+# shared_boundary = geometry_assembler.shared_boundary
+#
+# # +
+# experiment_id = (
+#     geometry_type
+#     + "_act_"
+#     + str(geometry_data["actuator_length"])
+#     + "_window_"
+#     + str(waveform_window)
+#     + "_T_"
+#     + str(final_time)
+# )
+# print(experiment_id)
 
 
 class NormalInflow:
-    def __init__(self, series: TimeSeries):
+    def __init__(self, control_data):
         self.counter = 1
-        self.series = list(series.values())
+        self.control_data = control_data
 
     def eval(self):
-        if self.counter < len(self.series):
-            value = (0.0, self.series[self.counter])
+        if self.counter < len(self.control_data):
+            value = (0.0, self.control_data[self.counter])
             self.counter += 1
             return value
         return 0.0, 0.0
 
 
-class OptimizationSolver(OptimizationMixin, UnsteadyTVAcousticSolver):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.linear_basis = PiecewiseLinearBasis(
-            np.array([float(key) for key in default_grid.keys()]),
-            width=kwargs.get("signal_window", 2.0),
+def discrete_to_continuous_direct(function):
+    def wrapped(self, discrete_control):
+        continuous_control = self.linear_basis.extrapolate(list(discrete_control))
+        return function(self, continuous_control)
+
+    return wrapped
+
+
+def post(function):
+    def wrapped(self, discrete_control):
+        result = function(self, discrete_control)
+
+        if self.logger.if_log_data("optimization"):
+            output_data = [
+                self._objective(result, verbose=False),
+                result[1].kappa,
+            ] + list(discrete_control)
+            self.logger.log_optimization_step(output_data)
+        # if optimization_log_filename and run_mode == "optimization":
+        #     file_name = optimization_log_filename + experiment_id + ".dat"
+        #     output_data = [
+        #         self._objective(result, verbose=False),
+        #         result[1].kappa,
+        #     ] + list(discrete_control)
+        #     with open(file_name, "a") as file:
+        #         writer = csv.writer(file)
+        #         writer.writerow(output_data)
+
+        return result
+
+    return wrapped
+
+
+def continuous_to_discrete_adj(function):
+    def wrapped(self, state):
+        continuous_gradient = function(self, state)
+        gradient_time_series = TimeSeries.from_list(
+            continuous_gradient, self.midpoint_grid
         )
-
-    def flow_rate(self, state):
-        return 2.0 * dolf.assemble(
-            dolf.inner(state[1], self.domain.n)
-            * self.domain.ds((boundary2.surface_index,))
-        )
-
-    def _objective_state(self, control):
-        restored_control = self.linear_basis.extrapolate([0.0] + list(control) + [0.0])
-        boundary4.bcond["inflow"] = NormalInflow(
-            TimeSeries.from_list(restored_control, default_grid)
-        )
-
-        surface_model = SurfaceModel(nondim_constants, kappa_t0=0.25)
-        boundary2.bcond["normal_force"] = surface_model
-
-        _old_flow_rate = 0
-        for state in self.solve_direct(
-            initial_state, verbose=False, yield_state=True, plot_every=10
-        ):
-            if isinstance(state, TimeSeries):
-                direct_history = state
-                break
-
-            with open("energy.dat", "a") as file:
-                _str = (
-                    str(self.forms.energy(state))
-                    + " "
-                    + str(surface_model.surface_energy())
-                )
-                file.write(_str)
-                file.write("\n")
-
-            _new_flow_rate = self.flow_rate(state)
-            surface_model.update_curvature(
-                0.5 * (_new_flow_rate + _old_flow_rate), self._dt
-            )
-            _old_flow_rate = _new_flow_rate
-        exit()
-
-        with open("log.dat", "a") as file:
-            file.write(
-                str(
-                    self._objective((direct_history.last, surface_model), verbose=False)
-                )
-                + "  "
-                + str(surface_model.kappa)
-                + ":\t"
-            )
-            for c in control:
-                file.write(str(c) + ",")
-            file.write("\n")
-
-        return direct_history.last, surface_model
-
-    def _objective(self, state, verbose=True):
-        if verbose:
-            print(
-                "evaluated at: ",
-                self.forms.energy(state[0])
-                + state[1].surface_energy(state[1].kappa) / 2.0,
-                " curvature: ",
-                state[1].kappa,
-            )
-        return (
-            self.forms.energy(state[0]) + state[1].surface_energy(state[1].kappa) / 2.0
-        )
-
-    def _jacobian(self, state):
-        state, surface_model = state
-        state = (state[0], -state[1], state[2])
-
-        adjoint_surface = AdjointSurfaceModel(direct_surface=surface_model)
-        boundary2.bcond["normal_force"] = adjoint_surface
-
-        _old_flow_rate = 0
-        _new_flow_rate = 0
-        adjoint_surface.update_curvature(
-            0.5 * (_new_flow_rate + _old_flow_rate), self._dt
-        )
-        for adjoint_state in solver.solve_adjoint(
-            initial_state=state, verbose=False, yield_state=True
-        ):
-            if isinstance(adjoint_state, TimeSeries):
-                adjoint_history = adjoint_state
-                break
-            _old_flow_rate = _new_flow_rate
-            _new_flow_rate = self.flow_rate(adjoint_state)
-            adjoint_surface.update_curvature(
-                0.5 * (_new_flow_rate + _old_flow_rate), self._dt
-            )
-
-        adjoint_stress = adjoint_history.apply(lambda x: self.forms.stress(x[0], x[1]))
-        adjoint_stress_averaged = adjoint_stress.apply(
-            lambda x: dolf.assemble(
-                dolf.dot(dolf.dot(x, self.domain.n), self.domain.n)
-                * self.domain.ds((boundary4.surface_index,))
-            )
-        )
-
-        du = TimeSeries.interpolate_to_keys(adjoint_stress_averaged, small_grid)
-        du[Decimal("0")] = 0.0
-        du[timer["T"]] = 0.0
+        du = TimeSeries.interpolate_to_keys(gradient_time_series, self.time_grid)
 
         discrete_grad = self.linear_basis.discretize(du.values())
-        discrete_grad[0] = 0.0
-        discrete_grad[-1] = 0.0
 
-        print("gradient norm: ", (adjoint_stress_averaged * du).integrate())
+        print("gradient norm: ", (gradient_time_series * du).integrate())
 
         print(
             "discrete gradient norm: ",
             (
-                adjoint_stress_averaged
+                gradient_time_series
                 * TimeSeries.from_list(
-                    self.linear_basis.extrapolate(discrete_grad), default_grid
+                    self.linear_basis.extrapolate(discrete_grad), self.time_grid
                 )
             ).integrate(),
         )
+        return discrete_grad
 
-        return discrete_grad[1:-1]
+    return wrapped
 
 
-timer = {"dt": Decimal("0.01"), "T": Decimal("20.0")}
-default_grid = TimeSeries.from_dict(
-    {
-        Decimal(k) * Decimal(timer["dt"]): 0
-        for k in range(int(timer["T"] / Decimal(timer["dt"])) + 1)
-    }
+class UnsteadyOptimizationSolver(OptimizationMixin, UnsteadyTVAcousticSolver):
+    def __init__(self, *args, signal_window=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.initial_state = kwargs["initial_state"]
+        self.control_boundary = kwargs.get("control_boundary")
+        self.shared_boundary = kwargs.get("shared_boundary")
+
+        self.logger = kwargs.get("logger")
+        self.model_factory = kwargs.get("model_factory")
+
+    def flow_rate(self, state, boundary):
+        return 2.0 * dolf.assemble(
+            dolf.inner(state[1], self.domain.n)
+            * self.domain.ds((boundary.surface_index,))
+        )
+
+    def initialize_control_boundary(self, control_data):
+        inflow = NormalInflow(control_data)
+        self.control_boundary.bcond["inflow"] = inflow
+
+    def log_intermediate_step(self, state, surface_model):
+        if self.logger.if_log_data("in_process"):
+            data = [
+                self.forms.energy(state),
+                surface_model.surface_energy() / 2.0,
+                self.forms.kinetic_energy_flux(
+                    state, (0.0, 1.0), self.control_boundary
+                ),
+                self.forms.kinetic_energy_flux(
+                    state, (0.0, -1.0), self.shared_boundary
+                ),
+                self.flow_rate(state, self.control_boundary),
+                self.flow_rate(state, self.shared_boundary),
+            ]
+            self.logger.log_intermediate_step(data)
+
+        # if energy_history_log_filename and run_mode == "single_run":
+        #     file_name = energy_history_log_filename + experiment_id + ".dat"
+        #     with open(file_name, "a") as file:
+        #         writer = csv.writer(file)
+        #         writer.writerow(
+        #             [
+        #                 self.forms.energy(state),
+        #                 surface_model.surface_energy() / 2.0,
+        #                 self.forms.kinetic_energy_flux(
+        #                     state, (0.0, 1.0), self.control_boundary
+        #                 ),
+        #                 self.forms.kinetic_energy_flux(
+        #                     state, (0.0, -1.0), self.shared_boundary
+        #                 ),
+        #                 self.flow_rate(state, self.control_boundary),
+        #                 self.flow_rate(state, self.shared_boundary),
+        #             ]
+        #         )
+
+    def initialize_shared_boundary(self):
+        # surface_model = SurfaceModel(nondim_constants, kappa_t0=initial_curvature)
+        surface_model = self.model_factory.create_direct_model()
+        if "normal_force" in self.shared_boundary.bcond:
+            self.shared_boundary.bcond["normal_force"] = surface_model
+        return surface_model
+
+    def initialize_adjoint_shared_boundary(self, direct_shared_boundary):
+        # adjoint_surface = AdjointSurfaceModel(direct_surface=direct_shared_boundary)
+        adjoint_surface = self.model_factory.create_adjoint_model(
+            direct_shared_boundary
+        )
+        self.shared_boundary.bcond["normal_force"] = adjoint_surface
+        adjoint_surface.update_curvature(0.0, self._dt)
+        return adjoint_surface
+
+    def evaluate_adjoint_sensitivity(self, adjoint_state):
+        return self.boundary_averaged_stress(adjoint_state, self.control_boundary)
+
+    @post
+    @discrete_to_continuous_direct
+    def _objective_state(self, control):
+        self.initialize_control_boundary(control)
+
+        surface_model = self.initialize_shared_boundary()
+
+        _old_flow_rate = 0
+        for state in self.solve_direct(
+            self.initial_state,
+            verbose=False,
+            yield_state=True,
+            plot_every=self.logger.plot_every,
+        ):
+            _new_flow_rate = self.flow_rate(state, self.shared_boundary)
+            surface_model.update_curvature(
+                0.5 * (_new_flow_rate + _old_flow_rate), self._dt
+            )
+            _old_flow_rate = _new_flow_rate
+
+            self.log_intermediate_step(state, surface_model)
+
+        return state, surface_model
+
+    def _objective(self, state, verbose=True):
+        acoustic_energy = self.forms.energy(state[0])
+        free_energy = state[1].surface_energy(state[1].kappa) / 2.0
+        if verbose:
+            print(
+                "evaluated at: ",
+                acoustic_energy + free_energy,
+                " curvature: ",
+                state[1].kappa,
+            )
+        return acoustic_energy + free_energy
+
+    def boundary_averaged_stress(self, state, boundary):
+        stress = self.forms.stress(state[0], state[1])
+        stress = dolf.assemble(
+            dolf.dot(dolf.dot(stress, self.domain.n), self.domain.n)
+            * self.domain.ds((boundary.surface_index,))
+        )
+        return stress
+
+    @continuous_to_discrete_adj
+    def _jacobian(self, state):
+        state, surface_model = state
+        state = (state[0], -state[1], state[2])
+
+        adjoint_surface = self.initialize_adjoint_shared_boundary(surface_model)
+
+        continuous_gradient = []
+
+        _old_flow_rate = 0
+        _new_flow_rate = 0
+        for adjoint_state in solver.solve_adjoint(
+            initial_state=state,
+            verbose=False,
+            yield_state=True,
+            plot_every=self.logger.plot_every,
+        ):
+            _old_flow_rate = _new_flow_rate
+            _new_flow_rate = self.flow_rate(adjoint_state, self.shared_boundary)
+            adjoint_surface.update_curvature(
+                0.5 * (_new_flow_rate + _old_flow_rate), self._dt
+            )
+            continuous_gradient.append(self.evaluate_adjoint_sensitivity(adjoint_state))
+
+        return continuous_gradient[::-1]
+
+    def run(self, signal_window, initial_guess=None, bounds=None):
+        # 1. define control
+        # `time_grid` defines the time grid for the direct simulation
+        self.time_grid = TimeSeries.from_dict(
+            {
+                Decimal(k) * Decimal(self.timer["dt"]): 0
+                for k in range(int(self.timer["T"] / Decimal(self.timer["dt"])) + 1)
+            }
+        )
+        # `midpoint_grid` defines the time grid for the adjoint simulation
+        self.midpoint_grid = TimeSeries.from_dict(
+            {
+                Decimal(k + 0.5) * Decimal(self.timer["dt"]): 0
+                for k in range(int(self.timer["T"] / Decimal(self.timer["dt"])))
+            }
+        )
+        # We define a control space, a PiecewiseLinearBasis in this case
+        self.linear_basis = PiecewiseLinearBasis(
+            np.array([float(key) for key in self.time_grid.keys()]),
+            width=signal_window,
+            reduced_basis=True,
+        )
+
+        # We prepare the initial guess and bounds on the control
+        if bounds is not None:
+            low_bound = [bounds[0] for _ in range(len(self.time_grid))]
+            top_bound = [bounds[1] for _ in range(len(self.time_grid))]
+            top_bound = self.linear_basis.discretize(top_bound)
+            low_bound = self.linear_basis.discretize(low_bound)
+            bounds = list(zip(low_bound, top_bound))
+
+        if initial_guess is None:
+            initial_guess = np.zeros(len(self.linear_basis.basis))
+
+        res = self.minimize(initial_guess, bounds)
+        return res
+
+
+solver = UnsteadyOptimizationSolver(
+    domain,
+    Re=Re,
+    Pr=Pr,
+    timer=timer,
+    signal_window=nondim_waveform_window,
+    experiment_id=experiment_id,
+    optimization_method=control_algorithm,
+    initial_state=(0.0, (0.0, 0.0), 0.0),
+    control_boundary=geometry_assembler.control_boundary,
+    shared_boundary=geometry_assembler.shared_boundary,
 )
-small_grid = TimeSeries.from_dict(
-    {
-        Decimal(k) * Decimal(timer["dt"]): 0
-        for k in range(1, int(timer["T"] / Decimal(timer["dt"])))
-    }
-)
-
-surface_model = SurfaceModel(nondim_constants, kappa_t0=0.25)
-solver = OptimizationSolver(domain, Re=5.0e3, Pr=10.0, timer=timer, signal_window=2.0)
-initial_state = (0.0, (0.0, 0.0), 0.0)
-
-coarse_space_control = [
-    0.0031218434670749083,
-    0.00039993341910226596,
-    -0.0008878779110163696,
-    -0.0008273270413055289,
-    0.0006028534180741699,
-    0.0030869918808126085,
-    0.0021383126783835207,
-    0.0003107608476460111,
-    0.0004944440592362955,
-    0.00022870287117476664,
-    0.0005532036274521335,
-    7.096444090708459e-05,
-    0.002310475217827071,
-    0.0028336197709607387,
-    0.00028401286298087127,
-    -0.0009931305927794536,
-    -0.0005059536985463389,
-    0.0005782996337251334,
-    0.0029616268344061186,
-]
-fine_space_control = [
-    0.0057340410583603,
-    0.004348988141468184,
-    0.002600713271305053,
-    0.0014588122838216863,
-    -1.3963252799274768e-05,
-    -0.0029536265587314287,
-    -0.003208008239608044,
-    0.0003867774901876068,
-    0.0011280819983280935,
-    0.0011591353299198544,
-    0.0012764097182818887,
-    -0.002460916367586768,
-    -0.0020178554770998564,
-    -0.0013670691905502443,
-    -0.0017718006620248707,
-    -0.0014969825370280986,
-    0.00018035963910830908,
-    6.486019238675759e-05,
-    0.0012411480058023231,
-    0.0038396199078573755,
-    0.0037676162665253345,
-    0.001823109793081534,
-    0.00011139038027340335,
-    -0.0010031191899376262,
-    -0.00108534994537646,
-    0.0010568937508934734,
-    0.0033569215955585575,
-    0.004203841393821547,
-    0.002000569397421494,
-    -0.00021343583507798738,
-    -0.0017699617373726705,
-    -0.000972946515541353,
-    0.0005112773977696465,
-    0.0017117389239682498,
-    0.0015319530970557278,
-    -7.435667663405189e-05,
-    -0.00033002526087062253,
-    -0.00047180156257920365,
-    0.00011596815398274645,
-    0.0010414846809007063,
-    5.188267208057239e-05,
-    -0.0008583016120634149,
-    -0.0005342174190514572,
-    7.876803304607066e-05,
-    0.0015837498050353459,
-    0.0015961162466011705,
-    0.0005303669690068481,
-    -0.0011343499844002874,
-    -0.0014369592188818237,
-    0.0002861077392815923,
-    0.0022854020225331205,
-    0.003921745818550618,
-    0.002976291541322398,
-    0.0007062540246278567,
-    -0.000696818289551337,
-    -0.0007018867800509128,
-    7.956070992902062e-05,
-    0.0017142656681538588,
-    0.0031626368654953437,
-    0.002571209478925508,
-    0.0006842610657258326,
-    -0.00041524485108104483,
-    -0.00010103016510627052,
-    -0.001098398530256575,
-    -0.0014336849594044677,
-    -0.0013005192315957358,
-    -0.0018954428885900303,
-    -0.0011654245455391394,
-    0.0010711926003203391,
-    0.0013096432958956883,
-    0.0009142349409793696,
-    -0.00028351955196745686,
-    -0.0018094588580020877,
-    -0.001575808500947884,
-    0.00015534184364729588,
-    0.0014956082687823632,
-    0.002817621410850364,
-    0.003857146725632634,
-    0.0032568677076993194,
-]
-one_space_control = [
-    0.005324010468649279,
-    0.003343322647967684,
-    0.00016064736472172868,
-    -0.002609956815594884,
-    0.00016017495056383385,
-    -0.0017920392639235205,
-    -0.0011684353053945725,
-    -0.0011640435333961354,
-    -0.0003478163580602155,
-    0.002680230469332851,
-    0.0035283592996153594,
-    0.0012350678474811394,
-    0.0020440647579950525,
-    0.0030601016469968645,
-    -0.001300349273811132,
-    -0.0013562631408648453,
-    0.002429822124366182,
-    0.0011903783250840553,
-    -0.0004978743810532501,
-    0.00012618190506874136,
-    -0.0007177418693306068,
-    0.0008351849958615962,
-    0.0023076761486244936,
-    -0.0008946019301380705,
-    -0.0006792350052757791,
-    0.0031896064520691297,
-    0.0019994318287890004,
-    0.0011238524318151117,
-    0.0026527315266341666,
-    0.0017623738953415598,
-    -0.0011358134563953682,
-    -0.0010213713405194979,
-    -0.000925244092293188,
-    -0.0008996721045075374,
-    0.00044937109726455893,
-    -0.0014161497395480105,
-    0.00023472697596130617,
-    0.0030337916492754143,
-    0.0039864338178979535,
-]
-# coarse_basis = PiecewiseLinearBasis(
-#     np.array([float(key) for key in default_grid.keys()]), width=2.0
-# )
-# x0 = coarse_basis.extrapolate([0.0] + list(coarse_space_control) + [0.0])
-
-x0 = [0.0 for _ in range(len(default_grid))]
-top_bound = [0.015 for i in range(len(x0))]
-low_bound = [-0.015 for i in range(len(x0))]
-# The first and last elements of the control are zero by default
-top_bound = solver.linear_basis.discretize(top_bound)[1:-1]
-low_bound = solver.linear_basis.discretize(low_bound)[1:-1]
-bnds = list(zip(low_bound, top_bound))
-x0 = solver.linear_basis.discretize(x0)[1:-1]
-# x0 = coarse_space_control
-
-run_taylor_test = False
-if run_taylor_test:
-    energy = []
-    state = solver._objective_state(x0)
-    energy.append(solver._objective(state))
-    print(energy[-1])
-    grad = solver._jacobian(state)
-
-    for i in range(1, 11):
-        new_state = solver._objective_state(grad * 1.0e-3 * i)
-        energy.append(solver._objective(new_state))
-
-    exit()
-
-res = solver.minimize(x0, bnds)
+res = solver.run(control_default_value, (control_lower_limit, control_upper_limit))
+#
+# if run_mode == "taylor_test":
+#     x0 = [1.0e-4 for _ in range(len(x0))]
+#     energy = []
+#     _state = solver._objective_state(x0)
+#     energy.append(solver._objective(_state))
+#     print(energy[-1])
+#     grad = np.array(solver._jacobian(_state))
+#     x0 = np.array(x0)
+#
+#     for i in range(1, 11):
+#         new_state = solver._objective_state(x0 + grad * 1.0e-6 * i)
+#         energy.append(solver._objective(new_state))
+# elif run_mode == "optimization":
+#     # res = solver.minimize(x0, bnds)
+#     res = solver.run(control_default_value, (control_lower_limit, control_upper_limit))
+# elif run_mode == "single_run":
+#     solver._objective_state(x0)
+# else:
+#     raise NotImplementedError(f"No mode called {run_mode} is implemented")

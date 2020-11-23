@@ -81,6 +81,9 @@ class BaseTVAcousticWeakForm(ABC, BaseWeakForm):
         "force": "Neumann",
         "normal_force": "Neumann",
         "impedance": "Robin",
+        "inhom_impedance": "Robin",
+        "nozzle_impedance": "Robin",
+        "inhom_nozzle_impedance": "Robin",
         "normal_impedance": "Robin",
         "shape_impedance": "Robin",
         "slip": "Neumann",
@@ -127,7 +130,8 @@ class BaseTVAcousticWeakForm(ABC, BaseWeakForm):
             return self.function_space_factory.function_spaces
         except AttributeError:
             raise AttributeError(
-                "A function_space_factory which implements functions_spaces must be provided."
+                "A function_space_factory which implements "
+                "`functions_spaces` must be provided."
             )
 
     @property
@@ -173,6 +177,36 @@ class BaseTVAcousticWeakForm(ABC, BaseWeakForm):
         if self.geometric_dimension == 1:
             return self.shear_stress(velocity) - pressure
         return self.shear_stress(velocity) - pressure * self.identity_tensor
+
+    def kinetic_energy_flux(self, state, direction, boundary):
+        """
+        Calculates the kinetic energy flux u_i * sigma_ij * n_j through the
+        `boundary`
+        :param state: self state
+        :param direction: flux direction n_j
+        :param boundary: target surface
+        :return: float energy flux
+        """
+        pressure, velocity, temperature = state
+        flux = dolf.inner(
+            velocity,
+            dolf.dot(dolf.as_vector(direction), self.stress(pressure, velocity)),
+        )
+        return dolf.assemble(flux * self.domain.ds((boundary.surface_index,)))
+
+    def mass_flow_rate(self, state, boundary):
+        return dolf.assemble(
+            dolf.inner(state[1], self.domain.n)
+            * self.domain.ds((boundary.surface_index,))
+        )
+
+    def avg_normal_stress(self, state, boundary):
+        stress = self.stress(state[0], state[1])
+        stress = dolf.assemble(
+            dolf.dot(dolf.dot(stress, self.domain.n), self.domain.n)
+            * self.domain.ds((boundary.surface_index,))
+        )
+        return stress
 
     def heat_flux(self, temperature):
         return (
@@ -231,6 +265,9 @@ class BaseTVAcousticWeakForm(ABC, BaseWeakForm):
             * (continuity_component + momentum_component + energy_component)
             * self.domain.dx
         )
+
+    def volume_dissipation(self, state):
+        return dolf.assemble(self.spatial_component(state, state))
 
     def boundary_components(self, trial, test):
         """
@@ -294,6 +331,50 @@ class BaseTVAcousticWeakForm(ABC, BaseWeakForm):
                         self._parse_dolf_expression(boundary.bcond[stress_bc])
                         * velocity
                     )
+                elif stress_bc == "inhom_impedance":
+                    # Impedance term
+                    stress = (
+                        self._parse_dolf_expression(boundary.bcond[stress_bc][0])
+                        * velocity
+                    )
+                    # Force term
+                    normal_force = boundary.bcond[stress_bc][1]
+                    normal_force = 0.5 * (
+                        normal_force.real + normal_force.imag
+                    ) - 0.5j * (normal_force.real - normal_force.imag)
+                    stress += self._parse_dolf_expression(normal_force) * self.domain.n
+                elif stress_bc == "nozzle_impedance":
+                    capacitance = boundary.bcond[stress_bc]["capacitance"]
+                    inductance = boundary.bcond[stress_bc]["inductance"]
+                    resistance = boundary.bcond[stress_bc]["resistance"]
+                    frequency = boundary.bcond[stress_bc]["frequency"]
+
+                    z1 = -1.0 / (frequency * capacitance) - frequency * inductance
+                    z1 = self._parse_dolf_expression(z1)
+
+                    z2 = self._parse_dolf_expression(resistance)
+
+                    stress = z1 * dolf.inner(
+                        velocity, self.domain.n
+                    ) * self.domain.n + z2 * velocity.dx(0).dx(0)
+                elif stress_bc == "inhom_nozzle_impedance":
+                    inductance = boundary.bcond[stress_bc]["inductance"]
+                    resistance = boundary.bcond[stress_bc]["resistance"]
+                    frequency = boundary.bcond[stress_bc]["frequency"]
+
+                    z1 = -1.0j * frequency * inductance
+                    z1 = self._parse_dolf_expression(z1)
+
+                    z2 = self._parse_dolf_expression(resistance)
+
+                    stress = z1 * velocity + z2 * velocity.dx(0).dx(0)
+
+                    # Force term
+                    normal_force = boundary.bcond[stress_bc]["force"]
+                    normal_force = 0.5 * (
+                        normal_force.real + normal_force.imag
+                    ) - 0.5j * (normal_force.real - normal_force.imag)
+                    stress += self._parse_dolf_expression(normal_force) * self.domain.n
                 elif stress_bc == "shape_impedance":
                     try:
                         shape = boundary.velocity_shape
@@ -314,10 +395,11 @@ class BaseTVAcousticWeakForm(ABC, BaseWeakForm):
                         * self.domain.n
                     )
                 elif stress_bc == "normal_force":
-                    stress = (
-                        self._parse_dolf_expression(boundary.bcond[stress_bc])
-                        * self.domain.n
-                    )
+                    normal_force = boundary.bcond[stress_bc]
+                    # normal_force = 0.5 * (
+                    #     normal_force.real + normal_force.imag
+                    # ) - 0.5j * (normal_force.real - normal_force.imag)
+                    stress = self._parse_dolf_expression(normal_force) * self.domain.n
                 elif stress_bc == "slip" or stress_bc == "normal_velocity":
                     normal_velocity = (
                         dolf.Constant(0.0)
@@ -349,8 +431,8 @@ class BaseTVAcousticWeakForm(ABC, BaseWeakForm):
         bc = set(bcond.keys()) & set(allowed_bconds.keys())
         if len(bc) != 1:
             raise TypeError(
-                "Incorrect number of boundary condition."
-                f"One expected, {len(bc)} received."
+                "Incorrect number of boundary conditions."
+                f"Expected 1, but {len(bc)} received."
             )
         return bc.pop()
 
