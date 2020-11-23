@@ -1,4 +1,53 @@
-import math
+from math import pi as PI
+from collections import namedtuple
+
+Constants = namedtuple(
+    "Constants",
+    [
+        "density",
+        "acoustic_mach",
+        "channel_L",
+        "nozzle_L",
+        "nozzle_R",
+        "surface_tension",
+        "Re",
+        "sound_speed",
+    ],
+)
+
+
+class SurfaceModelFactory:
+    def __init__(self, setup_data):
+        model_data = setup_data["nozzle_domain"].copy()
+        self.initial_condition = model_data["initial_curvature"]
+        nozzle_domain_length = model_data["length"]
+        nozzle_domain_radius = model_data["radius"]
+
+        constants_data = setup_data["constants"]
+        L = constants_data["length"]
+        c_s = constants_data["sound_speed"]
+        rho = constants_data["density"]
+        epsilon = constants_data["Mach"]
+        gamma_st = constants_data["surface_tension"]
+        mu = constants_data["viscosity"]
+        Re = rho * c_s * L / mu
+
+        self.constants = Constants(
+            rho / rho,
+            epsilon,
+            L / L,
+            nozzle_domain_length / L,
+            nozzle_domain_radius / L,
+            2.0 * gamma_st / (rho * c_s ** 2.0 * nozzle_domain_radius * epsilon),
+            Re,
+            c_s / c_s,
+        )
+
+    def create_direct_model(self):
+        return SurfaceModel(constants=self.constants, kappa_t0=self.initial_condition)
+
+    def create_adjoint_model(self, direct_surface):
+        return AdjointSurfaceModel(direct_surface=direct_surface)
 
 
 class SurfaceModel:
@@ -64,7 +113,7 @@ class SurfaceModel:
         if abs(kappa) < 1.0e-3:
             return (
                 2.0
-                * math.pi
+                * PI
                 * self.r ** 3.0
                 / 8
                 * (
@@ -77,7 +126,7 @@ class SurfaceModel:
         else:
             return (
                 8.0
-                * math.pi
+                * PI
                 / kappa ** 4.0
                 * (1.0 - self._cos_theta(kappa)) ** 2.0
                 / self._cos_theta(kappa)
@@ -106,10 +155,10 @@ class SurfaceModel:
         energy = (
             self.r ** 3.0
             / (8.0 * self.epsilon)
-            * (self.gamma_tension * 8.0 * math.pi * _kappa_function)
+            * (self.gamma_tension * 8.0 * PI * _kappa_function)
         )
         static_energy = (
-            self.r ** 3.0 / (8.0 * self.epsilon) * self.gamma_tension * 4.0 * math.pi
+            self.r ** 3.0 / (8.0 * self.epsilon) * self.gamma_tension * 4.0 * PI
         )
 
         return energy - static_energy
