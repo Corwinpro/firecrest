@@ -395,10 +395,11 @@ class BaseTVAcousticWeakForm(ABC, BaseWeakForm):
                         * self.domain.n
                     )
                 elif stress_bc == "normal_force":
-                    stress = (
-                        self._parse_dolf_expression(boundary.bcond[stress_bc])
-                        * self.domain.n
-                    )
+                    normal_force = boundary.bcond[stress_bc]
+                    # normal_force = 0.5 * (
+                    #     normal_force.real + normal_force.imag
+                    # ) - 0.5j * (normal_force.real - normal_force.imag)
+                    stress = self._parse_dolf_expression(normal_force) * self.domain.n
                 elif stress_bc == "slip" or stress_bc == "normal_velocity":
                     normal_velocity = (
                         dolf.Constant(0.0)
