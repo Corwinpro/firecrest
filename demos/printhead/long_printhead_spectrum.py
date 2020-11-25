@@ -35,7 +35,7 @@ domain_boundaries = (boundary1, boundary2, boundary3, boundary4, boundary5, boun
 domain = SimpleDomain(domain_boundaries)
 
 solver = EigenvalueTVAcousticSolver(
-    domain, complex_shift=-0.03 + 1.0j, Re=1000.0, Pe=1.0, nmodes=30
+    domain, complex_shift=-0.03 + 1.0j, Re=1000.0, Pr=10.0, nmodes=30
 )
 solver.solve()
 
