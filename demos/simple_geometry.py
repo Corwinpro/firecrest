@@ -1,7 +1,9 @@
 from firecrest.mesh.boundaryelement import BSplineElement, LineElement
 from firecrest.mesh.geometry import SimpleDomain
 
-control_points = [
+line_control_points = [[0.5, 0.1], [0.5, -0.2], [0.0, -0.2], [0.0, 0.0]]
+
+bspline_control_points = [
     [0.0, 0.0],
     [0.1, 0.1],
     [0.2, -0.1],
@@ -9,6 +11,8 @@ control_points = [
     [0.4, 0.0],
     [0.5, 0.1],
 ]
-boundary2 = LineElement([[0.5, 0.1], [0.5, -0.2], [0.0, -0.2], [0.0, 0.0]])
-boundary1 = BSplineElement(control_points)
-domain = SimpleDomain([boundary1, boundary2])
+
+if __name__ == "__main__":
+    bspline_boundary = BSplineElement(bspline_control_points)
+    line_boundary = LineElement(line_control_points, el_size=0.2)
+    domain = SimpleDomain([bspline_boundary, line_boundary])
