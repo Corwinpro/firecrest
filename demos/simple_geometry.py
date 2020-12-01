@@ -14,5 +14,5 @@ bspline_control_points = [
 
 if __name__ == "__main__":
     bspline_boundary = BSplineElement(bspline_control_points)
-    line_boundary = LineElement(line_control_points, el_size=0.2)
+    line_boundary = LineElement(line_control_points, el_size=0.1)
     domain = SimpleDomain([bspline_boundary, line_boundary])
