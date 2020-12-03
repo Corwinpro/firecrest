@@ -1,7 +1,6 @@
-from firecrest.mesh.boundaryelement import LineElement
-from firecrest.mesh.geometry import SimpleDomain
-from firecrest.solvers.eigenvalue_tv_acoustic_solver import EigenvalueTVAcousticSolver
 import dolfin as dolf
+
+from firecrest.api import SimpleDomain, LineElement, EigenvalueTVAcousticSolver
 
 z = -1.0 - 2.0j
 
@@ -24,75 +23,57 @@ boundary2 = LineElement(
 domain_boundaries = (boundary1, boundary2)
 domain = SimpleDomain(domain_boundaries)
 
-solver = EigenvalueTVAcousticSolver(domain, complex_shift=-3.0j, Re=500.0, Pr=1.0)
-
-
-def stress(mode):
-    return dolf.assemble(
-        dolf.dot(
-            dolf.dot(solver.forms.stress(mode[0], mode[1]), solver.domain.n),
-            solver.domain.n,
-        )
-        * solver.domain.ds(boundary2.surface_index)
-    )
-
-
-def normal_velocity(mode):
-    return dolf.assemble(
-        (dolf.dot(mode[1], solver.domain.n)) * solver.domain.ds(boundary2.surface_index)
-    )
-
 
 if __name__ == "__main__":
 
-    solver.solve()
+    solver = EigenvalueTVAcousticSolver(domain, complex_shift=-3.0j, Re=500.0, Pr=1.0)
+    (ev, real_mode, imag_mode), = solver.solve(number_of_modes=1)
 
-    for i in range(int(solver.nof_modes_converged / 2)):
-        ev, real_mode, imag_mode = solver.extract_solution(i)
-        solver.output_field(real_mode + imag_mode)
-        energy = dolf.assemble(
-            solver.forms.temporal_component(real_mode, real_mode)
-        ) + dolf.assemble(solver.forms.temporal_component(imag_mode, imag_mode))
-        print(
-            "Estimated eigenvalue: ",
-            (
-                -dolf.assemble(solver.forms.spatial_component(real_mode, real_mode))
-                - dolf.assemble(solver.forms.spatial_component(imag_mode, imag_mode))
-                + z.real
-                * dolf.assemble(
-                    (
-                        dolf.inner(real_mode[1], real_mode[1])
-                        + dolf.inner(imag_mode[1], imag_mode[1])
-                    )
-                    * domain.ds(boundary2.surface_index)
-                )
-            )
-            / energy
-            + dolf.assemble(
-                # 2 * (div(uR) * PI - div(uI) * PR)
-                solver.forms.spatial_component(real_mode, imag_mode)
-                - solver.forms.spatial_component(imag_mode, real_mode)
-                + z.imag
-                * (
+    solver.output_field(real_mode + imag_mode)
+    energy = dolf.assemble(
+        solver.forms.temporal_component(real_mode, real_mode)
+    ) + dolf.assemble(solver.forms.temporal_component(imag_mode, imag_mode))
+    print(
+        "Estimated eigenvalue: ",
+        (
+            -dolf.assemble(solver.forms.spatial_component(real_mode, real_mode))
+            - dolf.assemble(solver.forms.spatial_component(imag_mode, imag_mode))
+            + z.real
+            * dolf.assemble(
+                (
                     dolf.inner(real_mode[1], real_mode[1])
                     + dolf.inner(imag_mode[1], imag_mode[1])
                 )
-                * domain.ds(boundary2.surface_index)
+                * domain.ds((boundary2.surface_index,))
             )
-            / energy
-            * 1.0j,
         )
+        / energy
+        + dolf.assemble(
+            solver.forms.spatial_component(real_mode, imag_mode)
+            - solver.forms.spatial_component(imag_mode, real_mode)
+            + z.imag
+            * (
+                dolf.inner(real_mode[1], real_mode[1])
+                + dolf.inner(imag_mode[1], imag_mode[1])
+            )
+            * domain.ds(boundary2.surface_index)
+        )
+        / energy
+        * 1.0j,
+    )
 
-        z_u_real = z.real * normal_velocity(real_mode) - z.imag * normal_velocity(
-            imag_mode
-        )
-        z_u_imag = z.real * normal_velocity(imag_mode) + z.imag * normal_velocity(
-            real_mode
-        )
-        print("Z*u real: ", z_u_real)
-        print("sigma_n_n real: ", stress(real_mode))
-        print("difference: ", z_u_real - stress(real_mode))
+    z_u_real = z.real * solver.forms.mass_flow_rate(
+        real_mode, boundary2
+    ) - z.imag * solver.forms.mass_flow_rate(imag_mode, boundary2)
+    z_u_imag = z.real * solver.forms.mass_flow_rate(
+        imag_mode, boundary2
+    ) + z.imag * solver.forms.mass_flow_rate(real_mode, boundary2)
+    print("Z*u real: ", z_u_real)
+    real_stress = solver.forms.avg_normal_stress(real_mode, boundary2)
+    print("sigma_n_n real: ", real_stress)
+    print("difference: ", z_u_real - real_stress)
 
-        print("Z*u imag: ", z_u_imag)
-        print("sigma_n_n imag: ", stress(imag_mode))
-        print("difference: ", z_u_imag - stress(imag_mode))
+    print("Z*u imag: ", z_u_imag)
+    imaginary_stress = solver.forms.avg_normal_stress(imag_mode, boundary2)
+    print("sigma_n_n imag: ", imaginary_stress)
+    print("difference: ", z_u_imag - imaginary_stress)
