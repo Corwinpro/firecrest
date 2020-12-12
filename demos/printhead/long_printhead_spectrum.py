@@ -1,8 +1,6 @@
-from firecrest.mesh.boundaryelement import LineElement
-from firecrest.mesh.geometry import SimpleDomain
-from firecrest.solvers.eigenvalue_tv_acoustic_solver import EigenvalueTVAcousticSolver
-import dolfin as dolf
 import matplotlib.pyplot as plt
+
+from firecrest.api import LineElement, SimpleDomain, EigenvalueTVAcousticSolver
 
 control_points_1 = [[9.9, -0.2], [9.9, 0.0], [0.0, 0.0], [0.0, 3.0]]
 control_points_2 = [[0.0, 3.0], [1.0, 3.0]]
