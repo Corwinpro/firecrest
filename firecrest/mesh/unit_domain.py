@@ -16,9 +16,6 @@ class IntervalDomain(Geometry):
 
         self.mesh = dolf.IntervalMesh(self.resolution, self.start_point, self.end_point)
         self._boundary_parts = None
-        self._ds = None
-        self._dx = None
-        self._n = None
 
     @property
     def n(self):
@@ -49,12 +46,7 @@ class IntervalDomain(Geometry):
         """
         assert self.mesh, "Mesh needs to be generated"
 
-        if not self._ds:
-            self._ds = dolf.Measure(
-                "ds", domain=self.mesh, subdomain_data=self.boundary_parts
-            )
-
-        return self._ds
+        return dolf.Measure("ds", domain=self.mesh, subdomain_data=self.boundary_parts)
 
 
 class PointBoundary(BoundaryElement):
