@@ -77,9 +77,6 @@ class Geometry(ABC):
 
         self.mesh = None
         self._boundary_parts = None
-        self._ds = None
-        self._dx = None
-        self._n = None
 
     def geo_to_mesh(self):
         """
@@ -238,6 +235,10 @@ class Geometry(ABC):
         self._boundary_parts = boundary_parts
         return boundary_parts
 
+    @boundary_parts.setter
+    def boundary_parts(self, value):
+        self._boundary_parts = value
+
     @property
     def ds(self):
         """
@@ -245,12 +246,7 @@ class Geometry(ABC):
         """
         assert self.mesh, "Mesh needs to be generated"
 
-        if not self._ds:
-            self._ds = dolf.Measure(
-                "ds", domain=self.mesh, subdomain_data=self.boundary_parts
-            )
-
-        return self._ds
+        return dolf.Measure("ds", domain=self.mesh, subdomain_data=self.boundary_parts)
 
     @property
     def dx(self):
@@ -259,10 +255,7 @@ class Geometry(ABC):
         """
         assert self.mesh, "Mesh needs to be generated"
 
-        if not self._dx:
-            self._dx = dolf.dx(domain=self.mesh)
-
-        return self._dx
+        return dolf.dx(domain=self.mesh)
 
     @property
     def n(self):
@@ -271,10 +264,7 @@ class Geometry(ABC):
         """
         assert self.mesh, "Mesh needs to be generated"
 
-        if not self._n:
-            self._n = dolf.FacetNormal(self.mesh)
-
-        return self._n
+        return dolf.FacetNormal(self.mesh)
 
     def _get_boundaries(self, boundary_type):
         """
