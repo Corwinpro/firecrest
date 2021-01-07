@@ -25,16 +25,16 @@ control_points_5 = [[9.2, -0.2], [9.1, -0.2]]
 
 el_size = 0.06
 boundary0 = LineElement(
-    control_points_0, el_size=el_size / 4.0, bcond={"noslip": True, "isothermal": True}
+    control_points_0, el_size=el_size / 4.0, bcond={"noslip": True, "adiabatic": True}
 )
 boundary1 = LineElement(
-    control_points_1, el_size=el_size, bcond={"noslip": True, "isothermal": True}
+    control_points_1, el_size=el_size, bcond={"noslip": True, "adiabatic": True}
 )
 boundary2 = LineElement(
     control_points_2, el_size=el_size, bcond={"free": True, "adiabatic": True}
 )
 boundary3 = LineElement(
-    control_points_3, el_size=el_size, bcond={"noslip": True, "isothermal": True}
+    control_points_3, el_size=el_size, bcond={"noslip": True, "adiabatic": True}
 )
 boundary4 = LineElement(
     control_points_4,
@@ -81,7 +81,7 @@ def stress(mode):
 spectrum = [s0]
 f_spectrum = []
 
-solver = EigenvalueTVAcousticSolver(domain, complex_shift=s0, Re=Re, Pe=1.0, nmodes=2)
+solver = EigenvalueTVAcousticSolver(domain, complex_shift=s0, Re=Re, Pr=10.0, nmodes=2)
 solver.solve()
 
 s_old = s0
@@ -99,7 +99,7 @@ boundary5.bcond["nozzle_impedance"]["frequency"] = s0
 for i in range(10):
 
     solver = EigenvalueTVAcousticSolver(
-        domain, complex_shift=s0, Re=Re, Pe=1.0, nmodes=2
+        domain, complex_shift=s0, Re=Re, Pr=10.0, nmodes=2
     )
     solver.solve()
     s_old = s0
