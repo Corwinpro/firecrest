@@ -215,9 +215,9 @@ class BaseTVAcousticWeakForm(ABC, BaseWeakForm):
             / dolf.Constant(self.dolf_constants.gamma - 1.0)
         )
 
-    def temporal_component(self, trial, test, shift=None):
+    def _temporal_component(self, trial, test):
         """
-        Generates temporal component of the TVAcoustic weak form equation.
+        Generate the forms for the temporal component of the TVAcoustic weak form equation.
         """
         pressure, velocity, temperature = trial
         test_pressure, test_velocity, test_temperature = test
@@ -225,20 +225,9 @@ class BaseTVAcousticWeakForm(ABC, BaseWeakForm):
         continuity_component = self.density(pressure, temperature) * test_pressure
         momentum_component = dolf.inner(velocity, test_velocity)
         energy_component = self.entropy(pressure, temperature) * test_temperature
+        return continuity_component + momentum_component + energy_component
 
-        if shift is None:
-            shift = 1.0
-
-        return (
-            self._parse_dolf_expression(shift)
-            * (continuity_component + momentum_component + energy_component)
-            * self.domain.dx
-        )
-
-    def spatial_component(self, trial, test, shift=None):
-        """
-        Generates spatial component of the TVAcoustic weak form equation.
-        """
+    def _spatial_component(self, trial, test):
         pressure, velocity, temperature = trial
         test_pressure, test_velocity, test_temperature = test
 
@@ -256,15 +245,30 @@ class BaseTVAcousticWeakForm(ABC, BaseWeakForm):
         energy_component = dolf.inner(
             dolf.grad(test_temperature), self.heat_flux(temperature)
         )
+        return continuity_component + momentum_component + energy_component
+
+    def temporal_component(self, trial, test, shift=None):
+        """
+        Generate the volume-averaged forms for the temporal component of the
+        TVAcoustic weak form equation.
+        """
+        components = self._temporal_component(trial, test)
 
         if shift is None:
             shift = 1.0
 
-        return (
-            self._parse_dolf_expression(shift)
-            * (continuity_component + momentum_component + energy_component)
-            * self.domain.dx
-        )
+        return self._parse_dolf_expression(shift) * components * self.domain.dx
+
+    def spatial_component(self, trial, test, shift=None):
+        """
+        Generate volume-averaged spatial component of the TVAcoustic weak form equation.
+        """
+        components = self._spatial_component(trial, test)
+
+        if shift is None:
+            shift = 1.0
+
+        return self._parse_dolf_expression(shift) * components * self.domain.dx
 
     def volume_dissipation(self, state):
         return dolf.assemble(self.spatial_component(state, state))
