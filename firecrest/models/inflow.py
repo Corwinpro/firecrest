@@ -4,7 +4,7 @@ from dolfin import Expression
 
 logger = logging.getLogger(__name__)
 
-UNIFORM_TYPE_LABEL =  "uniform"
+UNIFORM_TYPE_LABEL = "uniform"
 PARABOLIC_TYPE_LABEL = "parabolic"
 
 
@@ -26,6 +26,7 @@ class InflowModelFactory:
                 f"{self.supported_types} are supported."
             )
 
+    @property
     def create_model(self):
         if self.type == UNIFORM_TYPE_LABEL:
             return self.create_normal_inflow_model
