@@ -1,11 +1,53 @@
+import logging
+
 from dolfin import Expression
+
+logger = logging.getLogger(__name__)
+
+UNIFORM_TYPE_LABEL =  "uniform"
+PARABOLIC_TYPE_LABEL = "parabolic"
 
 
 class InflowModelFactory:
+    _default_type = UNIFORM_TYPE_LABEL
+
+    supported_types = (UNIFORM_TYPE_LABEL, PARABOLIC_TYPE_LABEL)
+
+    def __init__(self, parameters):
+        self.parameters = parameters
+
+        self.type = self.parameters.get("type", None)
+        if self.type is None:
+            self.type = self._default_type
+            logger.warning(f"Using default type model: {self.type!r}")
+        elif self.type not in self.supported_types:
+            raise ValueError(
+                f"Model type {self.type!r} is not supported. Only "
+                f"{self.supported_types} are supported."
+            )
+
+    def create_model(self):
+        if self.type == UNIFORM_TYPE_LABEL:
+            return self.create_normal_inflow_model
+        elif self.type == PARABOLIC_TYPE_LABEL:
+            return self.create_parabolic_inflow_model
+
     def create_normal_inflow_model(self, history):
         return NormalInflow(history)
 
-    def create_parabolic_inflow_model(self, history, left, right):
+    def create_parabolic_inflow_model(self, history):
+        if "left" not in self.parameters:
+            raise ValueError(
+                "The InflowModel parameters for the parabolic inflow"
+                " profile must contain 'left' argument."
+            )
+        if "right" not in self.parameters:
+            raise ValueError(
+                "The InflowModel parameters for the parabolic inflow"
+                " profile must contain 'right' argument."
+            )
+        left = self.parameters["left"]
+        right = self.parameters["right"]
         return ParabolicInflow(history, left=left, right=right)
 
 
