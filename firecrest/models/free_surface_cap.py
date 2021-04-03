@@ -17,13 +17,11 @@ Constants = namedtuple(
 
 
 class SurfaceModelFactory:
-    def __init__(self, setup_data):
-        model_data = setup_data["nozzle_domain"].copy()
+    def __init__(self, model_data, constants_data):
         self.initial_condition = model_data["initial_curvature"]
         nozzle_domain_length = model_data["length"]
         nozzle_domain_radius = model_data["radius"]
 
-        constants_data = setup_data["constants"]
         L = constants_data["length"]
         c_s = constants_data["sound_speed"]
         rho = constants_data["density"]
