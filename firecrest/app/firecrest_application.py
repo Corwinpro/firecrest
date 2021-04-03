@@ -37,8 +37,13 @@ class FirecrestApp:
     def setup_model_factories(self):
         factories = {
             "models": {
-                "surface_model": SurfaceModelFactory(self.setup_data),
-                "inflow_model": InflowModelFactory(),
+                "surface_model": SurfaceModelFactory(
+                    model_data=self.setup_data["nozzle_domain"].copy(),
+                    constants_data=self.setup_data["constants"].copy()
+                ),
+                "inflow_model": InflowModelFactory(
+                    parameters=self.setup_data.get("inflow_model", {}).copy(),
+                ),
             },
             "solvers": {"unsteady_solver": None},
             "loggers": {

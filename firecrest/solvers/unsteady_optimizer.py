@@ -91,7 +91,7 @@ class UnsteadyOptimizationSolver(OptimizationMixin, UnsteadyTVAcousticSolver):
         return data
 
     def initialize_control_boundary(self, control_data):
-        inflow = self.model_factory["inflow_model"].create_normal_inflow_model
+        inflow = self.model_factory["inflow_model"].create_model
         self.control_boundary.bcond["inflow"] = inflow(control_data)
 
     def initialize_shared_boundary(self):
