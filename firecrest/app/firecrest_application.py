@@ -114,14 +114,6 @@ class FirecrestApp:
             * constants_data["length"]
             / constants_data["viscosity"]
         )
-        # L = constants_data["length"]
-        # c_s = constants_data["sound_speed"]
-        # rho = constants_data["density"]
-        # epsilon = constants_data["Mach"]
-        # gamma_st = constants_data["surface_tension"]
-        # mu = constants_data["viscosity"]
-        # Pr = constants_data["Pr"]
-        # Re = rho * c_s * L / mu
         return constants_data
 
     def _configure_time_domain(self):
