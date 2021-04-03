@@ -183,11 +183,13 @@ class UnsteadyOptimizationSolver(OptimizationMixin, UnsteadyTVAcousticSolver):
 
     def run(
         self,
+        run_mode,
         initial_guess=None,
         bounds=None,
         signal_window=None,
         optimization_method=None,
     ):
+        self.logger.run_mode = run_mode
         # 1. define control
         # `time_grid` defines the time grid for the direct simulation
         self.time_grid = TimeSeries.from_parameters(
@@ -229,15 +231,15 @@ class UnsteadyOptimizationSolver(OptimizationMixin, UnsteadyTVAcousticSolver):
         if initial_guess is None:
             initial_guess = np.zeros(len(self.basis.basis))
 
-        if self.logger.run_mode == "optimization":
+        if run_mode == "optimization":
             res = self.minimize(
                 initial_guess, bounds, optimization_method=optimization_method
             )
-        elif self.logger.run_mode == "single_run":
+        elif run_mode == "single_run":
             res = self._objective_state(initial_guess)
             grad = self._jacobian(res)
         else:
-            log.warn(f"The runtime {self.logger.run_mode} is not implemented")
+            log.warning(f"The run mode {run_mode} is not implemented")
             res = None
 
         return res

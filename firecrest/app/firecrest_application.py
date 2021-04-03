@@ -87,9 +87,10 @@ class FirecrestApp:
             logger=logger,
             model_factory=model_factory,
         )
-        result = optimizer.run(
-            self.control_space_configuration["control_default"],
-            self.control_space_configuration["bounds"],
+        optimizer.run(
+            run_mode=self.run_mode,
+            initial_guess=self.control_space_configuration["control_default"],
+            bounds=self.control_space_configuration["bounds"],
             signal_window=self.control_space_configuration["window"],
             optimization_method=self.control_space_configuration["algorithm"],
         )
