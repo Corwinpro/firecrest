@@ -111,7 +111,11 @@ class UnsteadyOptimizationSolver(OptimizationMixin, UnsteadyTVAcousticSolver):
         return adjoint_surface
 
     def evaluate_adjoint_sensitivity(self, adjoint_state):
-        return self.forms.avg_normal_stress(adjoint_state, self.control_boundary)
+        boundary_model = self.control_boundary.bcond["inflow"]
+        weight_function = boundary_model.generate_shape_expression()
+        return self.forms.weighted_stress(
+            adjoint_state, self.control_boundary, weight_vector_function=weight_function
+        )
 
     @post
     @discrete_to_continuous_direct
