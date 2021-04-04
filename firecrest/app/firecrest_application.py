@@ -37,8 +37,13 @@ class FirecrestApp:
     def setup_model_factories(self):
         factories = {
             "models": {
-                "surface_model": SurfaceModelFactory(self.setup_data),
-                "inflow_model": InflowModelFactory(),
+                "surface_model": SurfaceModelFactory(
+                    model_data=self.setup_data["nozzle_domain"].copy(),
+                    constants_data=self.setup_data["constants"].copy(),
+                ),
+                "inflow_model": InflowModelFactory(
+                    parameters=self.setup_data.get("inflow_model", {}).copy()
+                ),
             },
             "solvers": {"unsteady_solver": None},
             "loggers": {
@@ -68,6 +73,9 @@ class FirecrestApp:
         )
 
         domain = self.domain_configuration["domain"]
+        control_boundary_type = self.setup_data.get("inflow_model", {}).get(
+            "type", None
+        )
         logger = self.factories["loggers"]["base_logger"].create_basic_logger()
         model_factory = self.factories["models"]
         optimizer = UnsteadyOptimizationSolver(
@@ -81,10 +89,12 @@ class FirecrestApp:
             shared_boundary=self.domain_configuration["shared_boundary"],
             logger=logger,
             model_factory=model_factory,
+            control_boundary_type=control_boundary_type,
         )
-        result = optimizer.run(
-            self.control_space_configuration["control_default"],
-            self.control_space_configuration["bounds"],
+        optimizer.run(
+            run_mode=self.run_mode,
+            initial_guess=self.control_space_configuration["control_default"],
+            bounds=self.control_space_configuration["bounds"],
             signal_window=self.control_space_configuration["window"],
             optimization_method=self.control_space_configuration["algorithm"],
         )
@@ -109,14 +119,6 @@ class FirecrestApp:
             * constants_data["length"]
             / constants_data["viscosity"]
         )
-        # L = constants_data["length"]
-        # c_s = constants_data["sound_speed"]
-        # rho = constants_data["density"]
-        # epsilon = constants_data["Mach"]
-        # gamma_st = constants_data["surface_tension"]
-        # mu = constants_data["viscosity"]
-        # Pr = constants_data["Pr"]
-        # Re = rho * c_s * L / mu
         return constants_data
 
     def _configure_time_domain(self):

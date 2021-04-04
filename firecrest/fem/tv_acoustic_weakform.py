@@ -208,6 +208,14 @@ class BaseTVAcousticWeakForm(ABC, BaseWeakForm):
         )
         return stress
 
+    def weighted_stress(self, state, boundary, weight_vector_function):
+        stress = self.stress(state[0], state[1])
+        stress = dolf.assemble(
+            dolf.dot(dolf.dot(stress, self.domain.n), weight_vector_function)
+            * self.domain.ds((boundary.surface_index,))
+        )
+        return stress
+
     def heat_flux(self, temperature):
         return (
             dolf.grad(temperature)
