@@ -60,6 +60,7 @@ class UnsteadyOptimizationSolver(OptimizationMixin, UnsteadyTVAcousticSolver):
         super().__init__(*args, **kwargs)
         self.acoustic_initial_state = kwargs["initial_state"]
         self.control_boundary = kwargs.get("control_boundary")
+        self.control_boundary_type = kwargs.get("control_boundary_type")
         self.shared_boundary = kwargs.get("shared_boundary")
 
         self.logger = kwargs.get("logger")
@@ -91,7 +92,10 @@ class UnsteadyOptimizationSolver(OptimizationMixin, UnsteadyTVAcousticSolver):
         return data
 
     def initialize_control_boundary(self, control_data):
-        inflow = self.model_factory["inflow_model"].create_model(control_data)
+        inflow_model = self.model_factory["inflow_model"].create_model(
+            model_type=self.control_boundary_type
+        )
+        inflow = inflow_model(control_data)
         self.control_boundary.bcond["inflow"] = inflow
 
     def initialize_shared_boundary(self):

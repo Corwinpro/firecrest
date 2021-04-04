@@ -39,10 +39,10 @@ class FirecrestApp:
             "models": {
                 "surface_model": SurfaceModelFactory(
                     model_data=self.setup_data["nozzle_domain"].copy(),
-                    constants_data=self.setup_data["constants"].copy()
+                    constants_data=self.setup_data["constants"].copy(),
                 ),
                 "inflow_model": InflowModelFactory(
-                    parameters=self.setup_data.get("inflow_model", {}).copy(),
+                    parameters=self.setup_data.get("inflow_model", {}).copy()
                 ),
             },
             "solvers": {"unsteady_solver": None},
@@ -73,6 +73,9 @@ class FirecrestApp:
         )
 
         domain = self.domain_configuration["domain"]
+        control_boundary_type = self.setup_data.get("inflow_model", {}).get(
+            "type", None
+        )
         logger = self.factories["loggers"]["base_logger"].create_basic_logger()
         model_factory = self.factories["models"]
         optimizer = UnsteadyOptimizationSolver(
@@ -86,6 +89,7 @@ class FirecrestApp:
             shared_boundary=self.domain_configuration["shared_boundary"],
             logger=logger,
             model_factory=model_factory,
+            control_boundary_type=control_boundary_type,
         )
         optimizer.run(
             run_mode=self.run_mode,

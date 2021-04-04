@@ -16,21 +16,20 @@ class InflowModelFactory:
     def __init__(self, parameters):
         self.parameters = parameters
 
-        self.type = self.parameters.get("type", None)
-        if self.type is None:
-            self.type = self._default_type
-            logger.warning(f"Using default type model: {self.type!r}")
-        elif self.type not in self.supported_types:
+    def create_model(self, model_type=None):
+        if model_type is None:
+            model_type = self._default_type
+            logger.warning(f"Using default type model: {model_type!r}")
+
+        if model_type not in self.supported_types:
             raise ValueError(
-                f"Model type {self.type!r} is not supported. Only "
+                f"Model type {model_type!r} is not supported. Only "
                 f"{self.supported_types} are supported."
             )
 
-    @property
-    def create_model(self):
-        if self.type == UNIFORM_TYPE_LABEL:
+        if model_type == UNIFORM_TYPE_LABEL:
             return self.create_normal_inflow_model
-        elif self.type == PARABOLIC_TYPE_LABEL:
+        elif model_type == PARABOLIC_TYPE_LABEL:
             return self.create_parabolic_inflow_model
 
     def create_normal_inflow_model(self, history):
