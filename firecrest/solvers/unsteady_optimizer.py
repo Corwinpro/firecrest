@@ -198,24 +198,12 @@ class UnsteadyOptimizationSolver(OptimizationMixin, UnsteadyTVAcousticSolver):
         self.time_grid = TimeSeries.from_parameters(
             Decimal("0"), self.timer["T"], self.timer["dt"]
         )
-        # self.time_grid = TimeSeries.from_dict(
-        #     {
-        #         Decimal(k) * Decimal(self.timer["dt"]): 0
-        #         for k in range(int(self.timer["T"] / Decimal(self.timer["dt"])) + 1)
-        #     }
-        # )
         # `midpoint_grid` defines the time grid for the adjoint simulation
         self.midpoint_grid = TimeSeries.from_parameters(
             Decimal("0.5") * Decimal(self.timer["dt"]),
             self.timer["T"] - Decimal("0.5") * Decimal(self.timer["dt"]),
             self.timer["dt"],
         )
-        # self.midpoint_grid = TimeSeries.from_dict(
-        #     {
-        #         Decimal(k + 0.5) * Decimal(self.timer["dt"]): 0
-        #         for k in range(int(self.timer["T"] / Decimal(self.timer["dt"])))
-        #     }
-        # )
         # We define a control space, a PiecewiseLinearBasis in this case
         self.basis = PiecewiseLinearBasis(
             np.array([float(key) for key in self.time_grid.keys()]),
