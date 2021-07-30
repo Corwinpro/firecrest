@@ -1,15 +1,14 @@
+import logging
 import os
 import pygmsh as pg
 import meshio
-import numpy as np
 import subprocess
 import warnings
-from abc import ABC, abstractmethod
+from abc import ABC
 import dolfin as dolf
 from dolfin_utils.meshconvert import meshconvert
 
-# from dolfin_utils.meshconvert import meshconvert
-# import dolfin as dolf
+logger = logging.getLogger(__name__)
 
 GEO_EXT = ".geo"
 MSH_EXT = ".msh"
@@ -314,7 +313,7 @@ class SimpleDomain(Geometry):
                 cf.set_all(True)
                 self.mesh = dolf.refine(self.mesh, cf)
                 self._boundary_parts = dolf.adapt(self.boundary_parts, self.mesh)
-            print(
+            logging.info(
                 f"Refinement level: {refinement_level}, "
                 f"nof cells: {len(list(dolf.cells(self.mesh)))}"
             )
