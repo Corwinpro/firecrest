@@ -132,6 +132,18 @@ class SurfaceModel:
                 / 8
             )
 
+    def second_volume_derivative(self, kappa):
+        return (
+            8.0 * PI * self.r ** 3.0 / 8.0
+            * (1.0 - self._cos_theta(kappa))
+            / (kappa ** 3.0 * self._cos_theta(kappa))
+            * (
+                (1.0 - self._cos_theta(kappa)) / self._cos_theta(kappa) ** 2.0
+                - 4.0 * (1.0 - self._cos_theta(kappa)) / kappa ** 2.0
+                + 2.0 / self._cos_theta(kappa)
+            )
+        )
+
     def surface_energy(self, kappa=None):
         """
         Calculates the surface energy of the nozzle flow, minus the energy of the flat surface
@@ -170,6 +182,13 @@ class SurfaceModel:
             + self.constants.acoustic_mach
             * dt
             * flow_rate
+            / self.volume_derivative(self.kappa)
+        )
+        # Second order correction
+        kappa_updated += (
+            -dt ** 2.0 / 2.0
+            * ((self.kappa - self.prev_kappa)/dt) ** 2.0
+            * self.second_volume_derivative(self.kappa)
             / self.volume_derivative(self.kappa)
         )
         self.kappa_history.append(kappa_updated)
