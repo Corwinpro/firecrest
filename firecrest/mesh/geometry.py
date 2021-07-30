@@ -1,15 +1,14 @@
+import logging
 import os
 import pygmsh as pg
 import meshio
-import numpy as np
 import subprocess
 import warnings
-from abc import ABC, abstractmethod
+from abc import ABC
 import dolfin as dolf
 from dolfin_utils.meshconvert import meshconvert
 
-# from dolfin_utils.meshconvert import meshconvert
-# import dolfin as dolf
+logger = logging.getLogger(__name__)
 
 GEO_EXT = ".geo"
 MSH_EXT = ".msh"
@@ -297,6 +296,7 @@ class SimpleDomain(Geometry):
         mesh_name="mesh",
         mesh_folder="Mesh",
         dimensions=2,
+        refinement_level=0,
         **kwargs
     ):
         super().__init__(
@@ -305,6 +305,18 @@ class SimpleDomain(Geometry):
         self._generate_pg_geometry()
         self.compile_mesh()
         self.mesh = self.load_mesh()
+
+        if refinement_level > 0:
+            dolf.parameters["refinement_algorithm"] = "plaza_with_parent_facets"
+            for _ in range(refinement_level):
+                cf = dolf.MeshFunction("bool", self.mesh, True)
+                cf.set_all(True)
+                self.mesh = dolf.refine(self.mesh, cf)
+                self._boundary_parts = dolf.adapt(self.boundary_parts, self.mesh)
+            logging.info(
+                f"Refinement level: {refinement_level}, "
+                f"nof cells: {len(list(dolf.cells(self.mesh)))}"
+            )
 
     def _generate_surface_points(self):
         """
