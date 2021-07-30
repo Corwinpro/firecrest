@@ -1,4 +1,8 @@
+import logging
+
 import dolfin as dolf
+
+logger = logging.getLogger(__name__)
 
 
 class BaseFunctionSpace:
@@ -50,5 +54,8 @@ class BaseFunctionSpace:
     def function_spaces(self):
         if not self._function_spaces:
             self._function_spaces = self._generate_function_spaces()
+            logger.info(
+                f"Number of DOFs: {dolf.Function(self._function_spaces).vector().size()}"
+            )
 
         return self._function_spaces
