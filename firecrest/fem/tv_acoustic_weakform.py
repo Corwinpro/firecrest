@@ -14,6 +14,9 @@ from firecrest.fem.struct_templates import AcousticConstants
 import dolfin as dolf
 import ufl
 
+#: Default value of gamma = cp/cv for water
+DEFAULT_CP_CV_RATIO = 1.017
+
 
 def parse_trialtest(component):
     """
@@ -106,7 +109,7 @@ class BaseTVAcousticWeakForm(ABC, BaseWeakForm):
         self.test_functions = dolf.TestFunctions(self.function_space)
 
     def get_constants(self, kwargs):
-        self._gamma = kwargs.get("gamma", 1.4)
+        self._gamma = kwargs.get("gamma", DEFAULT_CP_CV_RATIO)
         self._Re = kwargs["Re"]
         try:
             self._Pe = kwargs["Pe"]
