@@ -91,7 +91,7 @@ class FirecrestApp:
             model_factory=model_factory,
             control_boundary_type=control_boundary_type,
         )
-        optimizer.run(
+        return optimizer, optimizer.run(
             run_mode=self.run_mode,
             initial_guess=self.control_space_configuration["control_default"],
             bounds=self.control_space_configuration["bounds"],
