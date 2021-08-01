@@ -125,6 +125,7 @@ class UnsteadyOptimizationSolver(OptimizationMixin, UnsteadyTVAcousticSolver):
     def _objective_state(self, control):
         self.initialize_control_boundary(control)
 
+        state = None
         surface_model = self.initialize_shared_boundary()
         _old_flow_rate = 0
         for state in self.solve_direct(
@@ -227,6 +228,8 @@ class UnsteadyOptimizationSolver(OptimizationMixin, UnsteadyTVAcousticSolver):
                 initial_guess, bounds, optimization_method=optimization_method
             )
         elif run_mode == "single_run":
+            res = self._objective_state(initial_guess)
+        elif run_mode == "direct_adjoint":
             res = self._objective_state(initial_guess)
             grad = self._jacobian(res)
         else:
