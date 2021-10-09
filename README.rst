@@ -19,26 +19,18 @@ Install the dolfin and necessary packages and activate:
 
 .. code-block:: bash
 
-    conda create -n fenicsproject -c conda-forge fenics matplotlib meshio
-    source activate fenicsproject
+    conda create -n firecrest -c conda-forge fenics matplotlib meshio
+    source activate firecrest
 
 
 Deactivate:
 
 .. code-block:: bash
 
-    source deactivate fenicsproject
-
-
-Additional packages
--------------------
-
-Install **pysplines** `from here`_.
+    source deactivate firecrest
 
 Logo by `Titov Fedor`_.
 
 __
-.. _from here:
-    https://github.com/Corwinpro/PySplines
 .. _Titov Fedor:
     https://www.artstation.com/quietvictories
