@@ -1,5 +1,5 @@
 click==8.0.2
 meshio==5.0.2
 gmsh==4.8.4
-h5py==3.4.0
+h5py==2.10.0
 pysplines==0.3.0
