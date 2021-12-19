@@ -1,4 +1,5 @@
 import decimal
+from decimal import Decimal
 from collections import OrderedDict
 import warnings
 import numpy as np
@@ -77,7 +78,8 @@ class TimeSeries(OrderedDict):
         else:
             if self._dt and self._dt != _dt:
                 warnings.warn(
-                    f"The time series time intervals appear to be non-uniform, with current dt = {self._dt} != {_dt}",
+                    f"The time series time intervals appear to be non-uniform, "
+                    f"with current dt = {self._dt} != {_dt}",
                     RuntimeWarning,
                 )
             self._dt = _dt
@@ -121,12 +123,32 @@ class TimeSeries(OrderedDict):
         """
         if len(array) != len(template_grid):
             raise TimeGridError(
-                f"Array must be of the same size as template grid ({len(template_grid)})"
+                f"Array len {len(array)} must be of the same size "
+                f"as template grid ({len(template_grid)})"
             )
         instance = cls()
         for item, key in zip(array, template_grid):
             instance[key] = item
 
+        return instance
+
+    def _from_list(self, array):
+        return self.__class__.from_list(array, self)
+
+    @classmethod
+    def from_parameters(cls, start, stop, step):
+        if not isinstance(start, Decimal):
+            start = Decimal(start)
+        if not isinstance(stop, Decimal):
+            stop = Decimal(stop)
+        if not isinstance(step, Decimal):
+            step = Decimal(step)
+        instance = TimeSeries.from_dict(
+            {
+                start + Decimal(k) * step: 0
+                for k in range(int((stop - start) / step) + 1)
+            }
+        )
         return instance
 
     def apply(self, func):
@@ -146,38 +168,63 @@ class TimeSeries(OrderedDict):
 
     @classmethod
     def interpolate_to_keys(cls, series, keys_series):
-        if len(series) - 1 != len(keys_series):
+        """
+        Given the `series` TimeSeries object, we interpolate the `series` values
+        onto the `keys_series` TimeSeries keys.
+        :param series:TimeSeries with values
+        :param keys_series:TimeSeries with keys
+        :return:TimeSeries
+        """
+        _copy_series = TimeSeries.from_dict(series)
+
+        if len(_copy_series) == len(keys_series) - 1:
+            _copy_series[_copy_series._first - _copy_series._dt] = -_copy_series[
+                _copy_series._first
+            ]
+            _copy_series[_copy_series._last + _copy_series._dt] = -_copy_series[
+                _copy_series._last
+            ]
+
+        if len(_copy_series) - 1 != len(keys_series):
             raise TimeGridError(
                 "The interpolated series must be of length of keys plus 1"
             )
         instance = cls()
         dt = keys_series._dt
         if dt is None:
-            dt = series._dt
+            dt = _copy_series._dt
             warnings.warn(
-                f"The interpolation TimeSeries grid has no dt attribute. Using the interpolating grid dt={dt} instead"
+                f"The interpolation TimeSeries grid has no dt attribute. "
+                f"Using the interpolating grid dt={dt} instead"
             )
 
         for key in keys_series:
             instance[key] = 0.5 * (
-                series[key - dt / decimal.Decimal(2.0)]
-                + series[key + dt / decimal.Decimal(2.0)]
+                _copy_series[key - dt / decimal.Decimal(2.0)]
+                + _copy_series[key + dt / decimal.Decimal(2.0)]
             )
 
         if len(instance) == 1:
-            instance._dt = series._dt or keys_series._dt
+            instance._dt = _copy_series._dt or keys_series._dt
         return instance
+
+    def interpolate(self, series):
+        return self.__class__.interpolate_to_keys(series, self)
 
 
 class PiecewiseLinearBasis:
     """
     Creates a triangular Piecewise Linear Basis for the given `space`.
     The width of the triangles is defined by the `width` parameter.
+
+    :kw param reduced_basis: sets the basis space to zero at corners (H_0)
     """
 
-    def __init__(self, space, width):
-        self.space = space
+    def __init__(self, space, width, **kwargs):
         self.width = width
+        self.space = space
+        self.space_step_size = abs(self.space[1] - self.space[0])
+
         assert (self.space[-1] - self.space[0]) % self.width < 1.0e-8 or (
             self.space[-1] - self.space[0]
         ) % self.width > self.width - 1.0e-8, (
@@ -185,6 +232,7 @@ class PiecewiseLinearBasis:
             + f"with the domain length ({self.space[-1] - self.space[0]})"
         )
         self.basis = []
+        self._is_reduced_basis = kwargs.get("reduced_basis", False)
         self._construct_basis()
 
         self.mass_matrix = None
@@ -218,15 +266,23 @@ class PiecewiseLinearBasis:
         return y
 
     def _construct_basis(self):
-        position = self.space[0]
-        while position < self.space[-1]:
+        if self._is_reduced_basis:
+            position_offsets = self.width / 2.0
+        else:
+            position_offsets = 0.0
+        position = self.space[0] + position_offsets
+        while abs(position - self.space[-1]) > 1.0e-12:
             self.basis.append(self._basis_function(position))
             position += self.width / 2.0
-        self.basis.append(self._basis_function(self.space[-1]))
+        if not self._is_reduced_basis:
+            self.basis.append(self._basis_function(self.space[-1]))
 
     def _construct_mass_matrix(self):
         self.mass_matrix = np.array(
-            [[sum(b1 * b2) for b1 in self.basis] for b2 in self.basis]
+            [
+                [sum(b1 * b2) * self.space_step_size for b1 in self.basis]
+                for b2 in self.basis
+            ]
         )
         self.inv_mass_matrix = np.linalg.inv(self.mass_matrix)
 
@@ -239,25 +295,98 @@ class PiecewiseLinearBasis:
         coefficients = self.discretize(y)
         return self.extrapolate(coefficients)
 
-    def discretize(self, y):
+    def discretize(self, y, *, mid_point=False):
         """
-        Calculates a discrete lower-order space representation of the y-funciton
+        Calculates a discrete lower-order space representation of the y-function
         :param y:np.array function to discretize
+        :param mid_point:bool grid or mid points provided
         :return:list discrete coefficients
         """
-        return self.inv_mass_matrix.dot(np.array([sum(y * b) for b in self.basis]))
+        if mid_point:
+            signal = (
+                [0.0] + [0.5 * (y[i] + y[i + 1]) for i in range(len(y) - 1)] + [0.0]
+            )
+        else:
+            signal = y
+        return self.inv_mass_matrix.dot(
+            np.array([sum(signal * b) * self.space_step_size for b in self.basis])
+        )
 
     def extrapolate(self, coefficients):
         """
-        Restores the linear function on self.space from disrcete coefficients
+        Restores the linear function on self.space from discrete coefficients
         :param coefficients:np.array discrete space coefficients
         :return:np.array restored function
         """
-        assert len(coefficients) == len(
-            self.basis
-        ), "Number of coefficients should equal the basis length"
+        if len(coefficients) != len(self.basis):
+            raise ValueError(
+                f"Number of coefficients {len(coefficients)} should equal the basis length {len(self.basis)}"
+            )
         res = self.space * 0
         for i in range(len(self.basis)):
             res += coefficients[i] * self.basis[i]
 
         return res
+
+    @classmethod
+    def convert_between_spaces(cls, from_basis, data, to_width):
+        """ Given the `data` array representation of a signal on
+        the `from_basis`, converts this discrete signal (reducing or
+        increasing the number of discrete points) to a signal with `to_width`
+        discrete basis width
+
+        :return
+        new_data: array
+            representation of the `data` on the new space of width `to_width`
+        new_bases: PiecewiseLinearBasis
+            basis with `to_width` width
+        """
+        from_signal = from_basis.extrapolate(data)
+
+        space = from_basis.space
+        new_basis = cls(space, to_width, reduced_basis=from_basis._is_reduced_basis)
+        return new_basis.discretize(from_signal), new_basis
+
+
+class ControlSpaceFactory:
+    def __init__(self, *args, **kwargs):
+        self.args = args
+        self.kwargs = kwargs
+
+    def create_piecewise_linear_space(self):
+        return LinearControlSpace(*self.args, **self.kwargs)
+
+
+class LinearControlSpace:
+    def __init__(self, dt, final_time, signal_window, *args, **kwargs):
+        final_time = Decimal(final_time)
+
+        # 1. define control
+        # `time_grid` defines the time grid for the direct simulation
+        self.time_grid = TimeSeries.from_dict(
+            {
+                Decimal(k) * Decimal(dt): 0
+                for k in range(int(final_time / Decimal(dt)) + 1)
+            }
+        )
+        # `midpoint_grid` defines the time grid for the adjoint simulation
+        self.midpoint_grid = TimeSeries.from_dict(
+            {
+                Decimal(k + 0.5) * Decimal(dt): 0
+                for k in range(int(final_time / Decimal(dt)))
+            }
+        )
+        # We define a control space, a PiecewiseLinearBasis in this case
+        self._is_reduced_basis = kwargs.get("reduced_basis", True)
+        self.basis = PiecewiseLinearBasis(
+            np.array([float(key) for key in self.time_grid.keys()]),
+            width=signal_window,
+            reduced_basis=self._is_reduced_basis,
+        )
+
+    def discrete_to_continuous(self, discrete_values):
+        continuous_values = self.basis.extrapolate(list(discrete_values))
+        return continuous_values
+
+    def continuous_to_discrete(self, function):
+        return self.basis.discretize(function.values())

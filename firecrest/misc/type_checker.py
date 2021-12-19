@@ -22,5 +22,6 @@ def is_dolfin_exp(arg):
             dolf.function.expression.Expression,
             dolf.function.function.Function,
             ufl.tensors.ComponentTensor,
+            ufl.algebra.Product,
         ),
     )

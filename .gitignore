@@ -2,7 +2,9 @@
 .idea
 __pycache__/
 firecrest.egg-info/
-Mesh/
+[M]esh/
 *.pyc
 *.pvd
 *.vtu
+log.dat
+/Mesh/

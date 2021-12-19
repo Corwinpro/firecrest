@@ -1,0 +1,44 @@
+{
+  "mode": "single_run",
+  "acoustic_domain": {
+    "element_size": 0.08,
+    "channel_height": 0.7,
+    "channel_length": 9.2,
+    "actuator_length": 4.0,
+    "nozzle_r": 0.1,
+    "nozzle_l": 0.2,
+    "nozzle_offset": 0.2,
+    "manifold_width": 2.0,
+    "manifold_height": 4.7
+  },
+  "constants": {
+    "length": 1.0e-4,
+    "sound_speed": 1.0e3,
+    "density": 1.0e3,
+    "Mach": 1.0e-3,
+    "surface_tension": 50.0e-3,
+    "viscosity": 2.0e-2,
+    "Pr": 10
+  },
+  "time_domain": {
+    "final_time": 2,
+    "dt": 0.001
+  },
+  "control_space": {
+    "type": "piecewise_linear",
+    "window": 0.5,
+    "control_default": [0.0016415311773756553, 0.0002877549134009383, 0.002814305524765201, -0.000577860701974489, 0.0032713694963792134, -0.0006372529768249147, 0.0021834503389561635],
+    "upper_limit": 0.015,
+    "lower_limit": -0.015
+  },
+  "nozzle_domain": {
+    "initial_curvature": 0.25,
+    "length": 10.0e-6,
+    "radius": 10.0e-6
+  },
+  "logging": {
+    "energy_history": "energy_history_",
+    "optimisation": "optimisation_log_",
+    "plot_frequency": 1000
+  }
+}

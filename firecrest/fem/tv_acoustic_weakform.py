@@ -14,6 +14,9 @@ from firecrest.fem.struct_templates import AcousticConstants
 import dolfin as dolf
 import ufl
 
+#: Default value of gamma = cp/cv for water
+DEFAULT_CP_CV_RATIO = 1.017
+
 
 def parse_trialtest(component):
     """
@@ -81,6 +84,9 @@ class BaseTVAcousticWeakForm(ABC, BaseWeakForm):
         "force": "Neumann",
         "normal_force": "Neumann",
         "impedance": "Robin",
+        "inhom_impedance": "Robin",
+        "nozzle_impedance": "Robin",
+        "inhom_nozzle_impedance": "Robin",
         "normal_impedance": "Robin",
         "shape_impedance": "Robin",
         "slip": "Neumann",
@@ -103,7 +109,7 @@ class BaseTVAcousticWeakForm(ABC, BaseWeakForm):
         self.test_functions = dolf.TestFunctions(self.function_space)
 
     def get_constants(self, kwargs):
-        self._gamma = kwargs.get("gamma", 1.4)
+        self._gamma = kwargs.get("gamma", DEFAULT_CP_CV_RATIO)
         self._Re = kwargs["Re"]
         try:
             self._Pe = kwargs["Pe"]
@@ -127,7 +133,8 @@ class BaseTVAcousticWeakForm(ABC, BaseWeakForm):
             return self.function_space_factory.function_spaces
         except AttributeError:
             raise AttributeError(
-                "A function_space_factory which implements functions_spaces must be provided."
+                "A function_space_factory which implements "
+                "`functions_spaces` must be provided."
             )
 
     @property
@@ -154,6 +161,9 @@ class BaseTVAcousticWeakForm(ABC, BaseWeakForm):
         return temperature / dolf.Constant(self.dolf_constants.gamma - 1.0) - pressure
 
     def shear_stress(self, velocity):
+        if self.geometric_dimension == 1:
+            return dolf.Constant(4.0 / 3.0) * velocity.dx(0) / self.dolf_constants.Re
+
         i, j = ufl.indices(2)
         shear_stress = (
             velocity[i].dx(j)
@@ -167,7 +177,47 @@ class BaseTVAcousticWeakForm(ABC, BaseWeakForm):
         return dolf.as_tensor(shear_stress, (i, j))
 
     def stress(self, pressure, velocity):
+        if self.geometric_dimension == 1:
+            return self.shear_stress(velocity) - pressure
         return self.shear_stress(velocity) - pressure * self.identity_tensor
+
+    def kinetic_energy_flux(self, state, direction, boundary):
+        """
+        Calculates the kinetic energy flux u_i * sigma_ij * n_j through the
+        `boundary`
+        :param state: self state
+        :param direction: flux direction n_j
+        :param boundary: target surface
+        :return: float energy flux
+        """
+        pressure, velocity, temperature = state
+        flux = dolf.inner(
+            velocity,
+            dolf.dot(dolf.as_vector(direction), self.stress(pressure, velocity)),
+        )
+        return dolf.assemble(flux * self.domain.ds((boundary.surface_index,)))
+
+    def mass_flow_rate(self, state, boundary):
+        return dolf.assemble(
+            dolf.inner(state[1], self.domain.n)
+            * self.domain.ds((boundary.surface_index,))
+        )
+
+    def avg_normal_stress(self, state, boundary):
+        stress = self.stress(state[0], state[1])
+        stress = dolf.assemble(
+            dolf.dot(dolf.dot(stress, self.domain.n), self.domain.n)
+            * self.domain.ds((boundary.surface_index,))
+        )
+        return stress
+
+    def weighted_stress(self, state, boundary, weight_vector_function):
+        stress = self.stress(state[0], state[1])
+        stress = dolf.assemble(
+            dolf.dot(dolf.dot(stress, self.domain.n), weight_vector_function)
+            * self.domain.ds((boundary.surface_index,))
+        )
+        return stress
 
     def heat_flux(self, temperature):
         return (
@@ -176,9 +226,9 @@ class BaseTVAcousticWeakForm(ABC, BaseWeakForm):
             / dolf.Constant(self.dolf_constants.gamma - 1.0)
         )
 
-    def temporal_component(self, trial, test, shift=None):
+    def _temporal_component(self, trial, test):
         """
-        Generates temporal component of the TVAcoustic weak form equation.
+        Generate the forms for the temporal component of the TVAcoustic weak form equation.
         """
         pressure, velocity, temperature = trial
         test_pressure, test_velocity, test_temperature = test
@@ -186,42 +236,53 @@ class BaseTVAcousticWeakForm(ABC, BaseWeakForm):
         continuity_component = self.density(pressure, temperature) * test_pressure
         momentum_component = dolf.inner(velocity, test_velocity)
         energy_component = self.entropy(pressure, temperature) * test_temperature
+        return continuity_component + momentum_component + energy_component
 
-        if shift is None:
-            shift = 1.0
-
-        return (
-            self._parse_dolf_expression(shift)
-            * (continuity_component + momentum_component + energy_component)
-            * self.domain.dx
-        )
-
-    def spatial_component(self, trial, test, shift=None):
-        """
-        Generates spatial component of the TVAcoustic weak form equation.
-        """
+    def _spatial_component(self, trial, test):
         pressure, velocity, temperature = trial
         test_pressure, test_velocity, test_temperature = test
 
         i, j = ufl.indices(2)
 
-        continuity_component = test_pressure * dolf.div(velocity)
-        momentum_component = dolf.inner(
-            dolf.as_tensor(test_velocity[i].dx(j), (i, j)),
-            self.stress(pressure, velocity),
-        )
+        if self.geometric_dimension == 1:
+            continuity_component = test_pressure * velocity.dx(0)
+            momentum_component = test_velocity.dx(0) * self.stress(pressure, velocity)
+        else:
+            continuity_component = test_pressure * dolf.div(velocity)
+            momentum_component = dolf.inner(
+                dolf.as_tensor(test_velocity[i].dx(j), (i, j)),
+                self.stress(pressure, velocity),
+            )
         energy_component = dolf.inner(
             dolf.grad(test_temperature), self.heat_flux(temperature)
         )
+        return continuity_component + momentum_component + energy_component
+
+    def temporal_component(self, trial, test, shift=None):
+        """
+        Generate the volume-averaged forms for the temporal component of the
+        TVAcoustic weak form equation.
+        """
+        components = self._temporal_component(trial, test)
 
         if shift is None:
             shift = 1.0
 
-        return (
-            self._parse_dolf_expression(shift)
-            * (continuity_component + momentum_component + energy_component)
-            * self.domain.dx
-        )
+        return self._parse_dolf_expression(shift) * components * self.domain.dx
+
+    def spatial_component(self, trial, test, shift=None):
+        """
+        Generate volume-averaged spatial component of the TVAcoustic weak form equation.
+        """
+        components = self._spatial_component(trial, test)
+
+        if shift is None:
+            shift = 1.0
+
+        return self._parse_dolf_expression(shift) * components * self.domain.dx
+
+    def volume_dissipation(self, state):
+        return dolf.assemble(self.spatial_component(state, state))
 
     def boundary_components(self, trial, test):
         """
@@ -285,6 +346,50 @@ class BaseTVAcousticWeakForm(ABC, BaseWeakForm):
                         self._parse_dolf_expression(boundary.bcond[stress_bc])
                         * velocity
                     )
+                elif stress_bc == "inhom_impedance":
+                    # Impedance term
+                    stress = (
+                        self._parse_dolf_expression(boundary.bcond[stress_bc][0])
+                        * velocity
+                    )
+                    # Force term
+                    normal_force = boundary.bcond[stress_bc][1]
+                    normal_force = 0.5 * (
+                        normal_force.real + normal_force.imag
+                    ) - 0.5j * (normal_force.real - normal_force.imag)
+                    stress += self._parse_dolf_expression(normal_force) * self.domain.n
+                elif stress_bc == "nozzle_impedance":
+                    capacitance = boundary.bcond[stress_bc]["capacitance"]
+                    inductance = boundary.bcond[stress_bc]["inductance"]
+                    resistance = boundary.bcond[stress_bc]["resistance"]
+                    frequency = boundary.bcond[stress_bc]["frequency"]
+
+                    z1 = -1.0 / (frequency * capacitance) - frequency * inductance
+                    z1 = self._parse_dolf_expression(z1)
+
+                    z2 = self._parse_dolf_expression(resistance)
+
+                    stress = z1 * dolf.inner(
+                        velocity, self.domain.n
+                    ) * self.domain.n + z2 * velocity.dx(0).dx(0)
+                elif stress_bc == "inhom_nozzle_impedance":
+                    inductance = boundary.bcond[stress_bc]["inductance"]
+                    resistance = boundary.bcond[stress_bc]["resistance"]
+                    frequency = boundary.bcond[stress_bc]["frequency"]
+
+                    z1 = -1.0j * frequency * inductance
+                    z1 = self._parse_dolf_expression(z1)
+
+                    z2 = self._parse_dolf_expression(resistance)
+
+                    stress = z1 * velocity + z2 * velocity.dx(0).dx(0)
+
+                    # Force term
+                    normal_force = boundary.bcond[stress_bc]["force"]
+                    normal_force = 0.5 * (
+                        normal_force.real + normal_force.imag
+                    ) - 0.5j * (normal_force.real - normal_force.imag)
+                    stress += self._parse_dolf_expression(normal_force) * self.domain.n
                 elif stress_bc == "shape_impedance":
                     try:
                         shape = boundary.velocity_shape
@@ -305,10 +410,11 @@ class BaseTVAcousticWeakForm(ABC, BaseWeakForm):
                         * self.domain.n
                     )
                 elif stress_bc == "normal_force":
-                    stress = (
-                        self._parse_dolf_expression(boundary.bcond[stress_bc])
-                        * self.domain.n
-                    )
+                    normal_force = boundary.bcond[stress_bc]
+                    # normal_force = 0.5 * (
+                    #     normal_force.real + normal_force.imag
+                    # ) - 0.5j * (normal_force.real - normal_force.imag)
+                    stress = self._parse_dolf_expression(normal_force) * self.domain.n
                 elif stress_bc == "slip" or stress_bc == "normal_velocity":
                     normal_velocity = (
                         dolf.Constant(0.0)
@@ -340,8 +446,8 @@ class BaseTVAcousticWeakForm(ABC, BaseWeakForm):
         bc = set(bcond.keys()) & set(allowed_bconds.keys())
         if len(bc) != 1:
             raise TypeError(
-                "Incorrect number of boundary condition."
-                f"One expected, {len(bc)} received."
+                "Incorrect number of boundary conditions."
+                f"Expected 1, but {len(bc)} received."
             )
         return bc.pop()
 
@@ -396,7 +502,10 @@ class BaseTVAcousticWeakForm(ABC, BaseWeakForm):
         """
 
         if bc_type == "noslip" or (bc_type == "inflow" and is_linearised):
-            value = dolf.Constant((0.0,) * self.geometric_dimension)
+            if self.geometric_dimension == 1:
+                value = dolf.Constant(0.0)
+            else:
+                value = dolf.Constant((0.0,) * self.geometric_dimension)
         elif bc_type == "isothermal" or (bc_type == "temperature" and is_linearised):
             value = dolf.Constant(0.0)
         elif bc_type == "inflow" or bc_type == "temperature":
@@ -405,7 +514,6 @@ class BaseTVAcousticWeakForm(ABC, BaseWeakForm):
             raise TypeError(f"Invalid boundary condition type for Dirichlet condition.")
 
         function_space = self.bc_to_fs[bc_type]
-
         return [
             dolf.DirichletBC(
                 function_space,

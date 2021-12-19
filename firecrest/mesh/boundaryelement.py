@@ -106,8 +106,14 @@ class BSplineElement(BoundaryElement):
         super().__init__(control_points, bcond=bcond, el_size=el_size, **kwargs)
         self.spline_degree = kwargs.pop("degree", 3)
         self.spline_periodic = kwargs.pop("periodic", False)
-        self.n = self.estimate_points_number(self.control_points, self.el_size)
         self.kwargs = kwargs
+
+        # Do not specify extra points for lines: control points themselves
+        # are enough
+        if self.spline_degree == 1:
+            self.n = len(self.control_points) - 1
+        else:
+            self.n = self.estimate_points_number(self.control_points, self.el_size)
 
         self.control_points = control_points
 

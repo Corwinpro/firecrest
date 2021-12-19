@@ -4,9 +4,9 @@ from firecrest.fem.struct_templates import Space
 
 def DEFAULT_TVACOUSTIC_SPACES(order):
     return (
-        Space(element_type="CG", order=order, dimension="scalar"),
-        Space(element_type="CG", order=order, dimension="vector"),
         Space(element_type="CG", order=order - 1, dimension="scalar"),
+        Space(element_type="CG", order=order, dimension="vector"),
+        Space(element_type="CG", order=order, dimension="scalar"),
     )
 
 
@@ -14,9 +14,9 @@ class TVAcousticFunctionSpace(BaseFunctionSpace):
     """
     Template function spaces for real Thermoviscous Acoustic FEM problem.
     Chosen function spaces are:
-    - Pressure(scalar, order = 2),
+    - Pressure(scalar, order = 1),
     - Velocity(vector, order = 2),
-    - Temperature(scalar, order = 1).
+    - Temperature(scalar, order = 2).
     """
 
     def __init__(self, domain, order=2):

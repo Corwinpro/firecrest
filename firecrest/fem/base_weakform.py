@@ -37,7 +37,7 @@ class BaseWeakForm:
         else:
             try:
                 expression = expression.eval()
-                value = self._parse_dolf_expression(expression)
+                value = self._parse_real_dolf_expression(expression)
             except AttributeError:
                 raise TypeError(
                     f"Invalid boundary condition value type for boundary expression {expression}. "

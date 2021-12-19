@@ -1,4 +1,8 @@
+import logging
+
 import dolfin as dolf
+
+logger = logging.getLogger(__name__)
 
 
 class BaseFunctionSpace:
@@ -40,6 +44,8 @@ class BaseFunctionSpace:
             return dolf.FiniteElement(element_type, cell, space.order)
         elif space.dimension == "vector":
             dimension = cell.geometric_dimension()
+            if dimension == 1:
+                return dolf.FiniteElement(element_type, cell, space.order)
             return dolf.VectorElement(element_type, cell, space.order, dimension)
         elif space.dimension >= 2:
             return dolf.VectorElement(element_type, cell, space.order, space.dimension)
@@ -48,5 +54,8 @@ class BaseFunctionSpace:
     def function_spaces(self):
         if not self._function_spaces:
             self._function_spaces = self._generate_function_spaces()
+            logger.info(
+                f"Number of DOFs: {dolf.Function(self._function_spaces).vector().size()}"
+            )
 
         return self._function_spaces

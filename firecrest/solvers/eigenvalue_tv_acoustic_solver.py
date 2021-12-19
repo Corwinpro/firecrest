@@ -1,3 +1,5 @@
+from slepc4py import SLEPc
+
 from firecrest.solvers.base_solver import EigenvalueSolver
 from firecrest.fem.tv_acoustic_weakform import ComplexTVAcousticWeakForm
 import dolfin as dolf
@@ -139,3 +141,18 @@ class EigenvalueTVAcousticSolver(EigenvalueSolver):
                 }
             )
         return self._visualization_files
+
+    def solve(self, number_of_modes=None):
+        if number_of_modes is None:
+            number_of_modes = self.nof_modes_to_converge
+        else:
+            number_of_modes = number_of_modes * 2
+        self.solver.setDimensions(number_of_modes, SLEPc.DECIDE)
+        super().solve()
+
+        results = []
+        for i in range(int(self.nof_modes_converged / 2)):
+            ev, real_mode, imag_mode = self.extract_solution(i)
+            results.append((ev, real_mode, imag_mode))
+
+        return results

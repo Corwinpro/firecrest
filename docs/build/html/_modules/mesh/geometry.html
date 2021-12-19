@@ -1,0 +1,552 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml" lang="python3">
+  <head>
+    <meta charset="utf-8" />
+  
+  <!-- Licensed under the Apache 2.0 License -->
+  <link rel="stylesheet" type="text/css" href="../../_static/fonts/open-sans/stylesheet.css" />
+  <!-- Licensed under the SIL Open Font License -->
+  <link rel="stylesheet" type="text/css" href="../../_static/fonts/source-serif-pro/source-serif-pro.css" />
+  <link rel="stylesheet" type="text/css" href="../../_static/css/bootstrap.min.css" />
+  <link rel="stylesheet" type="text/css" href="../../_static/css/bootstrap-theme.min.css" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+    <title>mesh.geometry &#8212; firecrest 0.1 documentation</title>
+    <link rel="stylesheet" href="../../_static/guzzle.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="../../" src="../../_static/documentation_options.js"></script>
+    <script type="text/javascript" src="../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../_static/doctools.js"></script>
+    <script type="text/javascript" src="../../_static/language_data.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+  
+   
+
+  </head><body>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../index.html">firecrest 0.1 documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="../index.html" accesskey="U">Module code</a> &#187;</li> 
+      </ul>
+    </div>
+    <div class="container-wrapper">
+
+      <div id="mobile-toggle">
+        <a href="#"><span class="glyphicon glyphicon-align-justify" aria-hidden="true"></span></a>
+      </div>
+  <div id="left-column">
+    <div class="sphinxsidebar">
+<div class="sidebar-block">
+  <div class="sidebar-wrapper">
+    <div id="main-search">
+      <form class="form-inline" action="../../search.html" method="GET" role="form">
+        <div class="input-group">
+          <input name="q" type="text" class="form-control" placeholder="Search...">
+        </div>
+        <input type="hidden" name="check_keywords" value="yes" />
+        <input type="hidden" name="area" value="default" />
+      </form>
+    </div>
+  </div>
+</div>
+      
+    </div>
+  </div>
+        <div id="right-column">
+          
+          <div role="navigation" aria-label="breadcrumbs navigation">
+            <ol class="breadcrumb">
+              <li><a href="../../index.html">Docs</a></li>
+              
+                <li><a href="../index.html">Module code</a></li>
+              
+              <li>mesh.geometry</li>
+            </ol>
+          </div>
+          
+          <div class="document clearer body">
+            
+  <h1>Source code for mesh.geometry</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">import</span> <span class="nn">pygmsh</span> <span class="k">as</span> <span class="nn">pg</span>
+<span class="kn">import</span> <span class="nn">meshio</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">subprocess</span>
+<span class="kn">import</span> <span class="nn">warnings</span>
+<span class="kn">from</span> <span class="nn">abc</span> <span class="k">import</span> <span class="n">ABC</span><span class="p">,</span> <span class="n">abstractmethod</span>
+<span class="kn">import</span> <span class="nn">dolfin</span> <span class="k">as</span> <span class="nn">dolf</span>
+<span class="kn">from</span> <span class="nn">dolfin_utils.meshconvert</span> <span class="k">import</span> <span class="n">meshconvert</span>
+
+<span class="c1"># from dolfin_utils.meshconvert import meshconvert</span>
+<span class="c1"># import dolfin as dolf</span>
+
+<span class="n">GEO_EXT</span> <span class="o">=</span> <span class="s2">&quot;.geo&quot;</span>
+<span class="n">MSH_EXT</span> <span class="o">=</span> <span class="s2">&quot;.msh&quot;</span>
+<span class="n">MSH_FORMAT_XDMF</span> <span class="o">=</span> <span class="s2">&quot;xdmf&quot;</span>
+<span class="n">MSH_FORMAT_XML</span> <span class="o">=</span> <span class="s2">&quot;xml&quot;</span>
+<span class="n">LOG_EXT</span> <span class="o">=</span> <span class="s2">&quot;.log&quot;</span>
+<span class="n">GMSH_PATH</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>
+
+
+<div class="viewcode-block" id="newfolder"><a class="viewcode-back" href="../../mesh.html#mesh.geometry.newfolder">[docs]</a><span class="k">def</span> <span class="nf">newfolder</span><span class="p">(</span><span class="n">path</span><span class="p">):</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">os</span><span class="o">.</span><span class="n">makedirs</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
+    <span class="k">except</span> <span class="ne">OSError</span><span class="p">:</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isdir</span><span class="p">(</span><span class="n">path</span><span class="p">):</span>
+            <span class="k">raise</span></div>
+
+
+<div class="viewcode-block" id="Geometry"><a class="viewcode-back" href="../../mesh.html#mesh.geometry.Geometry">[docs]</a><span class="k">class</span> <span class="nc">Geometry</span><span class="p">(</span><span class="n">ABC</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Abstract base class for Geometry Entity.</span>
+<span class="sd">    A Geometry consists of a set of boundary_elements.</span>
+<span class="sd">    params:</span>
+<span class="sd">    - mesh_name: name of mesh files, associated with the geometry</span>
+<span class="sd">    - mesh_folder: default mesh files directory</span>
+<span class="sd">    - dimensions: dimensionality of the domain</span>
+<span class="sd">    - msh_format: XML or XDMF mesh format</span>
+<span class="sd">    </span>
+<span class="sd">    attributes:</span>
+<span class="sd">    - boundary_elements: collection of boundary_elements forming the Geometry</span>
+<span class="sd">    - pg_geometry: pygmsh generated geometry</span>
+<span class="sd">    - pg_*: pygmsh generated entities</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">boundary_elements</span><span class="p">,</span>
+        <span class="n">mesh_name</span><span class="o">=</span><span class="s2">&quot;mesh&quot;</span><span class="p">,</span>
+        <span class="n">mesh_folder</span><span class="o">=</span><span class="s2">&quot;Mesh&quot;</span><span class="p">,</span>
+        <span class="n">dimensions</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span>
+        <span class="n">msh_format</span><span class="o">=</span><span class="n">MSH_FORMAT_XML</span><span class="p">,</span>
+    <span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">boundary_elements</span> <span class="o">=</span> <span class="n">boundary_elements</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">mesh_folder</span> <span class="o">=</span> <span class="n">mesh_folder</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">mesh_folder</span><span class="p">:</span>
+            <span class="n">newfolder</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">mesh_folder</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">mesh_name</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">mesh_folder</span> <span class="o">+</span> <span class="s2">&quot;/&quot;</span> <span class="o">+</span> <span class="n">mesh_name</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">dimensions</span> <span class="o">=</span> <span class="n">dimensions</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">geo_file</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">mesh_name</span> <span class="o">+</span> <span class="n">GEO_EXT</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">msh_file</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">mesh_name</span> <span class="o">+</span> <span class="n">MSH_EXT</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">log_file</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">mesh_name</span> <span class="o">+</span> <span class="n">LOG_EXT</span>
+
+        <span class="k">if</span> <span class="n">msh_format</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">(</span><span class="n">MSH_FORMAT_XDMF</span><span class="p">,</span> <span class="n">MSH_FORMAT_XML</span><span class="p">):</span>
+            <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span>
+                <span class="s2">&quot;Mesh format </span><span class="si">{}</span><span class="s2"> not supported. Using </span><span class="si">{}</span><span class="s2"> instead.&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+                    <span class="n">msh_format</span><span class="p">,</span> <span class="n">MSH_FORMAT_XML</span>
+                <span class="p">)</span>
+            <span class="p">)</span>
+            <span class="n">msh_format</span> <span class="o">=</span> <span class="n">MSH_FORMAT_XML</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">msh_format</span> <span class="o">=</span> <span class="n">msh_format</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">dolf_file</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">mesh_name</span> <span class="o">+</span> <span class="s2">&quot;.&quot;</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">msh_format</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">pg_geometry</span> <span class="o">=</span> <span class="n">pg</span><span class="o">.</span><span class="n">built_in</span><span class="o">.</span><span class="n">Geometry</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">mark_boundaries</span><span class="p">()</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">mesh</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_boundary_parts</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_ds</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_dx</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_n</span> <span class="o">=</span> <span class="kc">None</span>
+
+<div class="viewcode-block" id="Geometry.geo_to_mesh"><a class="viewcode-back" href="../../mesh.html#mesh.geometry.Geometry.geo_to_mesh">[docs]</a>    <span class="k">def</span> <span class="nf">geo_to_mesh</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        command line convertion of a </span>
+<span class="sd">        &lt;self.geo_file&gt; with .geo extension</span>
+<span class="sd">        to </span>
+<span class="sd">        &lt;self.msh_file&gt; with .msh extension</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">cmd</span> <span class="o">=</span> <span class="p">[</span>
+            <span class="s2">&quot;gmsh&quot;</span><span class="p">,</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">geo_file</span><span class="p">,</span>
+            <span class="s2">&quot;-</span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">dimensions</span><span class="p">),</span>
+            <span class="s2">&quot;-format&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;msh2&quot;</span><span class="p">,</span>
+            <span class="c1"># &quot;-save_all&quot;, # : Save all elements (discard physical group definitions)</span>
+            <span class="s2">&quot;-o&quot;</span><span class="p">,</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">msh_file</span><span class="p">,</span>
+        <span class="p">]</span>
+        <span class="n">p</span> <span class="o">=</span> <span class="n">subprocess</span><span class="o">.</span><span class="n">Popen</span><span class="p">(</span><span class="n">cmd</span><span class="p">,</span> <span class="n">stdout</span><span class="o">=</span><span class="n">subprocess</span><span class="o">.</span><span class="n">PIPE</span><span class="p">,</span> <span class="n">stderr</span><span class="o">=</span><span class="n">subprocess</span><span class="o">.</span><span class="n">PIPE</span><span class="p">)</span>
+        <span class="n">gmsh_out</span><span class="p">,</span> <span class="n">gmsh_err</span> <span class="o">=</span> <span class="n">p</span><span class="o">.</span><span class="n">communicate</span><span class="p">()</span>
+        <span class="n">gmsh_out</span> <span class="o">=</span> <span class="n">gmsh_out</span><span class="o">.</span><span class="n">decode</span><span class="p">()</span>
+        <span class="n">gmsh_err</span> <span class="o">=</span> <span class="n">gmsh_err</span><span class="o">.</span><span class="n">decode</span><span class="p">()</span>
+
+        <span class="c1"># Save output to file</span>
+        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">log_file</span><span class="p">,</span> <span class="s2">&quot;w+&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">mesh_log</span><span class="p">:</span>
+            <span class="n">mesh_log</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">gmsh_out</span><span class="p">)</span>
+            <span class="n">mesh_log</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">gmsh_err</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="Geometry.compile_mesh"><a class="viewcode-back" href="../../mesh.html#mesh.geometry.Geometry.compile_mesh">[docs]</a>    <span class="k">def</span> <span class="nf">compile_mesh</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">mesh_format</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Full mesh compilation routine. Geo -&gt; Msh -&gt; Dolf Readable format.</span>
+<span class="sd">        First, creates a .msh file from .geo using self.geo_to_mesh() method,</span>
+<span class="sd">        Second, creates an .xdmf or .xml dolfin-readable file self.dolf_file</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">mesh_format</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">mesh_format</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">msh_format</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">mesh_format</span> <span class="o">=</span> <span class="n">MSH_FORMAT_XDMF</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">write_geom</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">geo_to_mesh</span><span class="p">()</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">dimensions</span> <span class="o">==</span> <span class="mi">3</span> <span class="ow">and</span> <span class="n">mesh_format</span> <span class="o">==</span> <span class="s2">&quot;xdmf&quot;</span><span class="p">:</span>
+            <span class="n">mesh_format</span> <span class="o">=</span> <span class="s2">&quot;xml&quot;</span>
+
+        <span class="k">if</span> <span class="n">mesh_format</span> <span class="o">==</span> <span class="s2">&quot;xml&quot;</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_convert_xml_to_dolfin</span><span class="p">()</span>
+        <span class="k">elif</span> <span class="n">mesh_format</span> <span class="o">==</span> <span class="s2">&quot;xdmf&quot;</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_convert_xdmf_to_dolfin</span><span class="p">()</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Unknown mesh format: </span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">mesh_format</span><span class="p">))</span></div>
+
+    <span class="k">def</span> <span class="nf">_convert_xml_to_dolfin</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">meshconvert</span><span class="o">.</span><span class="n">convert2xml</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">msh_file</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">dolf_file</span><span class="p">)</span>
+        <span class="k">except</span> <span class="ne">FileNotFoundError</span><span class="p">:</span>
+            <span class="k">return</span> <span class="kc">False</span>
+
+    <span class="k">def</span> <span class="nf">_convert_xdmf_to_dolfin</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">mesh</span> <span class="o">=</span> <span class="n">meshio</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">msh_file</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">dimensions</span> <span class="o">==</span> <span class="mi">2</span><span class="p">:</span>
+            <span class="c1"># from gist: https://gist.github.com/michalhabera/bbe8a17f788192e53fd758a67cbf3bed</span>
+            <span class="n">mesh</span><span class="o">.</span><span class="n">points</span> <span class="o">=</span> <span class="n">mesh</span><span class="o">.</span><span class="n">points</span><span class="p">[:,</span> <span class="p">:</span><span class="mi">2</span><span class="p">]</span>  <span class="c1"># remove z-values to force 2d mesh</span>
+            <span class="n">mesh</span> <span class="o">=</span> <span class="n">meshio</span><span class="o">.</span><span class="n">Mesh</span><span class="p">(</span>
+                <span class="n">points</span><span class="o">=</span><span class="n">mesh</span><span class="o">.</span><span class="n">points</span><span class="p">,</span> <span class="n">cells</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;triangle&quot;</span><span class="p">:</span> <span class="n">mesh</span><span class="o">.</span><span class="n">cells</span><span class="p">[</span><span class="s2">&quot;triangle&quot;</span><span class="p">]}</span>
+            <span class="p">)</span>
+        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">dimensions</span> <span class="o">==</span> <span class="mi">3</span><span class="p">:</span>
+            <span class="c1"># TODO: figure out how to fix this</span>
+            <span class="n">mesh</span> <span class="o">=</span> <span class="n">meshio</span><span class="o">.</span><span class="n">Mesh</span><span class="p">(</span><span class="n">points</span><span class="o">=</span><span class="n">mesh</span><span class="o">.</span><span class="n">points</span><span class="p">,</span> <span class="n">cells</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;tetra&quot;</span><span class="p">:</span> <span class="n">mesh</span><span class="o">.</span><span class="n">cells</span><span class="p">[</span><span class="s2">&quot;tetra&quot;</span><span class="p">]})</span>
+
+        <span class="n">meshio</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">dolf_file</span><span class="p">,</span> <span class="n">mesh</span><span class="p">)</span>
+
+<div class="viewcode-block" id="Geometry.write_geom"><a class="viewcode-back" href="../../mesh.html#mesh.geometry.Geometry.write_geom">[docs]</a>    <span class="k">def</span> <span class="nf">write_geom</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">mesh_name</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Write the geom code to the specified file name</span>
+<span class="sd">        :param mesh_name: name of the mesh</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">mesh_name</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">file_name</span> <span class="o">=</span> <span class="n">mesh_name</span> <span class="o">+</span> <span class="n">GEO_EXT</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">file_name</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">geo_file</span>
+
+        <span class="c1"># First make sure mesh folder exists.</span>
+        <span class="n">newfolder</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">mesh_folder</span><span class="p">)</span>
+
+        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">file_name</span><span class="p">,</span> <span class="s2">&quot;w&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">gmsh_output</span><span class="p">:</span>
+            <span class="n">gmsh_output</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">pg_geometry</span><span class="o">.</span><span class="n">get_code</span><span class="p">())</span></div>
+
+<div class="viewcode-block" id="Geometry.load_mesh"><a class="viewcode-back" href="../../mesh.html#mesh.geometry.Geometry.load_mesh">[docs]</a>    <span class="k">def</span> <span class="nf">load_mesh</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">mesh_name</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">mesh_format</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Reads mesh_name.(xml|xdmf) file and returns a dolfin.Mesh() object</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">mesh_name</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">mesh_name</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">mesh_name</span>
+
+        <span class="k">if</span> <span class="n">mesh_format</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">mesh_format</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">msh_format</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">mesh_format</span> <span class="o">=</span> <span class="n">MSH_FORMAT_XDMF</span>
+
+        <span class="n">mesh_file</span> <span class="o">=</span> <span class="n">mesh_name</span> <span class="o">+</span> <span class="s2">&quot;.&quot;</span> <span class="o">+</span> <span class="n">mesh_format</span>
+
+        <span class="k">if</span> <span class="n">mesh_format</span> <span class="o">==</span> <span class="s2">&quot;xml&quot;</span><span class="p">:</span>
+            <span class="n">mesh</span> <span class="o">=</span> <span class="n">dolf</span><span class="o">.</span><span class="n">Mesh</span><span class="p">(</span><span class="n">mesh_file</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">mesh_format</span> <span class="o">==</span> <span class="s2">&quot;xdmf&quot;</span><span class="p">:</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">MPI_COMM</span> <span class="o">=</span> <span class="n">dolf</span><span class="o">.</span><span class="n">MPI</span><span class="o">.</span><span class="n">comm_world</span>
+            <span class="k">except</span> <span class="ne">AttributeError</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="n">e</span>
+
+            <span class="n">mesh</span> <span class="o">=</span> <span class="n">dolf</span><span class="o">.</span><span class="n">Mesh</span><span class="p">()</span>
+            <span class="n">xdmf_file</span> <span class="o">=</span> <span class="n">dolf</span><span class="o">.</span><span class="n">XDMFFile</span><span class="p">(</span><span class="n">MPI_COMM</span><span class="p">,</span> <span class="n">mesh_file</span><span class="p">)</span>
+            <span class="n">xdmf_file</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="n">mesh</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Unknown mesh format: </span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">mesh_format</span><span class="p">))</span>
+
+        <span class="k">return</span> <span class="n">mesh</span></div>
+
+<div class="viewcode-block" id="Geometry.mark_boundaries"><a class="viewcode-back" href="../../mesh.html#mesh.geometry.Geometry.mark_boundaries">[docs]</a>    <span class="k">def</span> <span class="nf">mark_boundaries</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        The dictionary &#39;markers_dict&#39; stores the pairs of </span>
+<span class="sd">        (keys) boundary condition type,</span>
+<span class="sd">        (values) list of boundary_elements of this boundary type,</span>
+<span class="sd">        i.e.</span>
+<span class="sd">        ```</span>
+<span class="sd">        self.market_dict = {</span>
+<span class="sd">        &quot;noslip&quot;: [noslip_boundary_1, noslip_boundary_2],</span>
+<span class="sd">        &quot;adiabatic&quot;: [noslip_boundary_1],</span>
+<span class="sd">        &quot;heat_flux&quot;: [noslip_boundary_2]</span>
+<span class="sd">        }</span>
+<span class="sd">        ```</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">markers_dict</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="k">for</span> <span class="n">boundary_element</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">boundary_elements</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">btype</span> <span class="ow">in</span> <span class="n">boundary_element</span><span class="o">.</span><span class="n">bcond</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">btype</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">markers_dict</span><span class="p">:</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">markers_dict</span><span class="p">[</span><span class="n">btype</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">boundary_element</span><span class="p">)</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">markers_dict</span><span class="p">[</span><span class="n">btype</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span><span class="n">boundary_element</span><span class="p">]</span></div>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">boundary_parts</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Creates dolfin MeshFunction of dim-1 dimension</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_boundary_parts</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_boundary_parts</span>
+
+        <span class="k">assert</span> <span class="bp">self</span><span class="o">.</span><span class="n">mesh</span><span class="p">,</span> <span class="s2">&quot;Need mesh to be generated to get the boundary parts&quot;</span>
+
+        <span class="n">boundary_parts</span> <span class="o">=</span> <span class="n">dolf</span><span class="o">.</span><span class="n">MeshFunction</span><span class="p">(</span>
+            <span class="s2">&quot;size_t&quot;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">mesh</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">mesh_name</span> <span class="o">+</span> <span class="s2">&quot;_facet_region.xml&quot;</span>
+        <span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_boundary_parts</span> <span class="o">=</span> <span class="n">boundary_parts</span>
+        <span class="k">return</span> <span class="n">boundary_parts</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">ds</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Creates dolfin &#39;ds&#39; measure, accounting for physical marking</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">assert</span> <span class="bp">self</span><span class="o">.</span><span class="n">mesh</span><span class="p">,</span> <span class="s2">&quot;Mesh needs to be generated&quot;</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">_ds</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_ds</span> <span class="o">=</span> <span class="n">dolf</span><span class="o">.</span><span class="n">Measure</span><span class="p">(</span>
+                <span class="s2">&quot;ds&quot;</span><span class="p">,</span> <span class="n">domain</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">mesh</span><span class="p">,</span> <span class="n">subdomain_data</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">boundary_parts</span>
+            <span class="p">)</span>
+
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_ds</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">dx</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Creates dolfin &#39;dx&#39; measure</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">assert</span> <span class="bp">self</span><span class="o">.</span><span class="n">mesh</span><span class="p">,</span> <span class="s2">&quot;Mesh needs to be generated&quot;</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">_dx</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_dx</span> <span class="o">=</span> <span class="n">dolf</span><span class="o">.</span><span class="n">dx</span><span class="p">(</span><span class="n">domain</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">mesh</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_dx</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">n</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Creates dolfin mesh normal</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">assert</span> <span class="bp">self</span><span class="o">.</span><span class="n">mesh</span><span class="p">,</span> <span class="s2">&quot;Mesh needs to be generated&quot;</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">_n</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_n</span> <span class="o">=</span> <span class="n">dolf</span><span class="o">.</span><span class="n">FacetNormal</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">mesh</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_n</span>
+
+    <span class="k">def</span> <span class="nf">_get_boundaries</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">boundary_type</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Returns all boundaries of the given boundary_type: str</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">markers_dict</span><span class="p">[</span><span class="n">boundary_type</span><span class="p">]</span>
+
+<div class="viewcode-block" id="Geometry.get_boundary_measure"><a class="viewcode-back" href="../../mesh.html#mesh.geometry.Geometry.get_boundary_measure">[docs]</a>    <span class="k">def</span> <span class="nf">get_boundary_measure</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">boundary_type</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">boundary</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Returns the dolfin &#39;ds&#39; boundary measure for all the boundaries of the</span>
+<span class="sd">        - boundary_type: str</span>
+<span class="sd">        - boundary: BoundaryElement</span>
+<span class="sd">        If neither is provided, returns the whole boundary measure</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">boundary_type</span><span class="p">:</span>
+            <span class="n">target_boundaries</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_boundaries</span><span class="p">(</span><span class="n">boundary_type</span><span class="p">)</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">ds</span><span class="p">(</span>
+                <span class="nb">tuple</span><span class="p">(</span><span class="n">boundary</span><span class="o">.</span><span class="n">surface_index</span> <span class="k">for</span> <span class="n">boundary</span> <span class="ow">in</span> <span class="n">target_boundaries</span><span class="p">)</span>
+            <span class="p">)</span>
+        <span class="k">elif</span> <span class="n">boundary</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">ds</span><span class="p">(</span><span class="n">boundary</span><span class="o">.</span><span class="n">surface_index</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">ds</span></div></div>
+
+
+<div class="viewcode-block" id="SimpleDomain"><a class="viewcode-back" href="../../mesh.html#mesh.geometry.SimpleDomain">[docs]</a><span class="k">class</span> <span class="nc">SimpleDomain</span><span class="p">(</span><span class="n">Geometry</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">boundary_elements</span><span class="p">,</span>
+        <span class="n">mesh_name</span><span class="o">=</span><span class="s2">&quot;mesh&quot;</span><span class="p">,</span>
+        <span class="n">mesh_folder</span><span class="o">=</span><span class="s2">&quot;Mesh&quot;</span><span class="p">,</span>
+        <span class="n">dimensions</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span>
+        <span class="o">**</span><span class="n">kwargs</span>
+    <span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span>
+            <span class="n">boundary_elements</span><span class="p">,</span> <span class="n">mesh_name</span><span class="p">,</span> <span class="n">mesh_folder</span><span class="p">,</span> <span class="n">dimensions</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span>
+        <span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_generate_pg_geometry</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">compile_mesh</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">mesh</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">load_mesh</span><span class="p">()</span>
+
+    <span class="k">def</span> <span class="nf">_generate_surface_points</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        For all boundary elements, we collect the surface points of each</span>
+<span class="sd">        boundary element and create geo_points list.</span>
+<span class="sd">        geo_points list is a list of pygmsh Point objects.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">surface_points</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">geo_points</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">boundary_element</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">boundary_elements</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">position</span> <span class="ow">in</span> <span class="n">boundary_element</span><span class="o">.</span><span class="n">surface_points</span><span class="p">:</span>
+                <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">surface_points</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span> <span class="ow">and</span> <span class="n">position</span> <span class="o">==</span> <span class="n">surface_points</span><span class="p">[</span><span class="mi">0</span><span class="p">]:</span>
+                    <span class="n">lcar</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="n">geo_points</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">lcar</span><span class="p">,</span> <span class="n">boundary_element</span><span class="o">.</span><span class="n">el_size</span><span class="p">)</span>
+                    <span class="n">geo_points</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">pg_geometry</span><span class="o">.</span><span class="n">add_point</span><span class="p">(</span>
+                        <span class="p">[</span><span class="n">position</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">position</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="mf">0.0</span><span class="p">],</span> <span class="n">lcar</span><span class="o">=</span><span class="n">lcar</span>
+                    <span class="p">)</span>
+                <span class="k">elif</span> <span class="nb">len</span><span class="p">(</span><span class="n">surface_points</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span> <span class="ow">and</span> <span class="n">position</span> <span class="o">==</span> <span class="n">surface_points</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]:</span>
+                    <span class="n">lcar</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="n">geo_points</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">lcar</span><span class="p">,</span> <span class="n">boundary_element</span><span class="o">.</span><span class="n">el_size</span><span class="p">)</span>
+                    <span class="n">geo_points</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">pg_geometry</span><span class="o">.</span><span class="n">add_point</span><span class="p">(</span>
+                        <span class="p">[</span><span class="n">position</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">position</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="mf">0.0</span><span class="p">],</span> <span class="n">lcar</span><span class="o">=</span><span class="n">lcar</span>
+                    <span class="p">)</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">surface_points</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">position</span><span class="p">)</span>
+                    <span class="n">geo_points</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">pg_geometry</span><span class="o">.</span><span class="n">add_point</span><span class="p">(</span>
+                            <span class="p">[</span><span class="n">position</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">position</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="mf">0.0</span><span class="p">],</span>
+                            <span class="n">lcar</span><span class="o">=</span><span class="n">boundary_element</span><span class="o">.</span><span class="n">el_size</span><span class="p">,</span>
+                        <span class="p">)</span>
+                    <span class="p">)</span>
+        <span class="k">return</span> <span class="n">geo_points</span>
+
+    <span class="k">def</span> <span class="nf">_generate_pg_points</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">boundary_element</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        For the given boundary element, we collect the surface points and create pg_points list.</span>
+<span class="sd">        We also write the pg_points code to the self.pg_geometry code.</span>
+<span class="sd">        </span>
+<span class="sd">        pg_points: list of pygmsh Point objects.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">pg_points</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">position</span> <span class="ow">in</span> <span class="n">boundary_element</span><span class="o">.</span><span class="n">surface_points</span><span class="p">:</span>
+            <span class="n">pg_points</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">pg_geometry</span><span class="o">.</span><span class="n">add_point</span><span class="p">(</span>
+                    <span class="p">[</span><span class="n">position</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">position</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="mf">0.0</span><span class="p">],</span> <span class="n">lcar</span><span class="o">=</span><span class="n">boundary_element</span><span class="o">.</span><span class="n">el_size</span>
+                <span class="p">)</span>
+            <span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">pg_points</span>
+
+    <span class="k">def</span> <span class="nf">_generate_pg_lines</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">boundary_element</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Provided the boundary_element instance has a list of pg_points from _generate_pg_points,</span>
+<span class="sd">        we generate a list of connections (lines) between the pg_points.</span>
+<span class="sd">        We also write the pg_lines code to the self.pg_geometry code.</span>
+<span class="sd">        The lines are pygmsh objects Line.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">pg_lines</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">boundary_element</span><span class="o">.</span><span class="n">pg_points</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span><span class="p">):</span>
+            <span class="n">line</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">pg_geometry</span><span class="o">.</span><span class="n">add_line</span><span class="p">(</span>
+                <span class="n">boundary_element</span><span class="o">.</span><span class="n">pg_points</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">boundary_element</span><span class="o">.</span><span class="n">pg_points</span><span class="p">[</span><span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">]</span>
+            <span class="p">)</span>
+            <span class="n">pg_lines</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">line</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">pg_geometry</span><span class="o">.</span><span class="n">add_physical_line</span><span class="p">(</span>
+            <span class="n">pg_lines</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="n">boundary_element</span><span class="o">.</span><span class="n">surface_index</span>
+        <span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">pg_lines</span>
+
+    <span class="k">def</span> <span class="nf">_generate_pg_geometry</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Main SimpleDomain mesh generation and compilation method.</span>
+<span class="sd">        We prepare pg_points and pg_lines, create a pg_lineloop,</span>
+<span class="sd">        and finally add a pg_surface bounded by the lineloop.</span>
+<span class="sd">        All the non-point objects also are gmsh &#39;physical&#39; objects.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">pg_points</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">pg_lines</span> <span class="o">=</span> <span class="p">[]</span>
+
+        <span class="c1"># Generating pg_points for all boundary elements</span>
+        <span class="k">for</span> <span class="n">boundary_element</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">boundary_elements</span><span class="p">:</span>
+            <span class="n">boundary_element</span><span class="o">.</span><span class="n">pg_points</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_generate_pg_points</span><span class="p">(</span><span class="n">boundary_element</span><span class="p">)</span>
+
+            <span class="bp">self</span><span class="o">.</span><span class="n">pg_points</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="n">boundary_element</span><span class="o">.</span><span class="n">pg_points</span><span class="p">)</span>
+
+        <span class="c1"># Fixing multiple point objects representing same physical point</span>
+        <span class="c1"># TODO: dict structure here might be more useful?</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">boundary_elements</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span><span class="p">):</span>
+            <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">            Iterate over the boundary_elements&#39; pg_points, and connect the </span>
+<span class="sd">            boundary elemements with index i and i-1 through the left edge point,</span>
+<span class="sd">            boundary elemements with index i and i+1 through the right edge point.</span>
+<span class="sd">            &quot;&quot;&quot;</span>
+            <span class="k">if</span> <span class="p">(</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">boundary_elements</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">el_size</span>
+                <span class="o">&gt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">boundary_elements</span><span class="p">[</span><span class="n">i</span> <span class="o">-</span> <span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">el_size</span>
+            <span class="p">):</span>
+                <span class="n">_left_point</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">boundary_elements</span><span class="p">[</span><span class="n">i</span> <span class="o">-</span> <span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">pg_points</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">_left_point</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">boundary_elements</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">pg_points</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">boundary_elements</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">pg_points</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">boundary_elements</span><span class="p">[</span>
+                <span class="n">i</span> <span class="o">-</span> <span class="mi">1</span>
+            <span class="p">]</span><span class="o">.</span><span class="n">pg_points</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="n">_left_point</span>
+
+            <span class="k">if</span> <span class="p">(</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">boundary_elements</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">el_size</span>
+                <span class="o">&gt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">boundary_elements</span><span class="p">[</span><span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">el_size</span>
+            <span class="p">):</span>
+                <span class="n">_right_point</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">boundary_elements</span><span class="p">[</span><span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">pg_points</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">_right_point</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">boundary_elements</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">pg_points</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">boundary_elements</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">pg_points</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">boundary_elements</span><span class="p">[</span>
+                <span class="n">i</span> <span class="o">+</span> <span class="mi">1</span>
+            <span class="p">]</span><span class="o">.</span><span class="n">pg_points</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">_right_point</span>
+
+        <span class="c1"># Generating pg_lines for all boundary elements</span>
+        <span class="k">for</span> <span class="n">boundary_element</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">boundary_elements</span><span class="p">:</span>
+            <span class="n">boundary_element</span><span class="o">.</span><span class="n">pg_lines</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_generate_pg_lines</span><span class="p">(</span><span class="n">boundary_element</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">pg_lines</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="n">boundary_element</span><span class="o">.</span><span class="n">pg_lines</span><span class="p">)</span>
+
+        <span class="c1"># Generating pg_lineloop from pg_lines</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">pg_lineloop</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">pg_geometry</span><span class="o">.</span><span class="n">add_line_loop</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">pg_lines</span><span class="p">)</span>
+
+        <span class="c1"># Generating pg_surface from pg_linespg_lineloop</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">pg_surface</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">pg_geometry</span><span class="o">.</span><span class="n">add_plane_surface</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">pg_lineloop</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">pg_geometry</span><span class="o">.</span><span class="n">add_physical_surface</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">pg_surface</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span></div>
+</pre></div>
+
+          </div>
+            
+        </div>
+        <div class="clearfix"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../index.html">firecrest 0.1 documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="../index.html" >Module code</a> &#187;</li> 
+      </ul>
+    </div>
+<script type="text/javascript">
+  $("#mobile-toggle a").click(function () {
+    $("#left-column").toggle();
+  });
+</script>
+<script type="text/javascript" src="../../_static/js/bootstrap.js"></script>
+  <div class="footer">
+    &copy; Copyright 2019, Petr Kungurtsev. Created using <a href="http://sphinx.pocoo.org/">Sphinx</a>.
+  </div>
+  </body>
+</html>

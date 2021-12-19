@@ -23,6 +23,7 @@ class SpectralTVAcousticSolver(BaseSolver):
             dolf.lhs(form) == dolf.rhs(form),
             w,
             self.forms.dirichlet_boundary_conditions(),
+            solver_parameters={"linear_solver": "mumps"},
         )
         state = w.split(True)
         return state
